@@ -1,0 +1,9 @@
+{
+  "appMode": "local",
+  "secomDbPath": "C:\\Users\\Owner\\Documents\\Antigravity\\agitated-raman",
+  "syncInterval": 60,
+  "databaseUrl": "",
+  "employeeSchedules": {
+    "20250070": "10:00"
+  }
+}

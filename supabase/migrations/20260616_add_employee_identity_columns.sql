@@ -1,0 +1,3 @@
+ALTER TABLE IF EXISTS public.sa_employees
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS login_id TEXT;

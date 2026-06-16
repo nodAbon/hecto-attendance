@@ -1,0 +1,19 @@
+{
+  "name": "hecto-secom-sync",
+  "version": "1.0.0",
+  "description": "세콤 MySQL → Supabase 3분 주기 동기화 데몬",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "list:hr": "node list-hr-employees.js",
+    "list:leave": "node list-hr-leaves.js",
+    "backfill:leaves": "node backfill-leaves.js",
+    "backfill:attendance:q1": "node backfill-attendance-range.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "dotenv": "^16.4.7",
+    "mysql2": "^3.14.0"
+  }
+}

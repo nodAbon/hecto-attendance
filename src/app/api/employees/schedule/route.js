@@ -1,0 +1,72 @@
+import { NextResponse } from 'next/server';
+import { verifySession } from '@/lib/auth';
+import { fetchEmployeeSchedules, saveEmployeeSchedules } from '@/lib/supabaseDb';
+import { isAdminRole, isLeaderPosition } from '@/lib/roleUtils';
+
+const isManager = (session) => !!session && (isAdminRole(session) || isLeaderPosition(session.position));
+
+const toScheduleMap = (rows = []) => rows.reduce((acc, row) => {
+  const empNo = String(row?.emp_no || '').trim();
+  if (!empNo) return acc;
+  acc[empNo] = String(row?.schedule_time || '08:00').substring(0, 5);
+  return acc;
+}, {});
+
+export async function GET(request) {
+  try {
+    const session = await verifySession(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    if (!isManager(session)) {
+      return NextResponse.json({ success: false, error: '권한이 없습니다.' }, { status: 403 });
+    }
+
+    const rows = await fetchEmployeeSchedules();
+    return NextResponse.json({
+      success: true,
+      schedules: toScheduleMap(rows),
+      rows
+    });
+  } catch (err) {
+    return NextResponse.json({
+      success: false,
+      error: err.message
+    }, { status: 500 });
+  }
+}
+
+export async function POST(request) {
+  try {
+    const session = await verifySession(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    if (!isManager(session)) {
+      return NextResponse.json({ success: false, error: '권한이 없습니다.' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const payload = body?.empNo
+      ? { [body.empNo]: body.schedule }
+      : (body?.schedules || {});
+
+    if (!payload || Object.keys(payload).length === 0) {
+      return NextResponse.json({ success: false, error: '저장할 일정이 없습니다.' }, { status: 400 });
+    }
+
+    await saveEmployeeSchedules(payload, session.userId);
+    const rows = await fetchEmployeeSchedules();
+
+    return NextResponse.json({
+      success: true,
+      schedules: toScheduleMap(rows),
+      rows
+    });
+  } catch (err) {
+    return NextResponse.json({
+      success: false,
+      error: err.message
+    }, { status: 500 });
+  }
+}
