@@ -4,7 +4,8 @@
  * - 3분 주기 실행
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
+loadSyncEnv();
 const fs   = require('fs');
 const path = require('path');
 const os   = require('os');

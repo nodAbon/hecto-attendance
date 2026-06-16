@@ -7,8 +7,10 @@
  *   node list-hr-leaves.js --json
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
+
+loadSyncEnv();
 
 const MYSQL_CONFIG = {
   host: process.env.MYSQL_HOST,

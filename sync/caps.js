@@ -11,9 +11,11 @@
  * ================================================================
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
+
+loadSyncEnv();
 
 const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS, 10) || 180_000;
 const MY_COMPANY_CODE = process.env.MY_COMPANY_CODE || '1600';

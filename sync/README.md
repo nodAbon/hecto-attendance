@@ -10,6 +10,8 @@ npm install
 cp .env.example .env
 ```
 
+`sync/` 스크립트는 `sync/.env`, `sync/.env.local`, 상위 폴더의 `.env` / `.env.local`도 함께 읽습니다.
+
 ## 실행
 
 ```bash

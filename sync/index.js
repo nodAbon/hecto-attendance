@@ -7,9 +7,11 @@
  * ================================================================
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
+
+loadSyncEnv();
 
 // ── 설정 ──────────────────────────────────────────────────────────
 const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS) || 180_000; // 3분

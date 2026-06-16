@@ -13,9 +13,11 @@
  *   node backfill-attendance-range.js
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
+
+loadSyncEnv();
 
 const COMPANY_CODE = process.env.MY_COMPANY_CODE || '1600';
 const RANGE_FROM = process.env.ATTENDANCE_BACKFILL_FROM || '2026-01-01';

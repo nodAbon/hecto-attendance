@@ -11,8 +11,10 @@
  *  2) 회사코드가 포함된 단일 사번형
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
+
+loadSyncEnv();
 
 const MYSQL_CONFIG = {
   host: process.env.MYSQL_HOST,

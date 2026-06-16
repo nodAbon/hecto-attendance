@@ -4,7 +4,8 @@
  * - 10분 주기 실행
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
+loadSyncEnv();
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
 

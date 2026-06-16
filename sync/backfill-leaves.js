@@ -3,9 +3,11 @@
  * ServerPC only: reads MySQL(VPN) and fills Supabase leave rows for queued empNo values.
  */
 
-require('dotenv').config();
+const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
+
+loadSyncEnv();
 
 const COMPANY_CODE = process.env.MY_COMPANY_CODE || '1600';
 const POLL_INTERVAL_MS = parseInt(process.env.LEAVE_BACKFILL_INTERVAL_MS, 10) || 300_000;
