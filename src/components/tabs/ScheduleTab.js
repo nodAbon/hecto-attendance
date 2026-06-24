@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { memo, useState, useEffect, useMemo } from 'react';
 import { Search, RefreshCw } from 'lucide-react';
@@ -113,7 +113,7 @@ function ScheduleTab({
           delete next[empNo];
           return next;
         });
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo });
       } else {
         alert(json.error || '일정 저장에 실패했습니다.');
       }
@@ -154,7 +154,7 @@ function ScheduleTab({
         setOverrideDate('');
         setScheduleSelectedDates([]);
         setOverrideNote('');
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo: overrideTarget.empNo });
       } else {
         alert(failed.error || '개별 근무일정 저장에 실패했습니다.');
       }
@@ -193,7 +193,7 @@ function ScheduleTab({
         setOverrideDate('');
         setScheduleSelectedDates([]);
         setOverrideNote('');
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo });
       } else {
         alert(failed.error || '개별 근무일정 조정 삭제에 실패했습니다.');
       }

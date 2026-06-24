@@ -1,0 +1,79 @@
+Created At: 2026-06-12T00:29:29Z
+Completed At: 2026-06-12T00:29:29Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 500 to 570
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+500:             leaveCode: todayLeave.leaveCode,
+501:             leaveName: todayLeave.leaveName,
+502:             leaveDays: todayLeave.leaveDays
+503:           } : null
+504:         });
+505:       } else {
+506:         // 로그 없음
+507:         let status = '미출근';
+508:         if (todayLeave) {
+509:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+510:             status = '연차';
+511:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+512:             status = '오전반차';
+513:           } else if (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62') {
+514:             status = '오후반차';
+515:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+516:             status = getTwoHourLeaveDisplayLabel(todayLeave);
+517:           } else {
+518:             status = todayLeave.leaveName || '휴가';
+519:           }
+520:         } else {
+521:           status = '미출근';
+522:           absentCount++;
+523:         }
+524: 
+525:         employeeStatuses.push({
+526:           ...emp,
+527:           status,
+528:           checkIn: '-',
+529:           checkOut: '-',
+530:           isLate: false,
+531:           lastGate: '-',
+532:           scheduleTime,
+533:           scheduleEndTime: getSchedulePairForDate(empNo, dept, todayStr).end,
+534:           todayLeave: todayLeave ? {
+535:             leaveCode: todayLeave.leaveCode,
+536:             leaveName: todayLeave.leaveName,
+537:             leaveDays: todayLeave.leaveDays
+538:           } : null
+539:         });
+540:       }
+541:     });
+542: 
+543:     // 4. 주간 트렌드 (최근 7일) - 대시보드에서는 제거하지만 API 하위 호환성 유지
+544:     const weeklyTrend = [];
+545:     for (let i = 6; i >= 0; i--) {
+546:       const d = new Date();
+547:       d.setDate(now.getDate() - i);
+548:       const dStr = getLocalDateString(d);
+549:       const dayName = d.toLocaleDateString('ko-KR', { weekday: 'short' });
+550: 
+551:       const dayLogs = logs.filter(log => (log.workDate || log.logTime.split(' ')[0]) === dStr);
+552:       const dayEmpNos = new Set(dayLogs.map(log => log.Sabun || log.empNo));
+553: 
+554:       if ((d.getDay() === 0 || d.getDay() === 6) && dayEmpNos.size === 0) continue;
+555: 
+556:       weeklyTrend.push({
+557:         date: dStr.substring(5, 10).replace('-', '/'),
+558:         dayName,
+559:         count: dayEmpNos.size,
+560:         rate: totalEmployeesCount > 0 ? Math.round((dayEmpNos.size / totalEmployeesCount) * 100) : 0
+561:       });
+562:     }
+563: 
+564:     // 5. 부서별 분포
+565:     const deptDistribution = {};
+566:     employeeStatuses.forEach(emp => {
+567:       if (!deptDistribution[emp.dept]) {
+568:         deptDistribution[emp.dept] = { total: 0, present: 0, late: 0 };
+569:       }
+570:       deptDistribution[emp.dept].total++;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

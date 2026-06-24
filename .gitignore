@@ -50,3 +50,5 @@ WorkManager.DB
 port_8899_layout.html
 
 .vercel
+
+.env*.local

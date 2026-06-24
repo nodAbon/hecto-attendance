@@ -1,0 +1,83 @@
+Created At: 2026-06-12T00:42:39Z
+Completed At: 2026-06-12T00:42:39Z
+File Path: `file:///C:/Users/Owner/.gemini/antigravity/brain/f9ab24ee-ade8-435e-9897-7bf90ff32aa5/walkthrough.md`
+Total Lines: 75
+Total Bytes: 9069
+Showing lines 1 to 75
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: # page.js 파일 분할 리팩토링 결과 보고서 (Walkthrough)
+2: 
+3: 기존에 3,780줄에 달하던 대규모 엔트리 파일 `src/app/page.js`를 각각의 독립적인 기능 단위 컴포넌트(Tab)로 완전히 쪼개는 구조 개선 작업을 성공적으로 마쳤습니다.
+4: 
+5: ---
+6: 
+7: ## 🛠️ 수행한 변경 사항
+8: 
+9: 1. **공용 달력 위젯 분리**:
+10:    * [DashboardCalendarWidget.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/DashboardCalendarWidget.js) [NEW]: 대시보드 캘린더와 전사 휴가 캘린더에서 공유되던 달력 렌더링 로직을 단일 공용 컴포넌트로 추출하여 코드 중복을 제거했습니다.
+11: 
+12: 2. **기능별 탭 컴포넌트 모듈화**:
+13:    * [DashboardTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/DashboardTab.js) [NEW]: 실시간 모니터링 카드, 원형 Donut 차트, 실시간 임직원 근태 목록 및 부서별 정시율 UI와 상태(State) 계산을 격리했습니다.
+14:    * [MonthlyTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/MonthlyTab.js) [NEW]: 월간 출근 현황표 테이블 렌더링 로직을 이동했습니다.
+15:    * [TrackerTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/TrackerTab.js) [NEW]: 사원별 출퇴근 상세 정보 집계 및 수정 제출, 그리고 모바일 연동 오늘 출퇴근 기록 패널을 격리했습니다.
+16:    * [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) [NEW]: 기본 출근 일정 설정 및 특정 일자별 스케줄 예외 등록/수정/삭제 달력을 묶어 분리했습니다.
+17:    * [LeaveTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/LeaveTab.js) [NEW]: 전사 휴가 현황 캘린더 탭을 슬림하게 래핑 및 모듈화했습니다.
+18:    * [OvertimeTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/OvertimeTab.js) [NEW]: 정산 대상 기간 등록/삭제 및 누적 초과근무 시간 테이블을 독립시켰습니다.
+19:    * [AdminPanelTabs.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/AdminPanelTabs.js) [NEW]: 관리자 전용 수동결재, 계정등록, 캡스 업로드 탭을 모듈화했습니다.
+20:    * [EmployeeAdminTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/EmployeeAdminTab.js) [NEW]: 임직원 정보 일괄 수정, 계정 비밀번호 초기화 및 연차 백필(소급) 요청 화면을 격리했습니다.
+21: 
+22: 3. **엔트리 page.js 슬림화 (3780줄 -> 570줄)**:
+23:    * [page.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/page.js) [MODIFY]: 3,780줄의 장대한 코드를 지우고, 각각의 탭 컴포넌트를 호출하여 필요한 Props를 매핑해 주는 가벼운 뼈대 형태로 전환했습니다. 최상위 데이터 페칭 기능 및 전역 상태(테마, 로그인 프로필 등) 관리 역할에만 집중할 수 있게 되었습니다.
+24: 
+25: ---
+26: 
+27: ## 🔬 검증 및 결과 (Verification)
+28: 
+29: ### 1. 자동화 빌드 검사
+30: 리팩토링 완료 후 프로덕션 빌드 스크립트를 재구동하여 에러가 없음을 확인했습니다:
+31: ```cmd
+32: cmd.exe /c "npm run build"
+33: ```
+34: * **결과**: `✓ Compiled successfully in 3.8s`, `✓ Generating static pages (27/27) in 1272ms`
+35: * 컴파일 오류 및 런타임 Hydration 깨짐을 야기할 만한 의존성 누락이 전혀 없이 **정상 컴파일(Green Build)**을 통과했습니다.
+36: 
+37: ### 2. 향후 운영상 기대효과
+38: * 특정 탭의 입력이나 클릭(예: 검색 쿼리 입력, 필터 토글 등)이 유발하는 React 상태 갱신이 다른 기능의 불필요한 렌더링을 유발하지 않아 탭 전환과 동작의 **반응 속도가 매우 쾌적해졌습니다.**
+39: * 파일 크기가 줄어들어 향후 코드 검색 및 신규 기능 추가 시의 피로도와 버그 유발 위험이 대폭 축소되었습니다.
+40: 
+41: ---
+42: 
+43: ## 🛠️ 추가 버그 수정 내역
+44: 
+45: ### 1. 기본 출근시간 조정 기능 정상화 (API 필드명 및 프론트엔드 데이터 바인딩 수정)
+46: * **문제점**: 직원 일정관리 탭에서 기본 출근시간을 변경하고 '기본일정 저장' 버튼을 누르면 API 호출(POST `/api/employees/schedule`)은 발생하지만 값이 서버로 반영되지 않거나, 저장 완료 얼럿이 발생한 후에도 UI 상에서 원래 출근 시각으로 되돌아가는 오동작이 있었습니다.
+47: * **원인**:
+48:   1. 백엔드 API 라우트(`src/app/api/employees/schedule/route.js`)는 `schedule` 필드로 기본 근무 시간을 받도록 설계되어 있었으나, 클라이언트 컴포넌트(`src/components/tabs/ScheduleTab.js`)에서는 `scheduleTime` 필드로 잘못 전송하고 있었습니다.
+49:   2. 프론트엔드의 기본 출근 시간 셀렉트 박스가 개별 날짜 스케줄 조정(오늘의 스케줄 override)이 포함된 `selectedEmp.scheduleTime`을 바인딩하고 있어, 변경을 감지하거나 저장한 이후 데이터를 다시 가져왔을 때 당일의 예외 시간으로 덮어써지며 화면이 되돌아가던 문제가 추가로 존재했습니다.
+50:   3. 결정적으로, API 전체 조회 시 기존 백엔드 GET `/api/attendance` 라우터가 기본 출근시간을 Supabase 실시간 DB가 아닌 로컬의 고정된 `secom-settings.json` 설정 파일로부터만 불러오고(getSettings) 있었기 때문에, 프론트엔드에서 수정을 저장하더라도 데이터베이스 값만 바뀌고 불러오는 데이터는 업데이트되지 않아 변경사항이 먹히지 않았습니다.
+51: * **해결**:
+52:   1. [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 내 `handleSaveSchedule` 함수의 `fetch` 요청 body 페이로드를 `JSON.stringify({ empNo, scheduleTime })`에서 `JSON.stringify({ empNo, schedule: scheduleTime })`으로 올바르게 수정하였습니다.
+53:   2. `ScheduleTab.js`의 `currentSchedule` 계산과 `isScheduleChanged` 논리 조건에서 사용되는 데이터를 당일의 예외 시간(`scheduleTime`) 대신, 고유의 기본 근무시간(`baseScheduleTime`)을 활용하도록 수정하여 바인딩 이슈를 완전히 해결했습니다.
+54:   3. [route.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js) 내에서 `fetchEmployeeSchedules`를 직접 호출하여 Supabase DB로부터 직원별 기본 일정을 실시간으로 받아오고 `getDefaultSchedule` 함수를 통해 매핑하도록 데이터 로딩 구조를 변경했습니다.
+55: * **검증**: 수정 후 프로덕션 빌드(`npm run build`)가 정상적으로 성공(Compiled successfully)함을 완료하였습니다.
+56: 
+57: 
+58: ### 2. 기본 일정 뱃지 제거 및 조정 뱃지 시각적 구분 강화
+59: * **요구사항**: 캘린더 화면에서 '기본' 일정 뱃지는 불필요하게 화면을 채우므로 숨기고, '조정' 일정이 적용된 날짜만 명확하게 강조하도록 뱃지와 범례를 개선했습니다.
+60: * **해결**:
+61:   * [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 및 [ScheduleCalendarPanel.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/ScheduleCalendarPanel.js)에서 '기본(Base)' 뱃지 렌더링 조건을 제거하여 개별 조정(`override`) 데이터가 있는 날짜에만 뱃지가 노출되도록 구현했습니다.
+62:   * 캘린더 상단 범례(Legend)에서도 '기본' 항목을 제거하고, '개별 조정' 뱃지와 범례의 색상을 파란색 대비 확연한 시각적 구분이 가능한 주황/앰버색(`--amber`)으로 적용했습니다.
+63:   * [globals.css](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/globals.css)의 `.calendar-day.has-override` 관련 테두리 및 뱃지 스타일을 보라색 계열에서 앰버색 계열로 변경하였습니다.
+64: 
+65: ### 3. 다중 선택 일자의 조정 일정 일괄 삭제 기능 추가
+66: * **문제점**: 캘린더에서 날짜를 여러 개 다중 선택한 후 우측의 '삭제' 버튼을 클릭했을 때, 가장 마지막으로 선택한 단일 날짜의 조정 정보만 삭제되는 UX 결함이 있었습니다.
+67: * **해결**:
+68:   * [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 내 `handleDeleteOverride` 함수가 다중 선택된 일자 리스트(`scheduleSelectedDates`)를 타겟으로 동작하도록 개편했습니다.
+69:   * `Promise.all` 구조를 활용하여 선택된 모든 예외 대상 일자들을 비동기 병렬 구조로 돌며 삭제 요청(DELETE `/api/employees/schedule-override`)을 일괄 전송하도록 구현했습니다.
+70:   * 또한, 선택된 일자 중 하나라도 등록된 개별 예외 근무가 존재하는 경우 우측 패널에 '삭제' 버튼이 노출되도록 뱃지 유무 조건 판별식을 고도화했습니다.
+71: 
+72: 
+73: 
+74: 
+75: 
+The above content shows the entire, complete file contents of the requested file.

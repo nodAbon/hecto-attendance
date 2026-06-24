@@ -1,0 +1,1 @@
+"      const overrideStart = overrideMap.get(`${empNo}_${todayStr}`);\n      const defaultSchedule = settings.employeeSchedules?.[empNo] || '08:00';\n      const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;"

@@ -1,0 +1,29 @@
+Created At: 2026-06-12T00:31:00Z
+Completed At: 2026-06-12T00:31:00Z
+File Path: `file:///C:/Users/Owner/.gemini/antigravity/brain/f9ab24ee-ade8-435e-9897-7bf90ff32aa5/walkthrough.md`
+Total Lines: 60
+Total Bytes: 6394
+Showing lines 40 to 60
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+40: 
+41: ---
+42: 
+43: ## 🛠️ 추가 버그 수정 내역
+44: 
+45: ### 1. 기본 출근시간 조정 기능 정상화
+46: * **문제점**: 직원 일정관리 탭에서 기본 출근시간을 변경하고 '기본일정 저장' 버튼을 누르면 API 호출(POST `/api/employees/schedule`)은 발생하지만 값이 서버로 반영되지 않는 문제가 있었습니다.
+47: * **원인**: 백엔드 API 라우트(`src/app/api/employees/schedule/route.js`)는 `schedule` 필드로 기본 근무 시간을 받도록 설계되어 있었으나, 클라이언트 컴포넌트(`src/components/tabs/ScheduleTab.js`)에서는 `scheduleTime` 필드로 잘못 전송하고 있었습니다.
+48: * **해결**: [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 내 `handleSaveSchedule` 함수의 `fetch` 요청 body 페이로드를 `JSON.stringify({ empNo, scheduleTime })`에서 `JSON.stringify({ empNo, schedule: scheduleTime })`으로 올바르게 수정하였습니다.
+49: * **검증**: 수정 후 프로덕션 빌드(`npm run build`)가 정상적으로 성공(Compiled successfully)함을 완료하였습니다.
+50: 
+51: ### 2. 기본 일정 뱃지 제거 및 조정 뱃지 시각적 구분 강화
+52: * **요구사항**: 캘린더 화면에서 '기본' 일정 뱃지는 불필요하게 화면을 채우므로 숨기고, '조정' 일정이 적용된 날짜만 명확하게 강조하도록 뱃지와 범례를 개선했습니다.
+53: * **해결**:
+54:   * [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 및 [ScheduleCalendarPanel.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/ScheduleCalendarPanel.js)에서 '기본(Base)' 뱃지 렌더링 조건을 제거하여 개별 조정(`override`) 데이터가 있는 날짜에만 뱃지가 노출되도록 구현했습니다.
+55:   * 캘린더 상단 범례(Legend)에서도 '기본' 항목을 제거하고, '개별 조정' 뱃지와 범례의 색상을 파란색 대비 확연한 시각적 구분이 가능한 주황/앰버색(`--amber`)으로 적용했습니다.
+56:   * [globals.css](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/globals.css)의 `.calendar-day.has-override` 관련 테두리 및 뱃지 스타일을 보라색 계열에서 앰버색 계열로 변경하였습니다.
+57: 
+58: 
+59: 
+60: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

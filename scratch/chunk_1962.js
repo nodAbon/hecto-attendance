@@ -1,0 +1,1 @@
+"import { NextResponse } from 'next/server';\nimport { fetchAttendanceLogs, getSettings } from '@/lib/secomDb';\n\nexport const dynamic = 'force-dynamic';\n\nexport async function GET(request) {"

@@ -1,0 +1,106 @@
+Created At: 2026-05-29T07:16:20Z
+Completed At: 2026-05-29T07:16:20Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 452
+Total Bytes: 17697
+Showing lines 1 to 452
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { NextResponse } from 'next/server';
+2: import { fetchAttendanceLogs, fetchEmployeeSchedules, fetchOvertimeSettings } from '@/lib/supabaseDb';
+3: 
+4: export const dynamic = 'force-dynamic';
+5: 
+6: export async function GET(request) {
+7:   try {
+8:     const { searchParams } = new URL(request.url);
+9:     const month = searchParams.get('month') || undefined; // YYYY-MM
+10:     const employeeSchedules = await fetchEmployeeSchedules();
+11:     const employeeScheduleMap = new Map(
+12:       (employeeSchedules || []).map((row) => [String(row.emp_no || '').trim(), String(row.schedule_time || '08:00').substring(0, 5)])
+13:     );
+14:     const getDefaultSchedule = (empNo) => employeeScheduleMap.get(String(empNo || '').trim()) || '08:00';
+15: 
+16:     const { 
+17:       logs, 
+18:       employees, 
+19:       leaves = [], 
+20:       corrections = [], 
+21:       overrides = [], 
+22:       manualCheckins = [], 
+23:       isDemo, 
+24:       error 
+25:     } = await fetchAttendanceLogs(month);
+26: 
+27:     const overtimeSettings = await fetchOvertimeSettings();
+28: 
+29:     // Create override map: empNo_workDate -> schedule_start
+30:     const overrideMap = new Map();
+31:     overrides.forEach(o => {
+32:       overrideMap.set(`${o.emp_no}_${o.work_date}`, o.schedule_start);
+33:     });
+34: 
+35:     // Create correction map: empNo_workDate -> correctedOutTime
+36:     const correctionMap = new Map();
+37:     corrections.forEach(c => {
+38:       correctionMap.set(`${c.emp_no}_${c.work_date}`, c.corrected_out_time);
+39:     });
+40: 
+4
+<truncated 16310 bytes>
+);
+398:       const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+399:       return { ...emp, scheduleTime };
+400:     }).sort((a, b) => a.name.localeCompare(b.name));
+401: 
+402:     return NextResponse.json({
+403:       success: true,
+404:       isDemo,
+405:       error: error || null,
+406:       mode: 'supabase',
+407:       stats: {
+408:         totalEmployees: totalEmployeesCount,
+409:         present: presentCount,
+410:         absent: absentCount,
+411:         late: lateCount,
+412:         workingNow: workingNowCount,
+413:         leave: leaveCount,
+414:         attendanceRate: totalEmployeesCount > 0 ? Math.round((presentCount / totalEmployeesCount) * 100) : 0
+415:       },
+416:       weeklyTrend,
+417:       deptData: formattedDeptData,
+418:       employeeStatuses: employeeStatuses.sort((a, b) => {
+419:         const statusPriority = { 
+420:           '근무중': 1, 
+421:           '오전반차': 2, 
+422:           '오후반차': 3, 
+423:           '연차': 4, 
+424:           '퇴근': 5, 
+425:           '미출근': 6 
+426:         };
+427:         return (statusPriority[a.status] || 9) - (statusPriority[b.status] || 9) || a.name.localeCompare(b.name);
+428:       }),
+429:       recentLogs: logs.slice(0, 15).map(log => ({
+430:         ...log,
+431:         timeOnly: log.logTime.split(' ')[1].substring(0, 5),
+432:         dateOnly: log.logTime.split(' ')[0].substring(5, 10).replace('-', '/')
+433:       })),
+434:       allLogs: logs,
+435:       allEmployees: allEmployeesList,
+436:       leaves: leaves,
+437:       corrections,
+438:       overrides,
+439:       manualCheckins,
+440:       overtimeSettings
+441:     });
+442: 
+443:   } catch (err) {
+444:     console.error('API attendance error:', err);
+445:     return NextResponse.json({
+446:       success: false,
+447:       error: err.message
+448:     }, { status: 500 });
+449:   }
+450: }
+451: 
+452: 
+The above content shows the entire, complete file contents of the requested file.

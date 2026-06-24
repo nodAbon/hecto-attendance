@@ -97,6 +97,7 @@ export default function DashboardShell({
   visibleLeaves,
   calendarEmployeeNameLookup,
   refreshAllData,
+  refreshEmployeeData,
   children,
 }) {
   const router = useRouter();
@@ -117,6 +118,14 @@ export default function DashboardShell({
       router.push(href);
     }
   }, [myEmpNo, router, setSelectedEmployee]);
+
+  const handleRefreshData = useCallback(async (opts) => {
+    if (opts?.empNo && refreshEmployeeData) {
+      await refreshEmployeeData(opts.empNo);
+    } else if (refreshAllData) {
+      await refreshAllData();
+    }
+  }, [refreshEmployeeData, refreshAllData]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -330,7 +339,7 @@ export default function DashboardShell({
             setSelectedMonth={setSelectedMonth}
             visibleMonthlyEmployees={visibleMonthlyEmployees}
             monthlyData={monthlyData}
-            refreshData={refreshAllData}
+            refreshData={handleRefreshData}
           />
         )}
 
@@ -348,7 +357,7 @@ export default function DashboardShell({
             monthlyLoading={monthlyLoading}
             monthlyData={monthlyData}
             visibleTrackerEmployees={visibleTrackerEmployees}
-            refreshData={refreshAllData}
+            refreshData={handleRefreshData}
           />
         )}
 
@@ -360,7 +369,7 @@ export default function DashboardShell({
             setSelectedMonth={setSelectedMonth}
             monthlyData={monthlyData}
             visibleScheduleEmployees={visibleScheduleEmployees}
-            refreshData={refreshAllData}
+            refreshData={handleRefreshData}
           />
         )}
 
@@ -383,7 +392,7 @@ export default function DashboardShell({
             monthlyData={monthlyData}
             myPosition={myPosition}
             myDept={myDept}
-            refreshData={refreshAllData}
+            refreshData={handleRefreshData}
             selectedMonth={selectedMonth}
           />
         )}
@@ -397,7 +406,7 @@ export default function DashboardShell({
             monthlyData={monthlyData}
             data={data}
             theme={theme}
-            refreshData={refreshAllData}
+            refreshData={handleRefreshData}
           />
         )}
 
@@ -407,7 +416,7 @@ export default function DashboardShell({
             data={data}
             monthlyData={monthlyData}
             theme={theme}
-            refreshData={refreshAllData}
+            refreshData={handleRefreshData}
           />
         )}
       </main>

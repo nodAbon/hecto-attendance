@@ -1,0 +1,107 @@
+Created At: 2026-05-29T07:37:57Z
+Completed At: 2026-05-29T07:37:57Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/auth/me/route.js`
+Total Lines: 115
+Total Bytes: 3730
+Showing lines 1 to 115
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { cookies } from 'next/headers';
+2: import { NextResponse } from 'next/server';
+3: import { getAdminClient } from '@/lib/supabaseClient';
+4: 
+5: const getCookieValueFromHeader = (cookieHeader, name) => {
+6:   if (!cookieHeader) return null;
+7:   const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+8:   return match ? decodeURIComponent(match[1]) : null;
+9: };
+10: 
+11: export async function GET(request) {
+12:   try {
+13:     const cookieHeader = request?.headers?.get?.('cookie') || '';
+14:     let accessToken = getCookieValueFromHeader(cookieHeader, 'sb-access-token');
+15:     let fallbackEmpNo = getCookieValueFromHeader(cookieHeader, 'user-emp-no') || '';
+16: 
+17:     if (!accessToken) {
+18:       try {
+19:         const cookieStore = await cookies();
+20:         accessToken = cookieStore.get('sb-access-token')?.value || null;
+21:         if (!fallbackEmpNo) {
+22:           fallbackEmpNo = cookieStore.get('user-emp-no')?.value || '';
+23:         }
+24:       } catch (e) {
+25:         // cookies() fallback
+26:       }
+27:     }
+28: 
+29:     if (!accessToken) {
+30:       return NextResponse.json({ success: false, user: null }, { status: 401 });
+31:     }
+32: 
+33:     const supabase = getAdminClient();
+34:     const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+35:     if (userError || !userData?.user) {
+36:       return NextResponse.json({ success: false, user: null }, { status: 401 });
+37:     }
+38: 
+39:     const profileSelect = 'id, emp_no, is_admi
+<truncated 654 bytes>
+ployees')
+58:         .select('emp_no, dept, name')
+59:         .eq('emp_no', fallbackEmpNo)
+60:         .maybeSingle();
+61: 
+62:       if (employee) {
+63:         const bootstrapProfile = {
+64:           id: userData.user.id,
+65:           emp_no: employee.emp_no,
+66:           dept: employee.dept || '',
+67:           rank: '',
+68:           position: '',
+69:           must_change_password: false,
+70:           is_admin: false,
+71:           updated_at: new Date().toISOString(),
+72:         };
+73: 
+74:         const { error: bootstrapError } = await supabase
+75:           .from('sa_profiles')
+76:           .upsert(bootstrapProfile, { onConflict: 'id' });
+77: 
+78:         if (!bootstrapError) {
+79:           profile = bootstrapProfile;
+80:         }
+81:       }
+82:     }
+83: 
+84:     if (!profile) {
+85:       return NextResponse.json({ success: false, user: null }, { status: 401 });
+86:     }
+87: 
+88:     const { data: employee } = await supabase
+89:       .from('sa_employees')
+90:       .select('dept, name')
+91:       .eq('emp_no', profile.emp_no)
+92:       .maybeSingle();
+93: 
+94:     const resolvedIsAdmin = !!profile.is_admin || profile.position === '관리자';
+95: 
+96:     return NextResponse.json({
+97:       success: true,
+98:       user: {
+99:         userId: profile.id || userData.user.id,
+100:         empNo: profile.emp_no,
+101:         name: employee?.name || '',
+102:         loginId: userData.user.email?.split('@')[0] || '',
+103:         isAdmin: resolvedIsAdmin,
+104:         position: profile.position || '',
+105:         team: employee?.dept || '',
+106:         rank: profile.rank || '',
+107:         mustChangePassword: !!profile.must_change_password,
+108:       },
+109:     });
+110:   } catch (err) {
+111:     console.error('[Auth Me]', err);
+112:     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
+113:   }
+114: }
+115: 
+The above content shows the entire, complete file contents of the requested file.

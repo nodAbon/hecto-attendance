@@ -1,0 +1,113 @@
+Created At: 2026-06-12T00:32:26Z
+Completed At: 2026-06-12T00:32:26Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 668
+Total Bytes: 27366
+Showing lines 540 to 644
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+540:       }
+541:     });
+542: 
+543:     // 4. 주간 트렌드 (최근 7일) - 대시보드에서는 제거하지만 API 하위 호환성 유지
+544:     const weeklyTrend = [];
+545:     for (let i = 6; i >= 0; i--) {
+546:       const d = new Date();
+547:       d.setDate(now.getDate() - i);
+548:       const dStr = getLocalDateString(d);
+549:       const dayName = d.toLocaleDateString('ko-KR', { weekday: 'short' });
+550: 
+551:       const dayLogs = logs.filter(log => (log.workDate || log.logTime.split(' ')[0]) === dStr);
+552:       const dayEmpNos = new Set(dayLogs.map(log => log.Sabun || log.empNo));
+553: 
+554:       if ((d.getDay() === 0 || d.getDay() === 6) && dayEmpNos.size === 0) continue;
+555: 
+556:       weeklyTrend.push({
+557:         date: dStr.substring(5, 10).replace('-', '/'),
+558:         dayName,
+559:         count: dayEmpNos.size,
+560:         rate: totalEmployeesCount > 0 ? Math.round((dayEmpNos.size / totalEmployeesCount) * 100) : 0
+561:       });
+562:     }
+563: 
+564:     // 5. 부서별 분포
+565:     const deptDistribution = {};
+566:     employeeStatuses.forEach(emp => {
+567:       if (!deptDistribution[emp.dept]) {
+568:         deptDistribution[emp.dept] = { total: 0, present: 0, late: 0 };
+569:       }
+570:       deptDistribution[emp.dept].total++;
+571:       if (emp.status !== '미출근' && emp.status !== '연차') {
+572:         deptDistribution[emp.dept].present++;
+573:         if (emp.isLate) deptDistribution[emp.dept].late++;
+574:       }
+575:     });
+576: 
+577:     const formattedDeptData = Object.keys(deptDistribution).map(dept => ({
+578:       name: dept,
+579:       const dayEmpNos = new Set(dayLogs.map(log => log.Sabun || log.empNo));
+580: 
+581:       if ((d.getDay() === 0 || d.getDay() === 6) && dayEmpNos.size === 0) continue;
+582: 
+583:       weeklyTrend.push({
+584:         date: dStr.substring(5, 10).replace('-', '/'),
+585:         dayName,
+586:         count: dayEmpNos.size,
+587:         rate: totalEmployeesCount > 0 ? Math.round((dayEmpNos.size / totalEmployeesCount) * 100) : 0
+588:       });
+589:     }
+590: 
+591:     // 5. 부서별 분포
+592:     const deptDistribution = {};
+593:     employeeStatuses.forEach(emp => {
+594:       if (!deptDistribution[emp.dept]) {
+595:         deptDistribution[emp.dept] = { total: 0, present: 0, late: 0 };
+596:       }
+597:       deptDistribution[emp.dept].total++;
+598:       if (emp.status !== '미출근' && emp.status !== '연차') {
+599:         deptDistribution[emp.dept].present++;
+600:         if (emp.isLate) deptDistribution[emp.dept].late++;
+601:       }
+602:     });
+603: 
+604:     const formattedDeptData = Object.keys(deptDistribution).map(dept => ({
+605:       name: dept,
+606:       total: deptDistribution[dept].total,
+607:       present: deptDistribution[dept].present,
+608:       late: deptDistribution[dept].late
+609:     }));
+610: 
+611:     // 전체 직원 리스트 정렬본
+612:     const allEmployeesList = Array.from(allEmployeesMap.values()).map(emp => {
+613:       const todayStr = getLocalDateString(now);
+614:       const baseStart = getDefaultSchedule(emp.empNo);
+615:       const baseScheduleTime = normalizeTime(baseStart, '08:00');
+616:       const baseScheduleEndTime = inferScheduleEnd(baseStart, emp.dept);
+617:       const scheduleTime = resolveScheduleTimeForDate(emp.empNo, emp.dept, todayStr);
+618:       return { ...emp, baseScheduleTime, baseScheduleEndTime, scheduleTime };
+619:     }).sort((a, b) => a.name.localeCompare(b.name));
+620:       isDemo,
+621:       error: error || null,
+622:       mode: 'supabase',
+623:       stats: {
+624:         totalEmployees: totalEmployeesCount,
+625:         present: presentCount,
+626:         absent: absentCount,
+627:         late: lateCount,
+628:         workingNow: workingNowCount,
+629:         leave: leaveCount,
+630:         attendanceRate: totalEmployeesCount > 0 ? Math.round((presentCount / totalEmployeesCount) * 100) : 0
+631:       },
+632:       weeklyTrend,
+633:       deptData: formattedDeptData,
+634:       employeeStatuses: employeeStatuses.sort((a, b) => {
+635:         const statusPriority = { 
+636:           '근무중': 1, 
+637:           '오전반차': 2, 
+638:           '오후반차': 3, 
+639:           '연차': 4, 
+640:           '퇴근': 5, 
+641:           '미출근': 6 
+642:         };
+643:         return (statusPriority[a.status] || 9) - (statusPriority[b.status] || 9) || a.name.localeCompare(b.name);
+644:       }),
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

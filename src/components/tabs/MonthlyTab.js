@@ -391,7 +391,7 @@ function MonthlyTab({
         },
       }));
       alert('월 기본 근무일정이 저장되었습니다.');
-      if (refreshData) await refreshData();
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
     } catch (err) {
       alert(err.message || '월 기본 근무일정 저장 중 오류가 발생했습니다.');
     } finally {
@@ -531,7 +531,7 @@ function MonthlyTab({
       });
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || '근무일정 저장에 실패했습니다.');
-      if (refreshData) await refreshData();
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
       alert('근무일정이 저장되었습니다.');
     } catch (err) {
       alert(err.message || '근무일정 저장 중 오류가 발생했습니다.');
@@ -552,7 +552,7 @@ function MonthlyTab({
       });
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || '근무일정 삭제에 실패했습니다.');
-      if (refreshData) await refreshData();
+      if (refreshData) await refreshData({ empNo });
       if (String(workDate || '') === modalSelectedDate) {
         setModalSelectedDate('');
         setModalSelectedDates([]);
@@ -591,7 +591,7 @@ function MonthlyTab({
       }));
       const failed = results.find((json) => !json.success);
       if (failed) throw new Error(failed.error || '근무일정 없음 처리에 실패했습니다.');
-      if (refreshData) await refreshData();
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
     } catch (err) {
       alert(err.message || '근무일정 없음 처리 중 오류가 발생했습니다.');
     } finally {
@@ -622,7 +622,7 @@ function MonthlyTab({
       }));
       const failed = results.find((json) => !json.success);
       if (failed) throw new Error(failed.error || '복원에 실패했습니다.');
-      if (refreshData) await refreshData();
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
     } catch (err) {
       alert(err.message || '복원 중 오류가 발생했습니다.');
     } finally {

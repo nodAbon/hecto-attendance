@@ -1,0 +1,29 @@
+Created At: 2026-06-12T00:35:47Z
+Completed At: 2026-06-12T00:35:47Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 455
+Total Bytes: 17556
+Showing lines 205 to 225
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+205:     let workingNowCount = 0;
+206:     let absentCount = 0;
+207:     let leaveCount = 0;
+208:     const employeeStatuses = [];
+209: 
+210:     // 3. 전체 직원 목록 기준으로 오늘 상태 계산
+211:     allEmployeesMap.forEach((emp, empNo) => {
+212:       const empLogs = empTodayMap.get(empNo) || [];
+213:       const todayStr = getLocalDateString(now);
+214:       const overrideStart = overrideMap.get(`${empNo}_${todayStr}`);
+215:       const defaultSchedule = settings.employeeSchedules?.[empNo] || '08:00';
+216:       const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+217:       const todayLeave = getEmployeeLeaveForDate(empNo, todayStrCompat);
+218: 
+219:       if (todayLeave) {
+220:         leaveCount++;
+221:       }
+222: 
+223:       // 야근 추정 룰 적용하여 오늘 유효 출근 로그 필터링
+224:       let officialLogs = [...empLogs].sort((a, b) => a.logTime.localeCompare(b.logTime));
+225:       let firstLog = officialLogs[0];
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

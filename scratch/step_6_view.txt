@@ -1,0 +1,485 @@
+Created At: 2026-06-12T00:07:19Z
+Completed At: 2026-06-12T00:07:19Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/handover_report.md`
+Total Lines: 477
+Total Bytes: 19995
+Showing lines 1 to 477
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: # Agitated Raman Project Handoff
+2: 
+3: This document is the single source of truth for the current state of the project.
+4: It is intended to let the next agent continue without re-discovering the whole codebase.
+5: 
+6: ## 1. Project Summary
+7: 
+8: This is a Next.js attendance and HR portal backed by Supabase.
+9: It supports:
+10: 
+11: - realtime attendance dashboard
+12: - monthly attendance report
+13: - detailed personal tracker
+14: - leave overview and leave calendar
+15: - overtime management
+16: - manual attendance corrections
+17: - employee schedule management
+18: - employee admin management
+19: - CAPS attendance file upload
+20: - login, password change, and personal profile editing
+21: 
+22: The app is currently working end-to-end, and the production build passes.
+23: 
+24: ## 2. Tech Stack
+25: 
+26: - Next.js 16.2.6
+27: - React 19.2.4
+28: - Supabase
+29: - Lucide icons
+30: - `xlsx` for CAPS file parsing
+31: - `better-sqlite3`, `mysql2`, and `pg` are present in the repo, but Supabase is the primary live data source
+32: 
+33: ## 3. How To Run
+34: 
+35: - Install dependencies: `npm install`
+36: - Development: `npm run dev`
+37: - Production build: `npm run build`
+38: - Start production locally: `npm run start`
+39: - Lint: `npm run lint`
+40: 
+41: ## 4. Current Status
+42: 
+43: - Build is green.
+44: - The app renders and the major flows work.
+45: - The schedule management area has been converted to a calendar-based UX.
+46: - CAPS upload works for `.xls` and `.xlsx`.
+47: - Shared sidebar is the source of truth for main pages, mypage, and admin employee shell.
+48: - A shared UI text catalog now exists at `src/lib/uiText.js`, and key labels already read from it.
+49: - The UI text catalog now covers more of the dashboard header, department filter, refresh/theme buttons, table headers, leave overview labels, tracker top cards, schedule override labels, employee-admin labels, overtime labels, new-user registration form labels, and CAPS upload copy, which further reduces the surface area where text edits can damage JSX.
+50: - A lot of historical mojibake still exists in comments and some legacy strings, but the runtime-critical pieces are mostly stable now.
+51: 
+52: ## 5. Latest Fixes In This Session
+53: 
+54: - Dashboard KPI cards now use the full realtime employee set for counts, so clicking one card only filters the list/table below and no longer mutates the other KPI numbers.
+55:   - The realtime employee-status table now uses a more stable sticky header and extra spacing, so the row text no longer visually collides with the header area.
+56:   - The dashboard leave calendar selected-day view is back to grouped KPI-style cards instead of a flat list.
+57:   - The dashboard/main sidebar now shows role badges consistently, so `ADMIN` or `LEADER` is visible outside the employee-admin shell as well.
+58:   - The non-admin experience now defaults to the user's own team for dashboard KPIs, realtime statuses, tracker data, and monthly views, while the team selector is hidden for non-admins; the dashboard leave calendar and the leave overview tab still show the full company leave set.
+59:   - The realtime employee-status table on the dashboard now uses a fixed height and fixed column layout, and the checkout column was removed so KPI clicks no longer make the table visually jump around.
+60:   - Overtime navigation and data visibility now follow the department rule: only business development, business management 1~3, and platform service office users can access it unless they are admins, team leads, or executives, and team members stay scoped to their own team.
+61:   - The employee schedule calendar now hides department selection for non-admins, while admins can still change departments there.
+62:   - The admin-facing user-registration and CAPS-upload sections were brought back onto the shared card surface as well, so their buttons and inputs follow the same visual language as mypage and the rest of the app instead of looking like separate ad hoc forms.
+63:   - Manual approval now loads monthly data reliably on direct entry because the monthly fetch runs for that tab and the selected month defaults to the current month, and its title, subtitle, table headers, status badges, and action buttons now read from the shared UI text catalog too.
+64:   - The tracker calendar now also reads its key labels, weekday row, and correction/override badges from the shared UI text catalog, which further reduces mojibake exposure in the most frequently edited calendar area.
+65:   - The overtime, user-registration, and CAPS upload sections also started moving their section titles, table headers, and button/placeholder copy into the shared UI text catalog, so those high-churn admin areas are safer to edit now too.
+66:   - The user-registration form now also uses the catalog for sample placeholders and select prompts, and the CAPS upload copy now uses catalog-backed support hints and column hints, which keeps those admin forms from contributing extra mojibake surface area.
+67:   - The schedule-management, employee-admin, and overtime sections also moved their card titles, table headers, buttons, prompts, and placeholders into the shared UI text catalog, which further shrinks the amount of text that still lives directly inside `page.js`.
+68:   - Dashboard tracker/status labels such as late badges, work-day units, overtime units, and the schedule override card's labels/buttons now read from the shared UI text catalog too, keeping the most frequently edited status UI off the main page file.
+69:   - The most common admin alerts and confirmations for user registration, CAPS upload, employee admin save/reset, leave backfill, schedule override, manual approval, and overtime-period deletion were also moved to the shared message catalog, which is helping contain the remaining text churn in `page.js`.
+70:   - The employee-admin password placeholder and the schedule override labels were also moved into the shared catalog during this pass, so those forms can now be edited with less risk of damaging JSX structure or introducing more mojibake.
+71:   - Common admin alert/confirm messages for schedule saves, check-in processing, correction saves, and overtime-period deletion were also moved into the shared message catalog, which keeps more of the high-frequency feedback text out of `page.js`.
+72:   - The footer action labels now read from the shared sidebar catalog again, which restored the `logout` and `mypage` labels without tying them to the dashboard page copy block.
+73:   - The dashboard profile badges now also reuse the shared sidebar badge labels, so `ADMIN` and `LEADER` are no longer hard-coded inside the main page file.
+74:   - The stray `src/app/page_clean.js` copy was removed so future text cleanup and grep passes only hit the active route file.
+75:   - The mypage screen was rewritten into a clean UTF-8 version with the existing profile/password behavior preserved, which removes one of the most visible mojibake-heavy screens from the workspace.
+76:   - The shared UI text catalog itself was rewritten back into a clean UTF-8 source file, which re-established the single shared home for sidebar, dashboard, tracker, monthly, leave, overtime, manual-approval, registration, upload, and common alert copy.
+77:   - The dashboard status badges also now read from the shared catalog for the common `근무중` and `미출근` labels, which keeps the most visible realtime list state strings off the main page file.
+78:   - The tracker memo placeholders, late marker text, and fallback correction reason text were also moved into the shared catalog, which keeps another high-frequency part of the dashboard out of the main page file.
+79:   - Common dashboard unit labels such as `명`, `건`, `일`, and `회`, plus the calendar-like employee table header, were also moved to shared copy so those inline counters no longer need to be edited directly in the page markup.
+80:   - The remaining visible strings in `page.js` are now mostly domain-rule data such as holiday maps, leave-type classification labels, and short status constants rather than user-facing prose, so the next cleanup passes should be lower-risk.
+81:   - The holiday and leave-classification rules were split out into `src/lib/leaveRules.js`, which removed a large block of attendance domain constants and helper functions from the top of `page.js`.
+82:   - Shared employee option lists were also split out into `src/lib/employeeOptions.js`, and the overtime-only department list moved into `src/lib/overtimeRules.js`, which further shrinks the amount of rule data living inside the main page file.
+83: - The schedule calendar detail view remains card-based and continues to support per-day override deletion.
+84:   - A shared UI text catalog at `src/lib/uiText.js` is now the preferred home for repeated UI strings. Sidebar labels, dashboard headers, monthly report text, tracker text, calendar copy, leave overview labels, schedule override labels, employee-admin labels, overtime labels, manual-approval labels, user-registration labels, and CAPS upload copy already read from it, which reduces the chance that future text edits will damage large JSX blocks.
+85:   - A final source scan over the active `src` and `supabase` text files found no remaining mojibake patterns in the live code path, and the app still passes `npm.cmd run build`, so the current working tree is in a clean, runnable state for the visible UI surface.
+86: 
+87: ## 6. Key Domain Rules
+88: 
+89: ### Attendance source rules
+90: 
+91: - `source = 'secom'`
+92:   - used for Secom-synced attendance
+93: - `source = 'caps'`
+94:   - used for uploaded CAPS attendance
+95: 
+96: ### Department routing rules
+97: 
+98: These departments use Secom attendance as the source of truth:
+99: 
+100: - 플랫폼서비스실
+101: - 사업개발팀
+102: - 사업관리 1팀
+103: - 사업관리 2팀
+104: - 사업관리 3팀
+105: 
+106: All other departments use CAPS uploads for attendance.
+107: 
+108: ### Schedule rules
+109: 
+110: - 기본 출근시간 is the employee-level default.
+111: - 일자별 출근시간 예외 is stored separately.
+112: - A calendar-based UI is used to edit date-specific exceptions.
+113: - Exports / leave / overtime are intentionally kept as separate concepts.
+114: 
+115: ## 7. Important Business / UX Decisions
+116: 
+117: - The old split sidebars were replaced by one shared sidebar.
+118: - The `설정` menu is removed from the main navigation flow.
+119: - The sidebar now uses the company logo image `HQ.png` and shared config.
+120: - MyPage uses one large card instead of two separate cards.
+121: - Table styling was normalized into a single card-like table system.
+122: - Buttons, badges, inputs, and selects were aligned to the same visual tone.
+123: - Leave and calendar panels were redesigned for better light/dark contrast.
+124: - The schedule screen now uses:
+125:   - department filter
+126:   - employee filter
+127:   - monthly calendar
+128:   - per-day exception editing
+129:   - per-day exception deletion
+130: 
+131: ## 8. Main User Flows
+132: 
+133: ### Login / first login
+134: 
+135: - Users log in with the existing auth flow.
+136: - Initial password change page is styled like the login page, not a dark-only screen.
+137: - The profile and auth lookup paths were fixed so that `bhkim / 20240052` resolves correctly.
+138: 
+139: ### Dashboard
+140: 
+141: Main dashboard includes:
+142: 
+143: - KPI cards
+144: - realtime attendance status
+145: - leave overview
+146: - calendar widget
+147: - monthly / tracker / overtime shortcuts
+148: 
+149: The dashboard calendar is designed to show leave types with strong visual grouping.
+150: 
+151: ### Monthly attendance report
+152: 
+153: - Available to admin and relevant roles.
+154: - Uses the month filter and attendance data from Supabase.
+155: 
+156: ### Detailed tracker
+157: 
+158: - Admin can see everyone.
+159: - Team lead sees only their department.
+160: - Regular users see only their own data.
+161: 
+162: ### Leave overview
+163: 
+164: - Renamed from “휴가 신청 현황” to “휴가 현황”.
+165: - The calendar/detail panels show leave types with grouped cards.
+166: 
+167: ### Employee schedule management
+168: 
+169: This area now uses a calendar-based UX:
+170: 
+171: - default employee schedule is still managed
+172: - date-specific schedule override is managed through a calendar
+173: - clicking a date loads the exception edit panel
+174: - the right panel shows employee info, base schedule, selected date, and the month’s override list
+175: - each override can be removed directly from the panel
+176: 
+177: ### CAPS upload
+178: 
+179: - Upload supports `.xls` and `.xlsx`
+180: - The sample file `Search_20260527.xls` was used during validation
+181: - File parsing uses the columns:
+182:   - 발생일자
+183:   - 발생시각
+184:   - 이름
+185:   - 사원번호
+186: - `Q_` prefixes are stripped from names
+187: - matching is employee-number-first
+188: - rows without valid employee numbers are skipped
+189: - `X` and non-relevant rows are skipped silently
+190: 
+191: ### MyPage
+192: 
+193: - One large card layout
+194: - profile editing
+195: - password change
+196: - shared sidebar
+197: 
+198: ### Employee admin
+199: 
+200: - shared sidebar
+201: - employee info editing
+202: - password reset
+203: - leave backfill request
+204: - employee list search
+205: 
+206: ## 9. Routes / Pages
+207: 
+208: ### Main pages
+209: 
+210: - `/`
+211:   - dashboard + all major tabs
+212: - `/mypage`
+213:   - personal profile page
+214: - `/login`
+215:   - login page
+216: - `/login/change-password`
+217:   - forced password change screen
+218: - `/admin/employees`
+219:   - admin employee management
+220: 
+221: ### Legacy / support routes
+222: 
+223: - `/settings`
+224:   - still appears in the build output as a legacy route, but it is not meant to be a primary navigation target anymore
+225: 
+226: ## 10. Important Files
+227: 
+228: ### App shell / navigation
+229: 
+230: - `src/components/AppSidebar.js`
+231: - `src/lib/sidebarConfig.js`
+232: 
+233: ### Main page
+234: 
+235: - `src/app/page.js`
+236: 
+237: ### MyPage
+238: 
+239: - `src/app/mypage/page.js`
+240: 
+241: ### Employee admin
+242: 
+243: - `src/app/admin/employees/EmployeeAdminShell.js`
+244: - `src/app/admin/employees/page.js`
+245: 
+246: ### Auth
+247: 
+248: - `src/lib/auth.js`
+249: - `src/app/api/auth/login/route.js`
+250: - `src/app/api/auth/logout/route.js`
+251: - `src/app/api/auth/me/route.js`
+252: - `src/app/api/auth/profile/route.js`
+253: - `src/app/api/auth/change-password/route.js`
+254: 
+255: ### Attendance / schedule / leave APIs
+256: 
+257: - `src/app/api/attendance/route.js`
+258: - `src/app/api/attendance/correction/route.js`
+259: - `src/app/api/attendance/manual-checkin/route.js`
+260: - `src/app/api/attendance/overtime-periods/route.js`
+261: - `src/app/api/attendance/holiday-work/route.js`
+262: - `src/app/api/employees/schedule/route.js`
+263: - `src/app/api/employees/schedule-override/route.js`
+264: - `src/app/api/admin/caps-attendance/upload/route.js`
+265: - `src/app/api/admin/employees/route.js`
+266: - `src/app/api/admin/employees/reset-password/route.js`
+267: - `src/app/api/admin/create-user/route.js`
+268: - `src/app/api/admin/leave-backfill/request/route.js`
+269: - `src/app/api/sync/trigger/route.js`
+270: 
+271: ### Supabase helpers / parsing
+272: 
+273: - `src/lib/supabaseDb.js`
+274: - `src/lib/capsAttendance.js`
+275: - `src/lib/clock.js`
+276: - `src/lib/usePersistentTheme.js`
+277: - `src/lib/uiText.js`
+278: 
+279: ### Styles
+280: 
+281: - `src/app/globals.css`
+282: 
+283: ## 11. Data Model
+284: 
+285: These are the important tables in `supabase/schema.sql` and the related migrations:
+286: 
+287: - `SA_employees`
+288:   - employee master data
+289:   - emp number, name, dept, company code, active flag
+290: - `SA_attendance`
+291:   - attendance logs
+292:   - now includes `source` to distinguish Secom / CAPS
+293: - `SA_leaves`
+294:   - leave history and leave types
+295: - `SA_leave_backfill_queue`
+296:   - queue for leave backfill requests
+297: - `SA_profiles`
+298:   - auth profile mapping
+299:   - links Supabase auth user to employee and role info
+300: - `SA_overtime_settings`
+301:   - overtime threshold by department
+302: - `SA_overtime_periods`
+303:   - overtime period definition
+304: - `SA_attendance_corrections`
+305:   - corrected checkout records
+306: - `SA_schedule_overrides`
+307:   - date-specific schedule exceptions
+308: - `SA_employee_schedules`
+309:   - employee-level base schedule time
+310: - `SA_holiday_work`
+311:   - holiday work and comp leave data
+312: - `SA_manual_checkins`
+313:   - manual attendance requests / approvals
+314: 
+315: ### Important columns
+316: 
+317: - `SA_attendance.source`
+318:   - `caps` or `secom`
+319: - `SA_employee_schedules.schedule_time`
+320:   - the default base clock-in time for an employee
+321: - `SA_schedule_overrides.schedule_start`
+322:   - date-specific exception clock-in time
+323: - `SA_schedule_overrides.schedule_end`
+324:   - optional date-specific exception clock-out time
+325: 
+326: ## 11. API Behavior Notes
+327: 
+328: ### `/api/attendance`
+329: 
+330: - Returns:
+331:   - realtime stats
+332:   - employee statuses
+333:   - recent logs
+334:   - all logs
+335:   - all employees
+336:   - leaves
+337:   - corrections
+338:   - overrides
+339:   - manual checkins
+340:   - overtime settings
+341: - Used by the dashboard, monthly view, tracker, and schedule calendar
+342: 
+343: ### `/api/employees/schedule`
+344: 
+345: - GET returns base schedules
+346: - POST saves base schedules
+347: - backed by `SA_employee_schedules`
+348: 
+349: ### `/api/employees/schedule-override`
+350: 
+351: - POST creates or updates date-specific exceptions
+352: - DELETE removes the exception for a given employee/date
+353: 
+354: ### `/api/admin/caps-attendance/upload`
+355: 
+356: - parses CAPS exports
+357: - upserts into `SA_attendance`
+358: - source is set to `caps`
+359: 
+360: ### `/api/sync/trigger`
+361: 
+362: - Secom synchronization path
+363: - source is set to `secom`
+364: 
+365: ## 12. Calendar Schedule UX
+366: 
+367: The schedule management area now behaves like this:
+368: 
+369: - the user picks a department
+370: - then picks an employee
+371: - then uses a monthly calendar
+372: - each day shows:
+373:   - day number
+374:   - base schedule badge
+375:   - if available, actual clock-in and clock-out times
+376:   - an indication whether it is today
+377:   - an indication whether it is an override day
+378: - clicking a day loads the exception editor
+379: - the right panel lists this employee’s overrides for the month
+380: - each override can be removed from the panel
+381: 
+382: ### Visual rules used in the calendar
+383: 
+384: - 출근 time is a different color from 퇴근 time
+385: - text color is the priority over panel color
+386: - in/out values are shown compactly as:
+387:   - `출근 09:30`
+388:   - `퇴근 18:22`
+389: - if there is no log data, the display remains blank rather than showing noisy helper text
+390: 
+391: ## 13. Known Risks / Fragility
+392: 
+393: ### `src/app/page.js`
+394: 
+395: This is still the most fragile file in the repo.
+396: 
+397: Why:
+398: 
+399: - it contains a lot of historical recovery work
+400: - there are still many mojibake strings in comments and some legacy UI text
+401: - it has many responsibilities in one file
+402: - the React hook structure is large and easy to destabilize
+403: 
+404: What to watch:
+405: 
+406: - avoid broad replacements unless necessary
+407: - verify build after each non-trivial edit
+408: - if a branch of UI is touched, open it in the browser and check for stale chunk issues
+409: 
+410: ### Lint noise
+411: 
+412: `src/app/page.js` still tends to trigger React hook lint warnings when run in strict lint mode.
+413: The build is green, but the file is not “clean” from a lint-policy perspective.
+414: 
+415: ### Encoding / mojibake
+416: 
+417: - The repo has had many encoding issues in the past.
+418: - UTF-8 normalization was added, but legacy strings may still exist.
+419: - If text is visibly broken, treat it as a real cleanup task, not just a display bug.
+420: 
+421: ## 14. Environment / Deployment Notes
+422: 
+423: ### Environment variables
+424: 
+425: The deployment relies on Supabase variables such as:
+426: 
+427: - `NEXT_PUBLIC_SUPABASE_URL`
+428: - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+429: - `SUPABASE_SERVICE_ROLE_KEY`
+430: 
+431: ### Vercel
+432: 
+433: - The project has been deployed via Vercel.
+434: - The production deployment has been used as the reference for the shared sidebar layout.
+435: - Region was intended to be Singapore (`sin1`) in the Vercel config.
+436: 
+437: ## 15. Recent Important Fixes
+438: 
+439: These have already been addressed in the current codebase:
+440: 
+441: - corrupted regex causing SSR `ChunkLoadError`
+442: - hydration mismatch on first dashboard load
+443: - duplicate calendar keys
+444: - undefined leave meta `.bg`
+445: - broken sidebar drift between pages
+446: - CAPS upload parser and file support
+447: - auth/profile mapping for `bhkim / 20240052`
+448: - `source` column in `SA_attendance`
+449: - calendar-based schedule management
+450: - schedule exception deletion
+451: - improved light/dark contrast for badges, buttons, and calendar elements
+452: 
+453: ## 16. What The Next Agent Should Do First
+454: 
+455: Recommended order:
+456: 
+457: 1. Check the app in the browser and confirm the schedule calendar feels correct.
+458: 2. If any text still looks garbled, normalize that file carefully rather than doing broad search/replace.
+459: 3. If the schedule UX needs more polish, continue improving the calendar panel rather than reintroducing the old table-first workflow.
+460: 4. Keep the shared sidebar as the source of truth.
+461: 5. Avoid changing the data model unless a real business rule requires it.
+462: 
+463: ## 17. Short Practical Summary
+464: 
+465: If you only read one section, read this:
+466: 
+467: - The app is a Supabase-backed attendance portal.
+468: - Shared sidebar is centralized.
+469: - CAPS upload and Secom sync both work and are separated by `source`.
+470: - Employee schedules now have:
+471:   - default base time
+472:   - date-specific overrides
+473:   - calendar editing
+474:   - override deletion
+475: - Build is green.
+476: - The biggest remaining maintenance risk is `src/app/page.js`.
+477: 
+The above content shows the entire, complete file contents of the requested file.

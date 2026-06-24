@@ -1,0 +1,29 @@
+Created At: 2026-06-12T00:36:10Z
+Completed At: 2026-06-12T00:36:10Z
+File Path: `file:///C:/Users/Owner/.gemini/antigravity/brain/f9ab24ee-ade8-435e-9897-7bf90ff32aa5/walkthrough.md`
+Total Lines: 65
+Total Bytes: 7259
+Showing lines 45 to 65
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+45: ### 1. 기본 출근시간 조정 기능 정상화 (API 필드명 및 프론트엔드 데이터 바인딩 수정)
+46: * **문제점**: 직원 일정관리 탭에서 기본 출근시간을 변경하고 '기본일정 저장' 버튼을 누르면 API 호출(POST `/api/employees/schedule`)은 발생하지만 값이 서버로 반영되지 않거나, 저장 완료 얼럿이 발생한 후에도 UI 상에서 원래 출근 시각으로 되돌아가는 오동작이 있었습니다.
+47: * **원인**:
+48:   1. 백엔드 API 라우트(`src/app/api/employees/schedule/route.js`)는 `schedule` 필드로 기본 근무 시간을 받도록 설계되어 있었으나, 클라이언트 컴포넌트(`src/components/tabs/ScheduleTab.js`)에서는 `scheduleTime` 필드로 잘못 전송하고 있었습니다.
+49:   2. 프론트엔드의 기본 출근 시간 셀렉트 박스가 개별 날짜 스케줄 조정(오늘의 스케줄 override)이 포함된 `selectedEmp.scheduleTime`을 바인딩하고 있어, 변경을 감지하거나 저장한 이후 데이터를 다시 가져왔을 때 당일의 예외 시간으로 덮어써지며 화면이 되돌아가던 문제가 추가로 존재했습니다.
+50: * **해결**:
+51:   1. [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 내 `handleSaveSchedule` 함수의 `fetch` 요청 body 페이로드를 `JSON.stringify({ empNo, scheduleTime })`에서 `JSON.stringify({ empNo, schedule: scheduleTime })`으로 올바르게 수정하였습니다.
+52:   2. `ScheduleTab.js`의 `currentSchedule` 계산과 `isScheduleChanged` 논리 조건에서 사용되는 데이터를 당일의 예외 시간(`scheduleTime`) 대신, 고유의 기본 근무시간(`baseScheduleTime`)을 활용하도록 수정하여 바인딩 이슈를 완전히 해결했습니다.
+53: * **검증**: 수정 후 프로덕션 빌드(`npm run build`)가 정상적으로 성공(Compiled successfully)함을 완료하였습니다.
+54: 
+55: 
+56: ### 2. 기본 일정 뱃지 제거 및 조정 뱃지 시각적 구분 강화
+57: * **요구사항**: 캘린더 화면에서 '기본' 일정 뱃지는 불필요하게 화면을 채우므로 숨기고, '조정' 일정이 적용된 날짜만 명확하게 강조하도록 뱃지와 범례를 개선했습니다.
+58: * **해결**:
+59:   * [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 및 [ScheduleCalendarPanel.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/ScheduleCalendarPanel.js)에서 '기본(Base)' 뱃지 렌더링 조건을 제거하여 개별 조정(`override`) 데이터가 있는 날짜에만 뱃지가 노출되도록 구현했습니다.
+60:   * 캘린더 상단 범례(Legend)에서도 '기본' 항목을 제거하고, '개별 조정' 뱃지와 범례의 색상을 파란색 대비 확연한 시각적 구분이 가능한 주황/앰버색(`--amber`)으로 적용했습니다.
+61:   * [globals.css](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/globals.css)의 `.calendar-day.has-override` 관련 테두리 및 뱃지 스타일을 보라색 계열에서 앰버색 계열로 변경하였습니다.
+62: 
+63: 
+64: 
+65: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

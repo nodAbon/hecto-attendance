@@ -1,0 +1,1 @@
+"import { NextResponse } from 'next/server';\nimport { fetchAttendanceLogs, getSettings } from '@/lib/supabaseDb';"

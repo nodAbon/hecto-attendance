@@ -1,0 +1,456 @@
+Created At: 2026-06-12T00:32:53Z
+Completed At: 2026-06-12T00:32:53Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 448
+Total Bytes: 17115
+Showing lines 1 to 448
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { NextResponse } from 'next/server';
+2: import { fetchAttendanceLogs, getSettings, fetchOvertimeSettings } from '@/lib/supabaseDb';
+3: 
+4: export const dynamic = 'force-dynamic';
+5: 
+6: export async function GET(request) {
+7:   try {
+8:     const settings = getSettings();
+9:     const { searchParams } = new URL(request.url);
+10:     const month = searchParams.get('month') || undefined; // YYYY-MM
+11: 
+12:     const { 
+13:       logs, 
+14:       employees, 
+15:       leaves = [], 
+16:       corrections = [], 
+17:       overrides = [], 
+18:       manualCheckins = [], 
+19:       isDemo, 
+20:       error 
+21:     } = await fetchAttendanceLogs(month);
+22: 
+23:     const overtimeSettings = await fetchOvertimeSettings();
+24: 
+25:     // Create override map: empNo_workDate -> schedule_start
+26:     const overrideMap = new Map();
+27:     overrides.forEach(o => {
+28:       overrideMap.set(`${o.emp_no}_${o.work_date}`, o.schedule_start);
+29:     });
+30: 
+31:     // Create correction map: empNo_workDate -> correctedOutTime
+32:     const correctionMap = new Map();
+33:     corrections.forEach(c => {
+34:       correctionMap.set(`${c.emp_no}_${c.work_date}`, c.corrected_out_time);
+35:     });
+36: 
+37:     const TWO_HOUR_LEAVE_CODES = new Set(['19', '20', '21', '22', '23', '24', '25', '26', '27', '28']);
+38: 
+39:     const getShiftedLimit = (baseSchedule, hoursToAdd) => {
+40:       const [schedH, schedM] = String(baseSchedule || '08:00').split(':').map(Number);
+41:       const totalMinutes = (schedH * 60) + schedM + (hoursToAdd * 60);
+42:       const endHour = Math.floor(totalMinutes / 60);
+43:       const endMinute = totalMinutes % 60;
+44:       return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}:59`;
+45:     };
+46: 
+47:     const getMorningHalfDayLimit = (baseSchedule) => {
+48:       const [schedH] = String(baseSchedule || '08:00').split(':').map(Number);
+49:       if (schedH >= 10) return getShiftedLimit(baseSchedule, 4);
+50:       return '13:00:59';
+51:     };
+52: 
+53:     const getTwoHourLeaveLimit = (baseSchedule) => {
+54:       const schedule = String(baseSchedule || '08:00');
+55:       const [schedH] = schedule.split(':').map(Number);
+56:       if (schedH === 10) return '13:00:59';
+57:       return getShiftedLimit(schedule, 2);
+58:     };
+59: 
+60:     const getTwoHourLeaveEndTime = (leave) => {
+61:       const rawName = String(leave?.leaveName || leave?.leave_name || '');
+62:       const match = rawName.match(/\[(\d{2})(?::?(\d{2}))?[~-](\d{2})(?::?(\d{2}))?\]/);
+63:       if (!match) return null;
+64:       const endHour = match[3];
+65:       const endMinute = match[4] || '00';
+66:       return `${endHour}:${endMinute}:59`;
+67:     };
+68: 
+69:     const getTwoHourLeaveDisplayLabel = (leave) => {
+70:       const rawName = String(leave?.leaveName || leave?.leave_name || '');
+71:       const match = rawName.match(/\[(\d{2})(?::?(\d{2}))?[~-](\d{2})(?::?(\d{2}))?\]/);
+72:       if (!match) return leave?.leaveName || leave?.leave_name || '휴가';
+73:       const startHour = parseInt(match[1], 10);
+74:       return startHour < 12 ? '오전반반차' : '오후반반차';
+75:     };
+76: 
+77:     // 1.5. 각 사원별/일자별 최초 출근 시간 추출 및 지각 판별 (야근 추정 룰 적용)
+78:     // logs는 시간 역순(내림차순)으로 정렬되어 있으므로 그룹화 후 오름차순 정렬하여 처리합니다.
+79:     const getEmployeeLeaveForDate = (empNo, dateStrCompat) => {
+80:       return leaves.find(l =>
+81:         l.empNo === empNo &&
+82:         dateStrCompat >= l.startDate &&
+83:         dateStrCompat <= l.endDate
+84:       );
+85:     };
+86: 
+87:     const logsByEmpAndDate = {}; // empNo -> dateStr -> [logs]
+88:     logs.forEach(log => {
+89:       const dateStr = log.logTime.split(' ')[0];
+90:       if (!logsByEmpAndDate[log.empNo]) logsByEmpAndDate[log.empNo] = {};
+91:       if (!logsByEmpAndDate[log.empNo][dateStr]) logsByEmpAndDate[log.empNo][dateStr] = [];
+92:       logsByEmpAndDate[log.empNo][dateStr].push(log);
+93:     });
+94: 
+95:     // 각 사원별로 루프를 돌며 일자별 첫 출근(입실) 시각을 판단
+96:     Object.keys(logsByEmpAndDate).forEach(empNo => {
+97:       const dateMap = logsByEmpAndDate[empNo];
+98:       const dates = Object.keys(dateMap).sort(); // 날짜 오름차순
+99: 
+100:       dates.forEach((dateStr, idx) => {
+101:         const dayLogs = dateMap[dateStr].sort((a, b) => a.logTime.localeCompare(b.logTime));
+102:         let firstLog = dayLogs[0];
+103:         let timeOnly = firstLog.logTime.split(' ')[1]; // "HH:MM:SS"
+104: 
+105:         // [야근 추정 룰] 07:00 이전 출입기록이 있고 전날 출입기록이 있다면 전날 새벽 야근으로 추정하여 패스
+106:         if (timeOnly < '07:00:00' && idx > 0) {
+107:           const prevDateStr = dates[idx - 1];
+108:           const prevDayLogs = dateMap[prevDateStr];
+109:           if (prevDayLogs && prevDayLogs.length > 0) {
+110:             // 07:00 이후의 다음 기록이 있는지 찾음
+111:             const nextLog = dayLogs.find(l => l.logTime.split(' ')[1] >= '07:00:00');
+112:             if (nextLog) {
+113:               firstLog = nextLog;
+114:               timeOnly = nextLog.logTime.split(' ')[1];
+115:             }
+116:           }
+117:         }
+118: 
+119:         // 지각 비교 기준 시각
+120:         const overrideStart = overrideMap.get(`${empNo}_${dateStr}`);
+121:         const defaultSchedule = settings.employeeSchedules?.[empNo] || '08:00';
+122:         const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+123:         const dayLeave = getEmployeeLeaveForDate(empNo, dateStr.replace(/-/g, ''));
+124: 
+125:         // 첫 출입 시간이 07시 이후일 때만 정식 출근으로 간주하고 지각 판별
+126:         const isOfficialCheckin = timeOnly >= '07:00:00';
+127:         let isLate = isOfficialCheckin && (timeOnly > `${scheduleTime}:59`);
+128:         if (dayLeave) {
+129:           if (dayLeave.leaveCode === '12' || dayLeave.leaveCode === '60' || parseFloat(dayLeave.leaveDays) === 1.0) {
+130:             isLate = false;
+131:           } else if (dayLeave.leaveCode === '16' || dayLeave.leaveCode === '61') {
+132:             isLate = timeOnly > getMorningHalfDayLimit(scheduleTime);
+133:           } else if (TWO_HOUR_LEAVE_CODES.has(String(dayLeave.leaveCode))) {
+134:             isLate = timeOnly > getTwoHourLeaveLimit(scheduleTime);
+135:           }
+136:         }
+137: 
+138:         // 해당 일자의 모든 로그 중, 첫번째 출근 로그에 isLate 결과 기록
+139:         dayLogs.forEach(l => {
+140:           if (l.id === firstLog.id && isOfficialCheckin) {
+141:             l.isLate = isLate;
+142:           } else {
+143:             l.isLate = false;
+144:           }
+145:         });
+146:       });
+147:     });
+148: 
+149:     // 1. 전체 직원 목록 기준 설정
+150:     const allEmployeesMap = new Map();
+151: 
+152:     if (employees && employees.length > 0) {
+153:       employees.forEach(emp => {
+154:         allEmployeesMap.set(emp.empNo, {
+155:           empNo: emp.empNo,
+156:           name: emp.name,
+157:           dept: emp.dept,
+158:           cardNo: ''
+159:         });
+160:       });
+161:     } else {
+162:       logs.forEach(log => {
+163:         allEmployeesMap.set(log.empNo, {
+164:           empNo: log.empNo,
+165:           name: log.name,
+166:           dept: log.dept,
+167:           cardNo: log.cardNo
+168:         });
+169:       });
+170:     }
+171: 
+172:     const totalEmployeesCount = allEmployeesMap.size || 10;
+173: 
+174:     // Helper to get local date string YYYY-MM-DD
+175:     const getLocalDateString = (date) => {
+176:       const offset = date.getTimezoneOffset();
+177:       const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+178:       return localDate.toISOString().split('T')[0];
+179:     };
+180: 
+181:     // 2. 오늘 날짜 기준 로그 필터
+182:     const now = new Date();
+183:     const todayStr = getLocalDateString(now);
+184:     const todayStrCompat = todayStr.replace(/-/g, '');
+185: 
+186:     const todayLogs = logs.filter(log => log.logTime.startsWith(todayStr));
+187: 
+188:     // 오늘 직원별 로그 그룹화
+189:     const empTodayMap = new Map();
+190:     todayLogs.forEach(log => {
+191:       if (!empTodayMap.has(log.empNo)) {
+192:         empTodayMap.set(log.empNo, []);
+193:       }
+194:       empTodayMap.get(log.empNo).push(log);
+195:     });
+196: 
+197:     let presentCount = 0;
+198:     let lateCount = 0;
+199:     let workingNowCount = 0;
+200:     let absentCount = 0;
+201:     let leaveCount = 0;
+202:     const employeeStatuses = [];
+203: 
+204:     // 3. 전체 직원 목록 기준으로 오늘 상태 계산
+205:     allEmployeesMap.forEach((emp, empNo) => {
+206:       const empLogs = empTodayMap.get(empNo) || [];
+207:       const todayStr = getLocalDateString(now);
+208:       const overrideStart = overrideMap.get(`${empNo}_${todayStr}`);
+209:       const defaultSchedule = settings.employeeSchedules?.[empNo] || '08:00';
+210:       const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+211:       const todayLeave = getEmployeeLeaveForDate(empNo, todayStrCompat);
+212: 
+213:       if (todayLeave) {
+214:         leaveCount++;
+215:       }
+216: 
+217:       // 야근 추정 룰 적용하여 오늘 유효 출근 로그 필터링
+218:       let officialLogs = [...empLogs].sort((a, b) => a.logTime.localeCompare(b.logTime));
+219:       let firstLog = officialLogs[0];
+220:       let hasValidTodayLog = officialLogs.length > 0;
+221: 
+222:       if (firstLog) {
+223:         const timeOnly = firstLog.logTime.split(' ')[1];
+224:         if (timeOnly < '07:00:00') {
+225:           // 전날 출입기록이 있는지 판별
+226:           const yesterday = new Date();
+227:           yesterday.setDate(yesterday.getDate() - 1);
+228:           const yesterdayStr = getLocalDateString(yesterday);
+229:           
+230:           const hasYesterdayLog = logs.some(l => l.empNo === empNo && l.logTime.startsWith(yesterdayStr));
+231:           if (hasYesterdayLog) {
+232:             // 07:00 이전 로그는 전날 새벽 야근으로 추정하여 패스
+233:             const nextLog = officialLogs.find(l => l.logTime.split(' ')[1] >= '07:00:00');
+234:             if (nextLog) {
+235:               firstLog = nextLog;
+236:               // 07:00 이후 로그들만 오늘 정식 로그로 취급
+237:               officialLogs = officialLogs.filter(l => l.logTime.split(' ')[1] >= '07:00:00');
+238:             } else {
+239:               hasValidTodayLog = false;
+240:             }
+241:           }
+242:         }
+243:       }
+244: 
+245:       if (hasValidTodayLog && firstLog) {
+246:         presentCount++;
+247:         const lastLog = officialLogs[officialLogs.length - 1];
+248: 
+249:         // 지각 여부 계산
+250:         const checkInTimeOnly = firstLog.logTime.split(' ')[1]; // "HH:MM:SS"
+251:         let checkInLimit = `${scheduleTime}:59`;
+252:         let isLate = false;
+253: 
+254:         if (todayLeave) {
+255:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+256:             isLate = false; // full day leave is never late
+257:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+258:             checkInLimit = getMorningHalfDayLimit(scheduleTime); // morning leave grace: base 13:00:59, 10:00 teams => +4 hours
+259:             isLate = checkInTimeOnly > checkInLimit;
+260:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+261:             // 2-hour leave: default schedule + 2 hours, but 10:00 teams are allowed until 13:00:59
+262:             checkInLimit = getTwoHourLeaveLimit(scheduleTime);
+263:             isLate = checkInTimeOnly > checkInLimit;
+264:           } else {
+265:             isLate = checkInTimeOnly > checkInLimit;
+266:           }
+267:         } else {
+268:           isLate = checkInTimeOnly > checkInLimit;
+269:         }
+270: 
+271:         if (isLate) lateCount++;
+272: 
+273:         // 현재 근무 여부
+274:         // 수정된 퇴근시간이 있으면 퇴근으로 처리
+275:         const correctedOut = correctionMap.get(`${empNo}_${todayStr}`);
+276:         const isCheckedOut = lastLog.eventType === '퇴근' || correctedOut !== undefined;
+277:         let status = '근무중';
+278: 
+279:         if (isCheckedOut) {
+280:           status = '퇴근';
+281:         } else if (todayLeave && (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62')) {
+282:           status = '오후반차';
+283:         } else if (todayLeave && TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+284:           status = getTwoHourLeaveDisplayLabel(todayLeave);
+285:         } else {
+286:           status = '근무중';
+287:           workingNowCount++;
+288:         }
+289: 
+290:         let outTimeText = '-';
+291:         if (correctedOut) {
+292:           outTimeText = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
+293:         } else if (lastLog.eventType === '퇴근') {
+294:           outTimeText = lastLog.logTime.split(' ')[1].substring(0, 5);
+295:         }
+296: 
+297:         employeeStatuses.push({
+298:           ...emp,
+299:           status,
+300:           checkIn: firstLog.logTime.split(' ')[1].substring(0, 5), // "HH:MM"
+301:           checkOut: outTimeText,
+302:           isLate,
+303:           lastGate: lastLog.gateName,
+304:           scheduleTime,
+305:           todayLeave: todayLeave ? {
+306:             leaveCode: todayLeave.leaveCode,
+307:             leaveName: todayLeave.leaveName,
+308:             leaveDays: todayLeave.leaveDays
+309:           } : null
+310:         });
+311:       } else {
+312:         // 로그 없음
+313:         let status = '미출근';
+314:         if (todayLeave) {
+315:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+316:             status = '연차';
+317:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+318:             status = '오전반차';
+319:           } else if (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62') {
+320:             status = '오후반차';
+321:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+322:             status = getTwoHourLeaveDisplayLabel(todayLeave);
+323:           } else {
+324:             status = todayLeave.leaveName || '휴가';
+325:           }
+326:         } else {
+327:           status = '미출근';
+328:           absentCount++;
+329:         }
+330: 
+331:         employeeStatuses.push({
+332:           ...emp,
+333:           status,
+334:           checkIn: '-',
+335:           checkOut: '-',
+336:           isLate: false,
+337:           lastGate: '-',
+338:           scheduleTime,
+339:           todayLeave: todayLeave ? {
+340:             leaveCode: todayLeave.leaveCode,
+341:             leaveName: todayLeave.leaveName,
+342:             leaveDays: todayLeave.leaveDays
+343:           } : null
+344:         });
+345:       }
+346:     });
+347: 
+348:     // 4. 주간 트렌드 (최근 7일) - 대시보드에서는 제거하지만 API 하위 호환성 유지
+349:     const weeklyTrend = [];
+350:     for (let i = 6; i >= 0; i--) {
+351:       const d = new Date();
+352:       d.setDate(now.getDate() - i);
+353:       const dStr = getLocalDateString(d);
+354:       const dayName = d.toLocaleDateString('ko-KR', { weekday: 'short' });
+355: 
+356:       const dayLogs = logs.filter(log => log.logTime.startsWith(dStr));
+357:       const dayEmpNos = new Set(dayLogs.map(log => log.Sabun || log.empNo));
+358: 
+359:       if ((d.getDay() === 0 || d.getDay() === 6) && dayEmpNos.size === 0) continue;
+360: 
+361:       weeklyTrend.push({
+362:         date: dStr.substring(5, 10).replace('-', '/'),
+363:         dayName,
+364:         count: dayEmpNos.size,
+365:         rate: totalEmployeesCount > 0 ? Math.round((dayEmpNos.size / totalEmployeesCount) * 100) : 0
+366:       });
+367:     }
+368: 
+369:     // 5. 부서별 분포
+370:     const deptDistribution = {};
+371:     employeeStatuses.forEach(emp => {
+372:       if (!deptDistribution[emp.dept]) {
+373:         deptDistribution[emp.dept] = { total: 0, present: 0, late: 0 };
+374:       }
+375:       deptDistribution[emp.dept].total++;
+376:       if (emp.status !== '미출근' && emp.status !== '연차') {
+377:         deptDistribution[emp.dept].present++;
+378:         if (emp.isLate) deptDistribution[emp.dept].late++;
+379:       }
+380:     });
+381: 
+382:     const formattedDeptData = Object.keys(deptDistribution).map(dept => ({
+383:       name: dept,
+384:       total: deptDistribution[dept].total,
+385:       present: deptDistribution[dept].present,
+386:       late: deptDistribution[dept].late
+387:     }));
+388: 
+389:     // 전체 직원 리스트 정렬본
+390:     const allEmployeesList = Array.from(allEmployeesMap.values()).map(emp => {
+391:       const todayStr = getLocalDateString(now);
+392:       const overrideStart = overrideMap.get(`${emp.empNo}_${todayStr}`);
+393:       const defaultSchedule = settings.employeeSchedules?.[emp.empNo] || '08:00';
+394:       const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+395:       return { ...emp, scheduleTime };
+396:     }).sort((a, b) => a.name.localeCompare(b.name));
+397: 
+398:     return NextResponse.json({
+399:       success: true,
+400:       isDemo,
+401:       error: error || null,
+402:       mode: settings.appMode,
+403:       stats: {
+404:         totalEmployees: totalEmployeesCount,
+405:         present: presentCount,
+406:         absent: absentCount,
+407:         late: lateCount,
+408:         workingNow: workingNowCount,
+409:         leave: leaveCount,
+410:         attendanceRate: totalEmployeesCount > 0 ? Math.round((presentCount / totalEmployeesCount) * 100) : 0
+411:       },
+412:       weeklyTrend,
+413:       deptData: formattedDeptData,
+414:       employeeStatuses: employeeStatuses.sort((a, b) => {
+415:         const statusPriority = { 
+416:           '근무중': 1, 
+417:           '오전반차': 2, 
+418:           '오후반차': 3, 
+419:           '연차': 4, 
+420:           '퇴근': 5, 
+421:           '미출근': 6 
+422:         };
+423:         return (statusPriority[a.status] || 9) - (statusPriority[b.status] || 9) || a.name.localeCompare(b.name);
+424:       }),
+425:       recentLogs: logs.slice(0, 15).map(log => ({
+426:         ...log,
+427:         timeOnly: log.logTime.split(' ')[1].substring(0, 5),
+428:         dateOnly: log.logTime.split(' ')[0].substring(5, 10).replace('-', '/')
+429:       })),
+430:       allLogs: logs,
+431:       allEmployees: allEmployeesList,
+432:       leaves: leaves,
+433:       corrections,
+434:       overrides,
+435:       manualCheckins,
+436:       overtimeSettings
+437:     });
+438: 
+439:   } catch (err) {
+440:     console.error('API attendance error:', err);
+441:     return NextResponse.json({
+442:       success: false,
+443:       error: err.message
+444:     }, { status: 500 });
+445:   }
+446: }
+447: 
+448: 
+The above content shows the entire, complete file contents of the requested file.

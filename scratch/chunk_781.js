@@ -1,0 +1,1 @@
+"        // 첫 출입 시간이 07시 이후일 때만 정식 출근으로 간주하고 지각 판별\n        const isOfficialCheckin = timeOnly >= '07:00:00';\n        const isLate = isOfficialCheckin && (timeOnly > `${scheduleTime}:59`);"

@@ -1,0 +1,799 @@
+1: {
+2:   "step_index": 377,
+3:   "source": "MODEL",
+4:   "type": "VIEW_FILE",
+5:   "status": "DONE",
+6:   "created_at": "2026-06-12T00:29:19Z",
+7:   "content": "Created At: 2026-06-12T00:29:19Z\nCompleted At: 2026-06-12T00:29:19Z\nFile Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`\nTotal Lines: 644\nTotal Bytes: 26479\nShowing lines 200 to 250\nThe following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.\n200:       }\n201:       end.setHours(end.getHours() - 3);\n202:       return end;\n203:     };\n204: \n205:     const isCheckoutCandidateForLog = (logTime, workDate, schedule, dayLeave = null) => {\n206:       const threshold = getCheckoutThreshold(workDate, schedule, dayLeave);\n207:       if (!threshold) return true;\n208:       const timestamp = new Date(`${String(logTime || '').replace(' ', 'T')}+09:00`).getTime();\n209:       return timestamp >= threshold.getTime();\n210:     };\n211: \n212:     const assignWorkDateForLog = (log) => {\n213:       const actualDate = String(log.logTime || '').split(' ')[0];\n214:       if (!actualDate) return null;\n215:       if (log.workDate && log.workDate !== actualDate) {\n216:         return log.workDate;\n217:       }\n218: \n219:       const dept = employeeDeptMap.get(String(log.empNo || '').trim()) || '';\n220:       const prevDate = shiftDate(actualDate, -1);\n221:       const prevSchedule = getSchedulePairForDate(log.empNo, dept, prevDate);\n222:       if (isOvernightSchedule(prevSchedule) && isLogWithinWindow(log.logTime, prevDate, prevSchedule)) {\n223:         return prevDate;\n224:       }\n225: \n226:       const currentSchedule = getSchedulePairForDate(log.empNo, dept, actualDate);\n227:       if (isOvernightSchedule(currentSchedule) && isLogWithinWindow(log.logTime, actualDate, currentSchedule)) {\n228:         return actualDate;\n229:       }\n230: \n231:       return actualDate;\n232:     };\n233: \n234:     const resolveScheduleTimeForDate = (empNo, dept, dateStr) => {\n235:       return getSchedulePairForDate(empNo, dept, dateStr).start;\n236:     };\n237: \n238:     const employeeDeptMap = new Map((employees || []).map((emp) => [String(emp.empNo || '').trim(), String(emp.dept || '').trim()]));\n239: \n240:     const logs = (rawLogs || []).map((log) => {\n241:       const workDate = assignWorkDateForLog(log);\n242:       const dept = employeeDeptMap.get(String(log.empNo || '').trim()) || '';\n243:       const schedulePair = getSchedulePairForDate(log.empNo, dept, workDate || String(log.logTime || '').split(' ')[0]);\n244:       const dayLeave = getEmployeeLeaveForDate(log.empNo, String(workDate || String(log.logTime || '').split(' ')[0]).replace(/-/g, ''));\n245:       const roleText = String(log.adjustedRole || '').trim().toLowerCase();\n246:       const isIgnored = roleText.includes('무시') || roleText.includes('ignore');\n247:       const isAdjustedCheckout = Boolean(log.isAdjustedCheckout) || roleText.includes('퇴') || roleText.includes('checkout');\n248:       const isAdjustedCheckin = Boolean(log.isAdjustedCheckin) || roleText.includes('출근') || roleText.includes('checkin');\n249:       const scheduledWorkOrder = getWorkOrder(log.logTime, schedulePair);\n250:       const savedWorkOrder = Number.isFinite(Number(log.workOrder)) ? Number(log.workOrder) : null;\nThe above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.\n"
+8: }
+9:   try {
+10:     const { searchParams } = new URL(request.url);
+11:     const month = searchParams.get('month') || undefined; // YYYY-MM
+12: 404:       if (false && firstLog) {
+13:     const employeeScheduleMap = new Map(
+14:       (employeeSchedules || []).map((row) => [String(row.emp_no || '').trim(), String(row.schedule_time || '08:00').substring(0, 5)])
+15:     );
+16:     const getDefaultSchedule = (empNo) => employeeScheduleMap.get(String(empNo || '').trim()) || '08:00';
+17:     const appSettings = getSettings();
+18:     const nightCheckinGraceHours = Number(appSettings?.nightCheckinGraceHours ?? 3) || 3;
+19: 
+20:     const { 
+21:       logs: rawLogs, 
+22:       employees, 
+23:       leaves = [], 
+24:       corrections = [], 
+25:       overrides = [], 
+26:       manualCheckins = [], 
+27:       isDemo, 
+28:       error 
+29:     } = await fetchAttendanceLogs(month);
+30: // MISSING
+31: // MISSING
+32: // MISSING
+33: // MISSING
+34:     const overrideMap = new Map();
+35:     overrides.forEach(o => {
+36:       overrideMap.set(`${o.emp_no}_${o.work_date}`, {
+37: 429:                 const checkoutLogs = officialLogs.filter((log) => {
+38: 430:           const role = String(log.adjustedRole || log.eventType || '').trim().toLowerCase();
+39: 431:           return log.isCheckoutCandidate || log.isAdjustedCheckout || role.includes('퇴') || role.includes('checkout');
+40: 432:         });
+41: 433:         const lastCheckoutLog = checkoutLogs.reduce((best, current) => {
+42: 434:           if (!best) return current;
+43: 435:           const bestOrder = Number.isFinite(Number(best.workOrder)) ? Number(best.workOrder) : Number(best.logTime.split(' ')[1].substring(0, 5).replace(':', ''));
+44: 436:           const currentOrder = Number.isFinite(Number(current.workOrder)) ? Number(current.workOrder) : Number(current.logTime.split(' ')[1].substring(0, 5).replace(':', ''));
+45: 437:           if (currentOrder > bestOrder) return current;
+46: 438:           if (currentOrder === bestOrder && current.logTime > best.logTime) return current;
+47: 439:           return best;
+48: 440:         }, null);
+49: 
+50:     const getShiftedLimit = (baseSchedule, hoursToAdd) => {
+51:       const [schedH, schedM] = String(baseSchedule || '08:00').split(':').map(Number);
+52:       const totalMinutes = (schedH * 60) + schedM + (hoursToAdd * 60);
+53:       const endHour = Math.floor(totalMinutes / 60);
+54:       const endMinute = totalMinutes % 60;
+55:       return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}:59`;
+56: 448:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+57: 449:             isLate = false; // full day leave is never late
+58: 450:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+59: 451:             checkInLimit = getMorningHalfDayLimit(scheduleTime); // morning leave grace: base 13:00:59, 10:00 teams => +4 hours
+60: 452:             isLate = checkInTimeOnly > checkInLimit;
+61: 453:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+62: 454:             // 2-hour leave: default schedule + 2 hours, but 10:00 teams are allowed until 13:00:59
+63: 455:             checkInLimit = getTwoHourLeaveLimit(scheduleTime);
+64: 456:             isLate = checkInTimeOnly > checkInLimit;
+65: 457:           } else {
+66: 458:             isLate = checkInTimeOnly > checkInLimit;
+67: 459:           }
+68:       return getShiftedLimit(schedule, 2);
+69:     };
+70: 
+71: // MISSING
+72: // MISSING
+73: // MISSING
+74: // MISSING
+75: // MISSING
+76: // MISSING
+77: // MISSING
+78: // MISSING
+79: // MISSING
+80: 472:         if (isCheckedOut) {
+81: 473:           status = '퇴근';
+82: 474:         } else if (todayLeave && (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62')) {
+83: 475:           status = '오후반차';
+84: 476:         } else if (todayLeave && TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+85: 477:           status = getTwoHourLeaveDisplayLabel(todayLeave);
+86: 478:         } else {
+87: 479:           status = '근무중';
+88: 480:           workingNowCount++;
+89: 481:         }
+90: // MISSING
+91: 483:         let outTimeText = '-';
+92: 484:         if (correctedOut) {
+93: 485:           outTimeText = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
+94: 486:         } else if (lastCheckoutLog) {
+95: 487:           outTimeText = lastCheckoutLog.logTime.split(' ')[1].substring(0, 5);
+96: // MISSING
+97: // MISSING
+98: // MISSING
+99: // MISSING
+100: // MISSING
+101: // MISSING
+102: 494:           checkOut: outTimeText,
+103: 495:           isLate,
+104: 496:           lastGate: lastCheckoutLog?.gateName || officialLogs[officialLogs.length - 1]?.gateName || '-',
+105: 497:           scheduleTime,
+106: 498:           scheduleEndTime: schedulePair.end,
+107: 499:           todayLeave: todayLeave ? {
+108: 500:             leaveCode: todayLeave.leaveCode,
+109: The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
+110: 
+111:       const [hours = 0, minutes = 0] = String(timeValue || '00:00').substring(0, 5).split(':').map((value) => Number(value) || 0);
+112:       return (hours * 60) + minutes;
+113:     };
+114: 
+115:     const normalizeTime = (timeValue, fallback = '00:00') => {
+116:       const value = String(timeValue || fallback).trim();
+117:       if (!value) return fallback;
+118:       return value.length >= 5 ? value.substring(0, 5) : fallback;
+119:     };
+120: 
+121:     const inferScheduleEnd = (scheduleStart, dept) => {
+122:       const start = normalizeTime(scheduleStart, '08:00');
+123:       if (isNightTeamDept(dept)) {
+124:         return start === '20:00' ? '08:00' : '06:00';
+125:       }
+126:       if (isSpecialDayTeamDept(dept)) {
+127:         return '19:00';
+128:       }
+129:       return start === '10:00' ? '19:00' : '17:00';
+130:     };
+131: 
+132:     const getSchedulePairForDate = (empNo, dept, dateStr) => {
+133:       const override = overrideMap.get(`${empNo}_${dateStr}`);
+134:       if (override?.scheduleStart) {
+135:         const start = normalizeTime(override.scheduleStart, '08:00');
+136:         return {
+137:           start,
+138:           end: normalizeTime(override.scheduleEnd || inferScheduleEnd(start, dept), inferScheduleEnd(start, dept)),
+139:         };
+140:       }
+141: 
+142:       const baseStart = getDefaultSchedule(empNo);
+143:       return {
+144:         start: normalizeTime(baseStart, '08:00'),
+145:         end: inferScheduleEnd(baseStart, dept),
+146:       };
+147:     };
+148: 
+149:     const isOvernightSchedule = (schedule) => toMinutes(schedule?.end) <= toMinutes(schedule?.start);
+150: 
+151:     const getWorkWindowForDate = (workDate, schedule) => {
+152:       const start = new Date(`${workDate}T${normalizeTime(schedule.start, '08:00')}:00+09:00`);
+153:       const end = new Date(`${workDate}T${normalizeTime(schedule.end, '17:00')}:00+09:00`);
+154:       const overnight = toMinutes(schedule.end) <= toMinutes(schedule.start);
+155:       if (overnight) {
+156:         end.setDate(end.getDate() + 1);
+157:       }
+158: 
+159:       return {
+160:         start: new Date(start.getTime() - ((overnight ? nightCheckinGraceHours : 0) * 60 * 60 * 1000)),
+161: // MISSING
+162: // MISSING
+163: // MISSING
+164: // MISSING
+165: // MISSING
+166: // MISSING
+167: // MISSING
+168: // MISSING
+169: // MISSING
+170: // MISSING
+171: // MISSING
+172: // MISSING
+173: // MISSING
+174: // MISSING
+175: // MISSING
+176: // MISSING
+177: // MISSING
+178: // MISSING
+179: // MISSING
+180: // MISSING
+181: // MISSING
+182: // MISSING
+183: // MISSING
+184: // MISSING
+185: // MISSING
+186: // MISSING
+187: // MISSING
+188: // MISSING
+189: // MISSING
+190: // MISSING
+191: // MISSING
+192: // MISSING
+193: // MISSING
+194: // MISSING
+195: // MISSING
+196: // MISSING
+197: // MISSING
+198: // MISSING
+199: // MISSING
+200:       }
+201:       end.setHours(end.getHours() - 3);
+202:       return end;
+203:     };
+204: 
+205:     const isCheckoutCandidateForLog = (logTime, workDate, schedule, dayLeave = null) => {
+206:       const threshold = getCheckoutThreshold(workDate, schedule, dayLeave);
+207:       if (!threshold) return true;
+208:       const timestamp = new Date(`${String(logTime || '').replace(' ', 'T')}+09:00`).getTime();
+209:       return timestamp >= threshold.getTime();
+210:     };
+211: 
+212:     const assignWorkDateForLog = (log) => {
+213:       const actualDate = String(log.logTime || '').split(' ')[0];
+214:       if (!actualDate) return null;
+215:       if (log.workDate && log.workDate !== actualDate) {
+216:         return log.workDate;
+217:       }
+218: 
+219:       const dept = employeeDeptMap.get(String(log.empNo || '').trim()) || '';
+220:       const prevDate = shiftDate(actualDate, -1);
+221:       const prevSchedule = getSchedulePairForDate(log.empNo, dept, prevDate);
+222:       if (isOvernightSchedule(prevSchedule) && isLogWithinWindow(log.logTime, prevDate, prevSchedule)) {
+223:         return prevDate;
+224:       }
+225: 
+226:       const currentSchedule = getSchedulePairForDate(log.empNo, dept, actualDate);
+227:       if (isOvernightSchedule(currentSchedule) && isLogWithinWindow(log.logTime, actualDate, currentSchedule)) {
+228:         return actualDate;
+229:       }
+230: 
+231:       return actualDate;
+232:     };
+233: 
+234:     const resolveScheduleTimeForDate = (empNo, dept, dateStr) => {
+235:       return getSchedulePairForDate(empNo, dept, dateStr).start;
+236:     };
+237: 
+238:     const employeeDeptMap = new Map((employees || []).map((emp) => [String(emp.empNo || '').trim(), String(emp.dept || '').trim()]));
+239: 
+240:     const logs = (rawLogs || []).map((log) => {
+241:       const workDate = assignWorkDateForLog(log);
+242:       const dept = employeeDeptMap.get(String(log.empNo || '').trim()) || '';
+243:       const schedulePair = getSchedulePairForDate(log.empNo, dept, workDate || String(log.logTime || '').split(' ')[0]);
+244:       const dayLeave = getEmployeeLeaveForDate(log.empNo, String(workDate || String(log.logTime || '').split(' ')[0]).replace(/-/g, ''));
+245:       const roleText = String(log.adjustedRole || '').trim().toLowerCase();
+246:       const isIgnored = roleText.includes('무시') || roleText.includes('ignore');
+247:       const isAdjustedCheckout = Boolean(log.isAdjustedCheckout) || roleText.includes('퇴') || roleText.includes('checkout');
+248:       const isAdjustedCheckin = Boolean(log.isAdjustedCheckin) || roleText.includes('출근') || roleText.includes('checkin');
+249:       const scheduledWorkOrder = getWorkOrder(log.logTime, schedulePair);
+250:       const savedWorkOrder = Number.isFinite(Number(log.workOrder)) ? Number(log.workOrder) : null;
+251: // MISSING
+252: // MISSING
+253: // MISSING
+254: // MISSING
+255: // MISSING
+256: // MISSING
+257: // MISSING
+258: // MISSING
+259: // MISSING
+260: // MISSING
+261: // MISSING
+262: // MISSING
+263: // MISSING
+264: // MISSING
+265: // MISSING
+266: // MISSING
+267: // MISSING
+268: // MISSING
+269: // MISSING
+270: // MISSING
+271: // MISSING
+272: // MISSING
+273: // MISSING
+274: // MISSING
+275: // MISSING
+276: // MISSING
+277: // MISSING
+278: // MISSING
+279: // MISSING
+280: // MISSING
+281: // MISSING
+282: // MISSING
+283: // MISSING
+284: // MISSING
+285: // MISSING
+286: // MISSING
+287: // MISSING
+288: // MISSING
+289: // MISSING
+290: // MISSING
+291: // MISSING
+292: // MISSING
+293: // MISSING
+294: // MISSING
+295: // MISSING
+296: // MISSING
+297: // MISSING
+298: // MISSING
+299: // MISSING
+300: // MISSING
+301: // MISSING
+302: // MISSING
+303: // MISSING
+304: // MISSING
+305: // MISSING
+306: // MISSING
+307: // MISSING
+308: // MISSING
+309: // MISSING
+310: // MISSING
+311: // MISSING
+312: // MISSING
+313: // MISSING
+314: // MISSING
+315: // MISSING
+316: // MISSING
+317: // MISSING
+318: // MISSING
+319: // MISSING
+320: // MISSING
+321: // MISSING
+322: // MISSING
+323: // MISSING
+324: // MISSING
+325: // MISSING
+326: // MISSING
+327: // MISSING
+328: // MISSING
+329: // MISSING
+330: // MISSING
+331: // MISSING
+332: // MISSING
+333: // MISSING
+334: // MISSING
+335: // MISSING
+336: // MISSING
+337: // MISSING
+338: // MISSING
+339: // MISSING
+340: // MISSING
+341: // MISSING
+342: // MISSING
+343: // MISSING
+344: // MISSING
+345: // MISSING
+346: // MISSING
+347: // MISSING
+348: // MISSING
+349: // MISSING
+350: // MISSING
+351: // MISSING
+352: // MISSING
+353: // MISSING
+354: // MISSING
+355: // MISSING
+356: // MISSING
+357: // MISSING
+358: // MISSING
+359: // MISSING
+360: // MISSING
+361: // MISSING
+362: // MISSING
+363: // MISSING
+364: // MISSING
+365: // MISSING
+366: // MISSING
+367: // MISSING
+368: // MISSING
+369: // MISSING
+370: // MISSING
+371: // MISSING
+372: // MISSING
+373: // MISSING
+374: // MISSING
+375: // MISSING
+376: // MISSING
+377: // MISSING
+378: // MISSING
+379: // MISSING
+380: // MISSING
+381: // MISSING
+382: // MISSING
+383: // MISSING
+384: // MISSING
+385: // MISSING
+386: // MISSING
+387: // MISSING
+388: // MISSING
+389: // MISSING
+390: // MISSING
+391: // MISSING
+392: // MISSING
+393: // MISSING
+394: // MISSING
+395: // MISSING
+396: // MISSING
+397: // MISSING
+398: // MISSING
+399: // MISSING
+400:       let officialLogs = [...empLogs].sort((a, b) => (a.workOrder ?? 0) - (b.workOrder ?? 0) || a.logTime.localeCompare(b.logTime));
+401: // MISSING
+402: // MISSING
+403: // MISSING
+404:       if (false && firstLog) {
+405: // MISSING
+406: // MISSING
+407: // MISSING
+408: // MISSING
+409: // MISSING
+410: // MISSING
+411: // MISSING
+412: // MISSING
+413: // MISSING
+414: // MISSING
+415: // MISSING
+416: // MISSING
+417: // MISSING
+418: // MISSING
+419: // MISSING
+420: // MISSING
+421: // MISSING
+422: // MISSING
+423: // MISSING
+424: // MISSING
+425: // MISSING
+426: // MISSING
+427: // MISSING
+428: // MISSING
+429:                 const checkoutLogs = officialLogs.filter((log) => {
+430:           const role = String(log.adjustedRole || log.eventType || '').trim().toLowerCase();
+431:           return log.isCheckoutCandidate || log.isAdjustedCheckout || role.includes('퇴') || role.includes('checkout');
+432:         });
+433:         const lastCheckoutLog = checkoutLogs.reduce((best, current) => {
+434:           if (!best) return current;
+435:           const bestOrder = Number.isFinite(Number(best.workOrder)) ? Number(best.workOrder) : Number(best.logTime.split(' ')[1].substring(0, 5).replace(':', ''));
+436:           const currentOrder = Number.isFinite(Number(current.workOrder)) ? Number(current.workOrder) : Number(current.logTime.split(' ')[1].substring(0, 5).replace(':', ''));
+437:           if (currentOrder > bestOrder) return current;
+438:           if (currentOrder === bestOrder && current.logTime > best.logTime) return current;
+439:           return best;
+440:         }, null);
+441: // MISSING
+442: // MISSING
+443: // MISSING
+444: // MISSING
+445: // MISSING
+446: // MISSING
+447: // MISSING
+448:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+449:             isLate = false; // full day leave is never late
+450:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+451:             checkInLimit = getMorningHalfDayLimit(scheduleTime); // morning leave grace: base 13:00:59, 10:00 teams => +4 hours
+452:             isLate = checkInTimeOnly > checkInLimit;
+453:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+454:             // 2-hour leave: default schedule + 2 hours, but 10:00 teams are allowed until 13:00:59
+455:             checkInLimit = getTwoHourLeaveLimit(scheduleTime);
+456:             isLate = checkInTimeOnly > checkInLimit;
+457:           } else {
+458:             isLate = checkInTimeOnly > checkInLimit;
+459:           }
+460: // MISSING
+461: // MISSING
+462: // MISSING
+463: // MISSING
+464: // MISSING
+465: // MISSING
+466: // MISSING
+467: // MISSING
+468: // MISSING
+469: // MISSING
+470: // MISSING
+471: // MISSING
+472:         if (isCheckedOut) {
+473:           status = '퇴근';
+474:         } else if (todayLeave && (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62')) {
+475:           status = '오후반차';
+476:         } else if (todayLeave && TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+477:           status = getTwoHourLeaveDisplayLabel(todayLeave);
+478:         } else {
+479:           status = '근무중';
+480:           workingNowCount++;
+481:         }
+482: // MISSING
+483:         let outTimeText = '-';
+484:         if (correctedOut) {
+485:           outTimeText = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
+486:         } else if (lastCheckoutLog) {
+487:           outTimeText = lastCheckoutLog.logTime.split(' ')[1].substring(0, 5);
+488: // MISSING
+489: // MISSING
+490: // MISSING
+491: // MISSING
+492: // MISSING
+493: // MISSING
+494:           checkOut: outTimeText,
+495:           isLate,
+496:           lastGate: lastCheckoutLog?.gateName || officialLogs[officialLogs.length - 1]?.gateName || '-',
+497:           scheduleTime,
+498:           scheduleEndTime: schedulePair.end,
+499:           todayLeave: todayLeave ? {
+500:             leaveCode: todayLeave.leaveCode,
+501:             leaveName: todayLeave.leaveName,
+502: // MISSING
+503: // MISSING
+504: // MISSING
+505: // MISSING
+506: // MISSING
+507:         let status = '미출근';
+508:         if (todayLeave) {
+509:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+510:             status = '연차';
+511:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+512:             status = '오전반차';
+513:           } else if (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62') {
+514:             status = '오후반차';
+515:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+516:             status = getTwoHourLeaveDisplayLabel(todayLeave);
+517:           } else {
+518:             status = todayLeave.leaveName || '휴가';
+519:           }
+520:         } else {
+521: // MISSING
+522: // MISSING
+523: // MISSING
+524: // MISSING
+525: // MISSING
+526: // MISSING
+527: // MISSING
+528: // MISSING
+529:           checkOut: '-',
+530:           isLate: false,
+531:           lastGate: '-',
+532:           scheduleTime,
+533:           scheduleEndTime: getSchedulePairForDate(empNo, dept, todayStr).end,
+534:           todayLeave: todayLeave ? {
+535:             leaveCode: todayLeave.leaveCode,
+536:             leaveName: todayLeave.leaveName,
+537: // MISSING
+538: // MISSING
+539: // MISSING
+540: // MISSING
+541: // MISSING
+542: // MISSING
+543: // MISSING
+544: // MISSING
+545: // MISSING
+546: // MISSING
+547: // MISSING
+548: // MISSING
+549: // MISSING
+550: // MISSING
+551:       const dayLogs = logs.filter(log => (log.workDate || log.logTime.split(' ')[0]) === dStr);
+552: // MISSING
+553: // MISSING
+554: // MISSING
+555: // MISSING
+556: // MISSING
+557: // MISSING
+558: // MISSING
+559: // MISSING
+560: // MISSING
+561: // MISSING
+562: // MISSING
+563: // MISSING
+564: // MISSING
+565: // MISSING
+566: // MISSING
+567: // MISSING
+568: // MISSING
+569: // MISSING
+570: // MISSING
+571: // MISSING
+572: // MISSING
+573: // MISSING
+574: // MISSING
+575: // MISSING
+576: // MISSING
+577: // MISSING
+578: // MISSING
+579: // MISSING
+580: // MISSING
+581: // MISSING
+582: // MISSING
+583: // MISSING
+584: // MISSING
+585:     const allEmployeesList = Array.from(allEmployeesMap.values()).map(emp => {
+586:       const todayStr = getLocalDateString(now);
+587:       const baseSchedulePair = getSchedulePairForDate(emp.empNo, emp.dept, todayStr);
+588:       const baseScheduleTime = baseSchedulePair.start;
+589:       const baseScheduleEndTime = baseSchedulePair.end;
+590:       const scheduleTime = resolveScheduleTimeForDate(emp.empNo, emp.dept, todayStr);
+591:       return { ...emp, baseScheduleTime, baseScheduleEndTime, scheduleTime };
+592:     }).sort((a, b) => a.name.localeCompare(b.name));
+593: // MISSING
+594: // MISSING
+595: // MISSING
+596: // MISSING
+597: // MISSING
+598:       mode: 'supabase',
+599: // MISSING
+600: // MISSING
+601: // MISSING
+602: // MISSING
+603: // MISSING
+604: // MISSING
+605: // MISSING
+606: // MISSING
+607: // MISSING
+608: // MISSING
+609: // MISSING
+610: // MISSING
+611: // MISSING
+612: // MISSING
+613: // MISSING
+614: // MISSING
+615: // MISSING
+616: // MISSING
+617: // MISSING
+618: // MISSING
+619: // MISSING
+620: // MISSING
+621: // MISSING
+622: // MISSING
+623: // MISSING
+624: // MISSING
+625: // MISSING
+626: // MISSING
+627:       allEmployees: allEmployeesList,
+628:       leaves: leaves,
+629:       corrections,
+630:       overrides,
+631:       manualCheckins,
+632:       overtimeSettings
+633:     });
+634: // MISSING
+635: // MISSING
+636: // MISSING
+637: // MISSING
+638: // MISSING
+639: // MISSING
+640: // MISSING
+641: // MISSING
+642: // MISSING
+643: // MISSING
+644: 
+645: // MISSING
+646: // MISSING
+647: // MISSING
+648: // MISSING
+649: // MISSING
+650: // MISSING
+651: // MISSING
+652: // MISSING
+653: // MISSING
+654: // MISSING
+655: // MISSING
+656: // MISSING
+657: // MISSING
+658: // MISSING
+659: // MISSING
+660: // MISSING
+661: // MISSING
+662: // MISSING
+663: // MISSING
+664: // MISSING
+665: // MISSING
+666: // MISSING
+667: // MISSING
+668: // MISSING
+669: // MISSING
+670: // MISSING
+671: // MISSING
+672: // MISSING
+673: // MISSING
+674: // MISSING
+675: // MISSING
+676: // MISSING
+677: // MISSING
+678: // MISSING
+679: // MISSING
+680: // MISSING
+681: // MISSING
+682: // MISSING
+683: // MISSING
+684: // MISSING
+685: // MISSING
+686: // MISSING
+687: // MISSING
+688: // MISSING
+689: // MISSING
+690: // MISSING
+691: // MISSING
+692: // MISSING
+693: // MISSING
+694: // MISSING
+695: // MISSING
+696: // MISSING
+697: // MISSING
+698: // MISSING
+699: // MISSING
+700: // MISSING
+701: // MISSING
+702: // MISSING
+703: // MISSING
+704: // MISSING
+705: // MISSING
+706: // MISSING
+707: // MISSING
+708: // MISSING
+709: // MISSING
+710: // MISSING
+711: // MISSING
+712: // MISSING
+713: // MISSING
+714: // MISSING
+715: // MISSING
+716: // MISSING
+717: // MISSING
+718: // MISSING
+719: // MISSING
+720: // MISSING
+721: // MISSING
+722: // MISSING
+723: // MISSING
+724: // MISSING
+725: // MISSING
+726: // MISSING
+727: // MISSING
+728: // MISSING
+729: // MISSING
+730: // MISSING
+731: // MISSING
+732: // MISSING
+733: // MISSING
+734: // MISSING
+735: // MISSING
+736: // MISSING
+737: // MISSING
+738: // MISSING
+739: // MISSING
+740: // MISSING
+741: // MISSING
+742: // MISSING
+743: // MISSING
+744: // MISSING
+745: // MISSING
+746: // MISSING
+747: // MISSING
+748: // MISSING
+749: // MISSING
+750: // MISSING
+751: // MISSING
+752: // MISSING
+753: // MISSING
+754: // MISSING
+755: // MISSING
+756: // MISSING
+757: // MISSING
+758: // MISSING
+759: // MISSING
+760: // MISSING
+761: // MISSING
+762: // MISSING
+763: // MISSING
+764: // MISSING
+765: // MISSING
+766: // MISSING
+767: // MISSING
+768: // MISSING
+769: // MISSING
+770: // MISSING
+771: // MISSING
+772: // MISSING
+773: // MISSING
+774: // MISSING
+775: // MISSING
+776: // MISSING
+777: // MISSING
+778: // MISSING
+779: // MISSING
+780: // MISSING
+781: // MISSING
+782: // MISSING
+783: // MISSING
+784: // MISSING
+785: // MISSING
+786: // MISSING
+787: // MISSING
+788: // MISSING
+789: // MISSING
+790: // MISSING
+791: // MISSING
+792: // MISSING
+793: // MISSING
+794: // MISSING
+795: // MISSING
+796: // MISSING
+797: // MISSING
+798: // MISSING
+799: // MISSING

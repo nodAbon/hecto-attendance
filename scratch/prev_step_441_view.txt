@@ -1,0 +1,110 @@
+Created At: 2026-05-29T07:37:47Z
+Completed At: 2026-05-29T07:37:47Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/handover_report.md`
+Total Lines: 477
+Total Bytes: 19995
+Showing lines 1 to 300
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: # Agitated Raman Project Handoff
+2: 
+3: This document is the single source of truth for the current state of the project.
+4: It is intended to let the next agent continue without re-discovering the whole codebase.
+5: 
+6: ## 1. Project Summary
+7: 
+8: This is a Next.js attendance and HR portal backed by Supabase.
+9: It supports:
+10: 
+11: - realtime attendance dashboard
+12: - monthly attendance report
+13: - detailed personal tracker
+14: - leave overview and leave calendar
+15: - overtime management
+16: - manual attendance corrections
+17: - employee schedule management
+18: - employee admin management
+19: - CAPS attendance file upload
+20: - login, password change, and personal profile editing
+21: 
+22: The app is currently working end-to-end, and the production build passes.
+23: 
+24: ## 2. Tech Stack
+25: 
+26: - Next.js 16.2.6
+27: - React 19.2.4
+28: - Supabase
+29: - Lucide icons
+30: - `xlsx` for CAPS file parsing
+31: - `better-sqlite3`, `mysql2`, and `pg` are present in the repo, but Supabase is the primary live data source
+32: 
+33: ## 3. How To Run
+34: 
+35: - Install dependencies: `npm install`
+36: - Development: `npm run dev`
+37: - Production build: `npm run build`
+38: - Start production locally: `npm run start`
+39: - Lint: `npm run lint`
+40: 
+41: ## 4. Current Status
+42: 
+43: - Build is green.
+44: - The app renders and the major flows work.
+45: - The schedule management area has been converted to a calendar-based UX.
+46: - CAPS upload works for `.xls` and `.xlsx`.
+47: - Shared sidebar is the source of truth for main pages, mypage, and admin employee shell.
+48: - 
+<truncated 12714 bytes>
+ - `src/lib/auth.js`
+249: - `src/app/api/auth/login/route.js`
+250: - `src/app/api/auth/logout/route.js`
+251: - `src/app/api/auth/me/route.js`
+252: - `src/app/api/auth/profile/route.js`
+253: - `src/app/api/auth/change-password/route.js`
+254: 
+255: ### Attendance / schedule / leave APIs
+256: 
+257: - `src/app/api/attendance/route.js`
+258: - `src/app/api/attendance/correction/route.js`
+259: - `src/app/api/attendance/manual-checkin/route.js`
+260: - `src/app/api/attendance/overtime-periods/route.js`
+261: - `src/app/api/attendance/holiday-work/route.js`
+262: - `src/app/api/employees/schedule/route.js`
+263: - `src/app/api/employees/schedule-override/route.js`
+264: - `src/app/api/admin/caps-attendance/upload/route.js`
+265: - `src/app/api/admin/employees/route.js`
+266: - `src/app/api/admin/employees/reset-password/route.js`
+267: - `src/app/api/admin/create-user/route.js`
+268: - `src/app/api/admin/leave-backfill/request/route.js`
+269: - `src/app/api/sync/trigger/route.js`
+270: 
+271: ### Supabase helpers / parsing
+272: 
+273: - `src/lib/supabaseDb.js`
+274: - `src/lib/capsAttendance.js`
+275: - `src/lib/clock.js`
+276: - `src/lib/usePersistentTheme.js`
+277: - `src/lib/uiText.js`
+278: 
+279: ### Styles
+280: 
+281: - `src/app/globals.css`
+282: 
+283: ## 11. Data Model
+284: 
+285: These are the important tables in `supabase/schema.sql` and the related migrations:
+286: 
+287: - `SA_employees`
+288:   - employee master data
+289:   - emp number, name, dept, company code, active flag
+290: - `SA_attendance`
+291:   - attendance logs
+292:   - now includes `source` to distinguish Secom / CAPS
+293: - `SA_leaves`
+294:   - leave history and leave types
+295: - `SA_leave_backfill_queue`
+296:   - queue for leave backfill requests
+297: - `SA_profiles`
+298:   - auth profile mapping
+299:   - links Supabase auth user to employee and role info
+300: - `SA_overtime_settings`
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

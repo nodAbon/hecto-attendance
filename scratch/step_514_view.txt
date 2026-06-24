@@ -1,0 +1,49 @@
+Created At: 2026-06-12T00:40:09Z
+Completed At: 2026-06-12T00:40:09Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 455
+Total Bytes: 17493
+Showing lines 235 to 275
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+235:           
+236:           const hasYesterdayLog = logs.some(l => l.empNo === empNo && l.logTime.startsWith(yesterdayStr));
+237:           if (hasYesterdayLog) {
+238:             // 07:00 이전 로그는 전날 새벽 야근으로 추정하여 패스
+239:             const nextLog = officialLogs.find(l => l.logTime.split(' ')[1] >= '07:00:00');
+240:             if (nextLog) {
+241:               firstLog = nextLog;
+242:               // 07:00 이후 로그들만 오늘 정식 로그로 취급
+243:               officialLogs = officialLogs.filter(l => l.logTime.split(' ')[1] >= '07:00:00');
+244:             } else {
+245:               hasValidTodayLog = false;
+246:             }
+247:           }
+248:         }
+249:       }
+250: 
+251:       if (hasValidTodayLog && firstLog) {
+252:         presentCount++;
+253:         const lastLog = officialLogs[officialLogs.length - 1];
+254: 
+255:         // 지각 여부 계산
+256:         const checkInTimeOnly = firstLog.logTime.split(' ')[1]; // "HH:MM:SS"
+257:         let checkInLimit = `${scheduleTime}:59`;
+258:         let isLate = false;
+259: 
+260:         if (todayLeave) {
+261:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+262:             isLate = false; // full day leave is never late
+263:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+264:             checkInLimit = getMorningHalfDayLimit(scheduleTime); // morning leave grace: base 13:00:59, 10:00 teams => +4 hours
+265:             isLate = checkInTimeOnly > checkInLimit;
+266:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+267:             // 2-hour leave: default schedule + 2 hours, but 10:00 teams are allowed until 13:00:59
+268:             checkInLimit = getTwoHourLeaveLimit(scheduleTime);
+269:             isLate = checkInTimeOnly > checkInLimit;
+270:           } else {
+271:             isLate = checkInTimeOnly > checkInLimit;
+272:           }
+273:         } else {
+274:           isLate = checkInTimeOnly > checkInLimit;
+275:         }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

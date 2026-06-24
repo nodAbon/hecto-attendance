@@ -1,0 +1,59 @@
+Created At: 2026-06-12T00:33:56Z
+Completed At: 2026-06-12T00:33:57Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 449
+Total Bytes: 17181
+Showing lines 360 to 410
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+360: 
+361:       weeklyTrend.push({
+362:         date: dStr.substring(5, 10).replace('-', '/'),
+363:         dayName,
+364:         count: dayEmpNos.size,
+365:         rate: totalEmployeesCount > 0 ? Math.round((dayEmpNos.size / totalEmployeesCount) * 100) : 0
+366:       });
+367:     }
+368: 
+369:     // 5. 부서별 분포
+370:     const deptDistribution = {};
+371:     employeeStatuses.forEach(emp => {
+372:       if (!deptDistribution[emp.dept]) {
+373:         deptDistribution[emp.dept] = { total: 0, present: 0, late: 0 };
+374:       }
+375:       deptDistribution[emp.dept].total++;
+376:       if (emp.status !== '미출근' && emp.status !== '연차') {
+377:         deptDistribution[emp.dept].present++;
+378:         if (emp.isLate) deptDistribution[emp.dept].late++;
+379:       }
+380:     });
+381: 
+382:     const formattedDeptData = Object.keys(deptDistribution).map(dept => ({
+383:       name: dept,
+384:       total: deptDistribution[dept].total,
+385:       present: deptDistribution[dept].present,
+386:       late: deptDistribution[dept].late
+387:     }));
+388: 
+389:     // 전체 직원 리스트 정렬본
+390:     const allEmployeesList = Array.from(allEmployeesMap.values()).map(emp => {
+391:       const todayStr = getLocalDateString(now);
+392:       const overrideStart = overrideMap.get(`${emp.empNo}_${todayStr}`);
+393:       const defaultSchedule = settings.employeeSchedules?.[emp.empNo] || '08:00';
+394:       const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+395:       const baseScheduleTime = defaultSchedule;
+396:       return { ...emp, scheduleTime, baseScheduleTime };
+397:     }).sort((a, b) => a.name.localeCompare(b.name));
+398: 
+399:     return NextResponse.json({
+400:       success: true,
+401:       isDemo,
+402:       error: error || null,
+403:       mode: settings.appMode,
+404:       stats: {
+405:         totalEmployees: totalEmployeesCount,
+406:         present: presentCount,
+407:         absent: absentCount,
+408:         late: lateCount,
+409:         workingNow: workingNowCount,
+410:         leave: leaveCount,
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

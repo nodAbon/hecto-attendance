@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { memo, useMemo, useState } from 'react';
 import { CheckCircle, Plus, Upload } from 'lucide-react';
@@ -74,7 +74,7 @@ function AdminPanelTabs({
   const [manualStatusFilter, setManualStatusFilter] = useState('all');
   const [manualNameQuery, setManualNameQuery] = useState('');
 
-  const handleDecideCheckin = async (id, decision) => {
+  const handleDecideCheckin = async (id, decision, empNo) => {
     try {
       const res = await fetch('/api/attendance/manual-checkin', {
         method: 'PUT',
@@ -84,7 +84,7 @@ function AdminPanelTabs({
       const json = await res.json();
       if (json.success) {
         alert(decision === 'approved' ? '승인 완료' : '반려 완료');
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo });
       } else {
         alert(json.error);
       }
@@ -449,13 +449,13 @@ function AdminPanelTabs({
                           {req.admin_decision === null && (
                             <>
                               <button
-                                onClick={() => handleDecideCheckin(req.id, 'approved')}
+                                onClick={() => handleDecideCheckin(req.id, 'approved', req.emp_no)}
                                 className="manual-approval-btn manual-approval-btn--approve"
                               >
                                 승인
                               </button>
                               <button
-                                onClick={() => handleDecideCheckin(req.id, 'rejected')}
+                                onClick={() => handleDecideCheckin(req.id, 'rejected', req.emp_no)}
                                 className="manual-approval-btn manual-approval-btn--reject"
                               >
                                 반려

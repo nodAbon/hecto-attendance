@@ -1,0 +1,24 @@
+Created At: 2026-06-12T00:32:07Z
+Completed At: 2026-06-12T00:32:08Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 110 to 125
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+110:     const toMinutes = (timeValue) => {
+111:       const [hours = 0, minutes = 0] = String(timeValue || '00:00').substring(0, 5).split(':').map((value) => Number(value) || 0);
+112:       return (hours * 60) + minutes;
+113:     };
+114: 
+115:     const normalizeTime = (timeValue, fallback = '00:00') => {
+116:       const value = String(timeValue || fallback).trim();
+117:       if (!value) return fallback;
+118:       return value.length >= 5 ? value.substring(0, 5) : fallback;
+119:     };
+120: 
+121:     const inferScheduleEnd = (scheduleStart, dept) => {
+122:       const start = normalizeTime(scheduleStart, '08:00');
+123:       if (isNightTeamDept(dept)) {
+124:         return start === '20:00' ? '08:00' : '06:00';
+125:       }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

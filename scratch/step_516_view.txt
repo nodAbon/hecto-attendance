@@ -1,0 +1,54 @@
+Created At: 2026-06-12T00:40:11Z
+Completed At: 2026-06-12T00:40:11Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 455
+Total Bytes: 17493
+Showing lines 270 to 315
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+270:           } else {
+271:             isLate = checkInTimeOnly > checkInLimit;
+272:           }
+273:         } else {
+274:           isLate = checkInTimeOnly > checkInLimit;
+275:         }
+276: 
+277:         if (isLate) lateCount++;
+278: 
+279:         // 현재 근무 여부
+280:         // 수정된 퇴근시간이 있으면 퇴근으로 처리
+281:         const correctedOut = correctionMap.get(`${empNo}_${todayStr}`);
+282:         const isCheckedOut = lastLog.eventType === '퇴근' || correctedOut !== undefined;
+283:         let status = '근무중';
+284: 
+285:         if (isCheckedOut) {
+286:           status = '퇴근';
+287:         } else if (todayLeave && (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62')) {
+288:           status = '오후반차';
+289:         } else if (todayLeave && TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+290:           status = getTwoHourLeaveDisplayLabel(todayLeave);
+291:         } else {
+292:           status = '근무중';
+293:           workingNowCount++;
+294:         }
+295: 
+296:         let outTimeText = '-';
+297:         if (correctedOut) {
+298:           outTimeText = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
+299:         } else if (lastLog.eventType === '퇴근') {
+300:           outTimeText = lastLog.logTime.split(' ')[1].substring(0, 5);
+301:         }
+302: 
+303:         employeeStatuses.push({
+304:           ...emp,
+305:           status,
+306:           checkIn: firstLog.logTime.split(' ')[1].substring(0, 5), // "HH:MM"
+307:           checkOut: outTimeText,
+308:           isLate,
+309:           lastGate: lastLog.gateName,
+310:           scheduleTime,
+311:           todayLeave: todayLeave ? {
+312:             leaveCode: todayLeave.leaveCode,
+313:             leaveName: todayLeave.leaveName,
+314:             leaveDays: todayLeave.leaveDays
+315:           } : null
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

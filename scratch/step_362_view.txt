@@ -1,0 +1,78 @@
+Created At: 2026-06-12T00:29:06Z
+Completed At: 2026-06-12T00:29:06Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 1 to 70
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { NextResponse } from 'next/server';
+2: import { fetchAttendanceLogs, fetchEmployeeSchedules, fetchOvertimeSettings } from '@/lib/supabaseDb';
+3: import { isNightTeamDept, isSpecialDayTeamDept } from '@/lib/nightScheduleRules';
+4: import { getSettings } from '@/lib/secomDb';
+5: 
+6: export const dynamic = 'force-dynamic';
+7: 
+8: export async function GET(request) {
+9:   try {
+10:     const { searchParams } = new URL(request.url);
+11:     const month = searchParams.get('month') || undefined; // YYYY-MM
+12:     const employeeSchedules = await fetchEmployeeSchedules();
+13:     const employeeScheduleMap = new Map(
+14:       (employeeSchedules || []).map((row) => [String(row.emp_no || '').trim(), String(row.schedule_time || '08:00').substring(0, 5)])
+15:     );
+16:     const getDefaultSchedule = (empNo) => employeeScheduleMap.get(String(empNo || '').trim()) || '08:00';
+17:     const appSettings = getSettings();
+18:     const nightCheckinGraceHours = Number(appSettings?.nightCheckinGraceHours ?? 3) || 3;
+19: 
+20:     const { 
+21:       logs: rawLogs, 
+22:       employees, 
+23:       leaves = [], 
+24:       corrections = [], 
+25:       overrides = [], 
+26:       manualCheckins = [], 
+27:       isDemo, 
+28:       error 
+29:     } = await fetchAttendanceLogs(month);
+30: 
+31:     const overtimeSettings = await fetchOvertimeSettings();
+32: 
+33:     // Create override map: empNo_workDate -> schedule_start
+34:     const overrideMap = new Map();
+35:     overrides.forEach(o => {
+36:       overrideMap.set(`${o.emp_no}_${o.work_date}`, {
+37:         scheduleStart: String(o.schedule_start || '').substring(0, 5),
+38:         scheduleEnd: String(o.schedule_end || '').substring(0, 5),
+39:       });
+40:     });
+41: 
+42:     // Create correction map: empNo_workDate -> correctedOutTime
+43:     const correctionMap = new Map();
+44:     corrections.forEach(c => {
+45:       correctionMap.set(`${c.emp_no}_${c.work_date}`, c.corrected_out_time);
+46:     });
+47: 
+48:     const TWO_HOUR_LEAVE_CODES = new Set(['19', '20', '21', '22', '23', '24', '25', '26', '27', '28']);
+49: 
+50:     const getShiftedLimit = (baseSchedule, hoursToAdd) => {
+51:       const [schedH, schedM] = String(baseSchedule || '08:00').split(':').map(Number);
+52:       const totalMinutes = (schedH * 60) + schedM + (hoursToAdd * 60);
+53:       const endHour = Math.floor(totalMinutes / 60);
+54:       const endMinute = totalMinutes % 60;
+55:       return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}:59`;
+56:     };
+57: 
+58:     const getMorningHalfDayLimit = (baseSchedule) => {
+59:       const [schedH] = String(baseSchedule || '08:00').split(':').map(Number);
+60:       if (schedH >= 10) return getShiftedLimit(baseSchedule, 4);
+61:       return '13:00:59';
+62:     };
+63: 
+64:     const getTwoHourLeaveLimit = (baseSchedule) => {
+65:       const schedule = String(baseSchedule || '08:00');
+66:       const [schedH] = schedule.split(':').map(Number);
+67:       if (schedH === 10) return '13:00:59';
+68:       return getShiftedLimit(schedule, 2);
+69:     };
+70: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

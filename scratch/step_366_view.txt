@@ -1,0 +1,49 @@
+Created At: 2026-06-12T00:29:09Z
+Completed At: 2026-06-12T00:29:10Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 570 to 610
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+570:       deptDistribution[emp.dept].total++;
+571:       if (emp.status !== '미출근' && emp.status !== '연차') {
+572:         deptDistribution[emp.dept].present++;
+573:         if (emp.isLate) deptDistribution[emp.dept].late++;
+574:       }
+575:     });
+576: 
+577:     const formattedDeptData = Object.keys(deptDistribution).map(dept => ({
+578:       name: dept,
+579:       total: deptDistribution[dept].total,
+580:       present: deptDistribution[dept].present,
+581:       late: deptDistribution[dept].late
+582:     }));
+583: 
+584:     // 전체 직원 리스트 정렬본
+585:     const allEmployeesList = Array.from(allEmployeesMap.values()).map(emp => {
+586:       const todayStr = getLocalDateString(now);
+587:       const baseSchedulePair = getSchedulePairForDate(emp.empNo, emp.dept, todayStr);
+588:       const baseScheduleTime = baseSchedulePair.start;
+589:       const baseScheduleEndTime = baseSchedulePair.end;
+590:       const scheduleTime = resolveScheduleTimeForDate(emp.empNo, emp.dept, todayStr);
+591:       return { ...emp, baseScheduleTime, baseScheduleEndTime, scheduleTime };
+592:     }).sort((a, b) => a.name.localeCompare(b.name));
+593: 
+594:     return NextResponse.json({
+595:       success: true,
+596:       isDemo,
+597:       error: error || null,
+598:       mode: 'supabase',
+599:       stats: {
+600:         totalEmployees: totalEmployeesCount,
+601:         present: presentCount,
+602:         absent: absentCount,
+603:         late: lateCount,
+604:         workingNow: workingNowCount,
+605:         leave: leaveCount,
+606:         attendanceRate: totalEmployeesCount > 0 ? Math.round((presentCount / totalEmployeesCount) * 100) : 0
+607:       },
+608:       weeklyTrend,
+609:       deptData: formattedDeptData,
+610:       employeeStatuses: employeeStatuses.sort((a, b) => {
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -211,7 +211,7 @@ export default function OvertimeTab({
       const json = await res.json();
       if (json.success) {
         setSaveSuccessEmp(empNo);
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo });
         setTimeout(() => setSaveSuccessEmp(null), 1800);
       } else {
         setSaveErrorEmp(empNo);

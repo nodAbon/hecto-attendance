@@ -1,0 +1,42 @@
+Created At: 2026-06-12T00:29:24Z
+Completed At: 2026-06-12T00:29:24Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 611 to 644
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+611:         const statusPriority = { 
+612:           '근무중': 1, 
+613:           '오전반차': 2, 
+614:           '오후반차': 3, 
+615:           '연차': 4, 
+616:           '퇴근': 5, 
+617:           '미출근': 6 
+618:         };
+619:         return (statusPriority[a.status] || 9) - (statusPriority[b.status] || 9) || a.name.localeCompare(b.name);
+620:       }),
+621:       recentLogs: logs.slice(0, 15).map(log => ({
+622:         ...log,
+623:         timeOnly: log.logTime.split(' ')[1].substring(0, 5),
+624:         dateOnly: log.logTime.split(' ')[0].substring(5, 10).replace('-', '/')
+625:       })),
+626:       allLogs: logs,
+627:       allEmployees: allEmployeesList,
+628:       leaves: leaves,
+629:       corrections,
+630:       overrides,
+631:       manualCheckins,
+632:       overtimeSettings
+633:     });
+634: 
+635:   } catch (err) {
+636:     console.error('API attendance error:', err);
+637:     return NextResponse.json({
+638:       success: false,
+639:       error: err.message
+640:     }, { status: 500 });
+641:   }
+642: }
+643: 
+644: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

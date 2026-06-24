@@ -1,0 +1,72 @@
+Created At: 2026-06-12T00:38:30Z
+Completed At: 2026-06-12T00:38:30Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/employees/schedule-override/route.js`
+Total Lines: 64
+Total Bytes: 2361
+Showing lines 1 to 64
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { NextResponse } from 'next/server';
+2: import { verifySession } from '@/lib/auth';
+3: import { deleteScheduleOverride, saveScheduleOverride } from '@/lib/supabaseDb';
+4: import { isAdminRole, isLeaderPosition } from '@/lib/roleUtils';
+5: 
+6: const canManageOverrides = (session) => isAdminRole(session) || isLeaderPosition(session?.position);
+7: 
+8: export async function POST(request) {
+9:   try {
+10:     const session = await verifySession(request);
+11:     if (!session) {
+12:       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+13:     }
+14: 
+15:     if (!canManageOverrides(session)) {
+16:       return NextResponse.json({ error: '관리자 또는 팀장 권한이 필요합니다.' }, { status: 403 });
+17:     }
+18: 
+19:     const { empNo, workDate, scheduleStart, scheduleEnd, note } = await request.json();
+20:     if (!empNo || !workDate || !scheduleStart) {
+21:       return NextResponse.json({ error: '필수 값이 누락되었습니다.' }, { status: 400 });
+22:     }
+23: 
+24:     await saveScheduleOverride({
+25:       empNo,
+26:       workDate,
+27:       scheduleStart,
+28:       scheduleEnd: scheduleEnd || null,
+29:       note: note || '',
+30:       userId: session.userId
+31:     });
+32: 
+33:     return NextResponse.json({ success: true, message: '근무시간이 저장되었습니다.' });
+34:   } catch (err) {
+35:     console.error('[Schedule Override API]', err);
+36:     return NextResponse.json({ error: err.message || '서버 오류가 발생했습니다.' }, { status: 500 });
+37:   }
+38: }
+39: 
+40: export async function DELETE(request) {
+41:   try {
+42:     const session = await verifySession(request);
+43:     if (!session) {
+44:       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+45:     }
+46: 
+47:     if (!canManageOverrides(session)) {
+48:       return NextResponse.json({ error: '관리자 또는 팀장 권한이 필요합니다.' }, { status: 403 });
+49:     }
+50: 
+51:     const { empNo, workDate } = await request.json();
+52:     if (!empNo || !workDate) {
+53:       return NextResponse.json({ error: '필수 값이 누락되었습니다.' }, { status: 400 });
+54:     }
+55: 
+56:     await deleteScheduleOverride({ empNo, workDate });
+57: 
+58:     return NextResponse.json({ success: true, message: '근무시간 예외가 삭제되었습니다.' });
+59:   } catch (err) {
+60:     console.error('[Schedule Override API DELETE]', err);
+61:     return NextResponse.json({ error: err.message || '서버 오류가 발생했습니다.' }, { status: 500 });
+62:   }
+63: }
+64: 
+The above content shows the entire, complete file contents of the requested file.

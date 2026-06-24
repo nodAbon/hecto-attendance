@@ -1,0 +1,29 @@
+Created At: 2026-06-12T00:35:45Z
+Completed At: 2026-06-12T00:35:45Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 455
+Total Bytes: 17556
+Showing lines 120 to 140
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+120:               timeOnly = nextLog.logTime.split(' ')[1];
+121:             }
+122:           }
+123:         }
+124: 
+125:         // 지각 비교 기준 시각
+126:         const overrideStart = overrideMap.get(`${empNo}_${dateStr}`);
+127:         const defaultSchedule = settings.employeeSchedules?.[empNo] || '08:00';
+128:         const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+129:         const dayLeave = getEmployeeLeaveForDate(empNo, dateStr.replace(/-/g, ''));
+130: 
+131:         // 첫 출입 시간이 07시 이후일 때만 정식 출근으로 간주하고 지각 판별
+132:         const isOfficialCheckin = timeOnly >= '07:00:00';
+133:         let isLate = isOfficialCheckin && (timeOnly > `${scheduleTime}:59`);
+134:         if (dayLeave) {
+135:           if (dayLeave.leaveCode === '12' || dayLeave.leaveCode === '60' || parseFloat(dayLeave.leaveDays) === 1.0) {
+136:             isLate = false;
+137:           } else if (dayLeave.leaveCode === '16' || dayLeave.leaveCode === '61') {
+138:             isLate = timeOnly > getMorningHalfDayLimit(scheduleTime);
+139:           } else if (TWO_HOUR_LEAVE_CODES.has(String(dayLeave.leaveCode))) {
+140:             isLate = timeOnly > getTwoHourLeaveLimit(scheduleTime);
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

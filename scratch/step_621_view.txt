@@ -1,0 +1,118 @@
+Created At: 2026-06-12T00:42:53Z
+Completed At: 2026-06-12T00:42:53Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/scratch/recovered_content.txt`
+Total Lines: 110
+Total Bytes: 6068
+Showing lines 1 to 110
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: Created At: 2026-06-12T00:29:31Z
+2: Completed At: 2026-06-12T00:29:31Z
+3: File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+4: Total Lines: 644
+5: Total Bytes: 26479
+6: Showing lines 400 to 500
+7: The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+8: 400:       let officialLogs = [...empLogs].sort((a, b) => (a.workOrder ?? 0) - (b.workOrder ?? 0) || a.logTime.localeCompare(b.logTime));
+9: 401:       let firstLog = officialLogs[0];
+10: 402:       let hasValidTodayLog = officialLogs.length > 0;
+11: 403: 
+12: 404:       if (false && firstLog) {
+13: 405:         const timeOnly = firstLog.logTime.split(' ')[1];
+14: 406:         if (timeOnly < '07:00:00') {
+15: 407:           // 전날 출입기록이 있는지 판별
+16: 408:           const yesterday = new Date();
+17: 409:           yesterday.setDate(yesterday.getDate() - 1);
+18: 410:           const yesterdayStr = getLocalDateString(yesterday);
+19: 411:           
+20: 412:           const hasYesterdayLog = logs.some(l => l.empNo === empNo && l.logTime.startsWith(yesterdayStr));
+21: 413:           if (hasYesterdayLog) {
+22: 414:             // 07:00 이전 로그는 전날 새벽 야근으로 추정하여 패스
+23: 415:             const nextLog = officialLogs.find(l => l.logTime.split(' ')[1] >= '07:00:00');
+24: 416:             if (nextLog) {
+25: 417:               firstLog = nextLog;
+26: 418:               // 07:00 이후 로그들만 오늘 정식 로그로 취급
+27: 419:               officialLogs = officialLogs.filter(l => l.logTime.split(' ')[1] >= '07:00:00');
+28: 420:             } else {
+29: 421:               hasValidTodayLog = false;
+30: 422:             }
+31: 423:           }
+32: 424:         }
+33: 425:       }
+34: 426: 
+35: 427:       if (hasValidTodayLog && firstLog) {
+36: 428:         presentCount++;
+37: 429:                 const checkoutLogs = officialLogs.filter((log) => {
+38: 430:           const role = String(log.adjustedRole || log.eventType || '').trim().toLowerCase();
+39: 431:           return log.isCheckoutCandidate || log.isAdjustedCheckout || role.includes('퇴') || role.includes('checkout');
+40: 432:         });
+41: 433:         const lastCheckoutLog = checkoutLogs.reduce((best, current) => {
+42: 434:           if (!best) return current;
+43: 435:           const bestOrder = Number.isFinite(Number(best.workOrder)) ? Number(best.workOrder) : Number(best.logTime.split(' ')[1].substring(0, 5).replace(':', ''));
+44: 436:           const currentOrder = Number.isFinite(Number(current.workOrder)) ? Number(current.workOrder) : Number(current.logTime.split(' ')[1].substring(0, 5).replace(':', ''));
+45: 437:           if (currentOrder > bestOrder) return current;
+46: 438:           if (currentOrder === bestOrder && current.logTime > best.logTime) return current;
+47: 439:           return best;
+48: 440:         }, null);
+49: 441: 
+50: 442:         // 지각 여부 계산
+51: 443:         const checkInTimeOnly = firstLog.logTime.split(' ')[1]; // "HH:MM:SS"
+52: 444:         let checkInLimit = `${scheduleTime}:59`;
+53: 445:         let isLate = false;
+54: 446: 
+55: 447:         if (todayLeave) {
+56: 448:           if (todayLeave.leaveCode === '12' || todayLeave.leaveCode === '60' || parseFloat(todayLeave.leaveDays) === 1.0) {
+57: 449:             isLate = false; // full day leave is never late
+58: 450:           } else if (todayLeave.leaveCode === '16' || todayLeave.leaveCode === '61') {
+59: 451:             checkInLimit = getMorningHalfDayLimit(scheduleTime); // morning leave grace: base 13:00:59, 10:00 teams => +4 hours
+60: 452:             isLate = checkInTimeOnly > checkInLimit;
+61: 453:           } else if (TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+62: 454:             // 2-hour leave: default schedule + 2 hours, but 10:00 teams are allowed until 13:00:59
+63: 455:             checkInLimit = getTwoHourLeaveLimit(scheduleTime);
+64: 456:             isLate = checkInTimeOnly > checkInLimit;
+65: 457:           } else {
+66: 458:             isLate = checkInTimeOnly > checkInLimit;
+67: 459:           }
+68: 460:         } else {
+69: 461:           isLate = checkInTimeOnly > checkInLimit;
+70: 462:         }
+71: 463: 
+72: 464:         if (isLate) lateCount++;
+73: 465: 
+74: 466:         // 현재 근무 여부
+75: 467:         // 수정된 퇴근시간이 있으면 퇴근으로 처리
+76: 468:         const correctedOut = correctionMap.get(`${empNo}_${todayStr}`);
+77: 469:         const isCheckedOut = correctedOut !== undefined || !!lastCheckoutLog;
+78: 470:         let status = '근무중';
+79: 471: 
+80: 472:         if (isCheckedOut) {
+81: 473:           status = '퇴근';
+82: 474:         } else if (todayLeave && (todayLeave.leaveCode === '17' || todayLeave.leaveCode === '62')) {
+83: 475:           status = '오후반차';
+84: 476:         } else if (todayLeave && TWO_HOUR_LEAVE_CODES.has(String(todayLeave.leaveCode))) {
+85: 477:           status = getTwoHourLeaveDisplayLabel(todayLeave);
+86: 478:         } else {
+87: 479:           status = '근무중';
+88: 480:           workingNowCount++;
+89: 481:         }
+90: 482: 
+91: 483:         let outTimeText = '-';
+92: 484:         if (correctedOut) {
+93: 485:           outTimeText = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
+94: 486:         } else if (lastCheckoutLog) {
+95: 487:           outTimeText = lastCheckoutLog.logTime.split(' ')[1].substring(0, 5);
+96: 488:         }
+97: 489: 
+98: 490:         employeeStatuses.push({
+99: 491:           ...emp,
+100: 492:           status,
+101: 493:           checkIn: firstLog.logTime.split(' ')[1].substring(0, 5), // "HH:MM"
+102: 494:           checkOut: outTimeText,
+103: 495:           isLate,
+104: 496:           lastGate: lastCheckoutLog?.gateName || officialLogs[officialLogs.length - 1]?.gateName || '-',
+105: 497:           scheduleTime,
+106: 498:           scheduleEndTime: schedulePair.end,
+107: 499:           todayLeave: todayLeave ? {
+108: 500:             leaveCode: todayLeave.leaveCode,
+109: The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
+110: 
+The above content shows the entire, complete file contents of the requested file.

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
@@ -465,7 +465,7 @@ export default function ScheduleCalendarPanel({
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || `${correctionType} 보정에 실패했습니다.`);
       if (typeof onRefreshData === 'function') {
-        await onRefreshData();
+        await onRefreshData({ empNo });
       }
       onChangeOverrideDate?.(activeDate, activeOverride || overrideMap.get(activeDate) || null);
       alert('근태 보정이 저장되었습니다.');
@@ -491,7 +491,7 @@ export default function ScheduleCalendarPanel({
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || `${correctionTypeToDelete} 보정 삭제에 실패했습니다.`);
       if (typeof onRefreshData === 'function') {
-        await onRefreshData();
+        await onRefreshData({ empNo });
       }
       alert('보정이 삭제되었습니다.');
     } catch (err) {
@@ -513,7 +513,8 @@ export default function ScheduleCalendarPanel({
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || '결재 처리에 실패했습니다.');
       if (typeof onRefreshData === 'function') {
-        await onRefreshData();
+        const empNo = selectedEmployee ? String(selectedEmployee.empNo || '').trim() : null;
+        await onRefreshData({ empNo });
       }
       if (typeof onChangeOverrideDate === 'function' && activeDate) {
         onChangeOverrideDate(activeDate, activeOverride || null);
@@ -539,7 +540,8 @@ export default function ScheduleCalendarPanel({
       if (!json?.success) throw new Error(json?.error || '수동 기록 삭제에 실패했습니다.');
       setSelectedManualDeleteIds([]);
       if (typeof onRefreshData === 'function') {
-        await onRefreshData();
+        const empNo = selectedEmployee ? String(selectedEmployee.empNo || '').trim() : null;
+        await onRefreshData({ empNo });
       }
       alert('선택한 수동 기록이 삭제되었습니다.');
     } catch (err) {

@@ -1,0 +1,81 @@
+Created At: 2026-06-12T00:24:47Z
+Completed At: 2026-06-12T00:24:47Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/employees/schedule/route.js`
+Total Lines: 73
+Total Bytes: 2272
+Showing lines 1 to 73
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { NextResponse } from 'next/server';
+2: import { verifySession } from '@/lib/auth';
+3: import { fetchEmployeeSchedules, saveEmployeeSchedules } from '@/lib/supabaseDb';
+4: import { isAdminRole, isLeaderPosition } from '@/lib/roleUtils';
+5: 
+6: const isManager = (session) => !!session && (isAdminRole(session) || isLeaderPosition(session.position));
+7: 
+8: const toScheduleMap = (rows = []) => rows.reduce((acc, row) => {
+9:   const empNo = String(row?.emp_no || '').trim();
+10:   if (!empNo) return acc;
+11:   acc[empNo] = String(row?.schedule_time || '08:00').substring(0, 5);
+12:   return acc;
+13: }, {});
+14: 
+15: export async function GET(request) {
+16:   try {
+17:     const session = await verifySession(request);
+18:     if (!session) {
+19:       return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 });
+20:     }
+21:     if (!isManager(session)) {
+22:       return NextResponse.json({ success: false, error: '권한이 없습니다.' }, { status: 403 });
+23:     }
+24: 
+25:     const rows = await fetchEmployeeSchedules();
+26:     return NextResponse.json({
+27:       success: true,
+28:       schedules: toScheduleMap(rows),
+29:       rows
+30:     });
+31:   } catch (err) {
+32:     return NextResponse.json({
+33:       success: false,
+34:       error: err.message
+35:     }, { status: 500 });
+36:   }
+37: }
+38: 
+39: export async function POST(request) {
+40:   try {
+41:     const session = await verifySession(request);
+42:     if (!session) {
+43:       return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 });
+44:     }
+45:     if (!isManager(session)) {
+46:       return NextResponse.json({ success: false, error: '권한이 없습니다.' }, { status: 403 });
+47:     }
+48: 
+49:     const body = await request.json();
+50:     const payload = body?.empNo
+51:       ? { [body.empNo]: body.schedule }
+52:       : (body?.schedules || {});
+53: 
+54:     if (!payload || Object.keys(payload).length === 0) {
+55:       return NextResponse.json({ success: false, error: '저장할 일정이 없습니다.' }, { status: 400 });
+56:     }
+57: 
+58:     await saveEmployeeSchedules(payload, session.userId);
+59:     const rows = await fetchEmployeeSchedules();
+60: 
+61:     return NextResponse.json({
+62:       success: true,
+63:       schedules: toScheduleMap(rows),
+64:       rows
+65:     });
+66:   } catch (err) {
+67:     return NextResponse.json({
+68:       success: false,
+69:       error: err.message
+70:     }, { status: 500 });
+71:   }
+72: }
+73: 
+The above content shows the entire, complete file contents of the requested file.

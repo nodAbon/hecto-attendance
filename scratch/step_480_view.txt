@@ -1,0 +1,29 @@
+Created At: 2026-06-12T00:35:49Z
+Completed At: 2026-06-12T00:35:49Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 455
+Total Bytes: 17556
+Showing lines 395 to 415
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+395:     // 전체 직원 리스트 정렬본
+396:     const allEmployeesList = Array.from(allEmployeesMap.values()).map(emp => {
+397:       const todayStr = getLocalDateString(now);
+398:       const overrideStart = overrideMap.get(`${emp.empNo}_${todayStr}`);
+399:       const defaultSchedule = settings.employeeSchedules?.[emp.empNo] || '08:00';
+400:       const scheduleTime = overrideStart ? overrideStart.substring(0, 5) : defaultSchedule;
+401:       const baseScheduleTime = defaultSchedule;
+402:       return { ...emp, scheduleTime, baseScheduleTime };
+403:     }).sort((a, b) => a.name.localeCompare(b.name));
+404: 
+405:     return NextResponse.json({
+406:       success: true,
+407:       isDemo,
+408:       error: error || null,
+409:       mode: settings.appMode,
+410:       stats: {
+411:         totalEmployees: totalEmployeesCount,
+412:         present: presentCount,
+413:         absent: absentCount,
+414:         late: lateCount,
+415:         workingNow: workingNowCount,
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

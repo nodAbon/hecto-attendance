@@ -1,0 +1,42 @@
+Created At: 2026-06-12T00:42:14Z
+Completed At: 2026-06-12T00:42:14Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/scratch/search_next.js`
+Total Lines: 34
+Total Bytes: 1258
+Showing lines 1 to 34
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: const fs = require('fs');
+2: const path = require('path');
+3: 
+4: const nextDir = 'C:\\Users\\Owner\\Documents\\antigravity\\agitated-raman\\.next';
+5: 
+6: function searchNext(dir) {
+7:   if (!fs.existsSync(dir)) return;
+8:   const stat = fs.statSync(dir);
+9:   if (stat.isDirectory()) {
+10:     const files = fs.readdirSync(dir);
+11:     for (const file of files) {
+12:       searchNext(path.join(dir, file));
+13:     }
+14:   } else if (stat.isFile() && (dir.endsWith('.js') || dir.endsWith('.json') || dir.endsWith('.html'))) {
+15:     try {
+16:       const content = fs.readFileSync(dir, 'utf8');
+17:       if (content.includes('isCheckoutCandidate') || content.includes('lastCheckoutLog')) {
+18:         console.log(`Found reference in: ${dir}`);
+19:         // If it's a JS file in server/app/api/attendance, let's print its content size or path
+20:         if (dir.includes('attendance') && dir.includes('route')) {
+21:           console.log('--- THIS SEEMS TO BE THE COMPILED ROUTE! ---');
+22:           fs.writeFileSync('C:\\Users\\Owner\\Documents\\antigravity\\agitated-raman\\scratch\\recovered_compiled_route.js', content, 'utf8');
+23:           console.log('Saved to scratch/recovered_compiled_route.js');
+24:         }
+25:       }
+26:     } catch (e) {
+27:       // ignore
+28:     }
+29:   }
+30: }
+31: 
+32: searchNext(nextDir);
+33: console.log('Search finished.');
+34: 
+The above content shows the entire, complete file contents of the requested file.

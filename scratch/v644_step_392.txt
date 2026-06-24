@@ -1,0 +1,29 @@
+Created At: 2026-06-12T00:29:36Z
+Completed At: 2026-06-12T00:29:36Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 330 to 350
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+330: 
+331:     // 1. 전체 직원 목록 기준 설정
+332:     const allEmployeesMap = new Map();
+333: 
+334:     if (employees && employees.length > 0) {
+335:       employees.forEach(emp => {
+336:         allEmployeesMap.set(emp.empNo, {
+337:           empNo: emp.empNo,
+338:           name: emp.name,
+339:           dept: emp.dept,
+340:           cardNo: ''
+341:         });
+342:       });
+343:     } else {
+344:       logs.forEach(log => {
+345:         allEmployeesMap.set(log.empNo, {
+346:           empNo: log.empNo,
+347:           name: log.name,
+348:           dept: log.dept,
+349:           cardNo: log.cardNo
+350:         });
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

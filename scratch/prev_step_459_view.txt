@@ -1,0 +1,99 @@
+Created At: 2026-05-29T07:38:54Z
+Completed At: 2026-05-29T07:38:54Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/auth/profile/route.js`
+Total Lines: 251
+Total Bytes: 8580
+Showing lines 1 to 251
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { cookies } from 'next/headers';
+2: import { NextResponse } from 'next/server';
+3: import { getAdminClient } from '@/lib/supabaseClient';
+4: 
+5: const getCookieValueFromHeader = (cookieHeader, name) => {
+6:   if (!cookieHeader) return null;
+7:   const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+8:   return match ? decodeURIComponent(match[1]) : null;
+9: };
+10: 
+11: const PROFILE_SELECT = 'id, emp_no, rank, position, must_change_password, is_admin';
+12: 
+13: async function resolveProfile(supabase, userId, fallbackEmpNo) {
+14:   const { data: profile } = await supabase
+15:     .from('sa_profiles')
+16:     .select(PROFILE_SELECT)
+17:     .eq('id', userId)
+18:     .maybeSingle();
+19: 
+20:   if (profile) {
+21:     return profile;
+22:   }
+23: 
+24:   // If no profile found by ID but fallbackEmpNo is provided, check if profile exists with that empNo
+25:   if (fallbackEmpNo) {
+26:     const { data: fallbackProfile } = await supabase
+27:       .from('sa_profiles')
+28:       .select(PROFILE_SELECT)
+29:       .eq('emp_no', fallbackEmpNo)
+30:       .maybeSingle();
+31:     if (fallbackProfile) {
+32:       // Link this profile to this user id
+33:       const updatedProfile = {
+34:         ...fallbackProfile,
+35:         id: userId,
+36:         updated_at: new Date().toISOString()
+37:       };
+38:       await supabase.from('sa_profiles').upsert(updatedProfile, { onConflict: 'id' });
+39:       return updatedProfile;
+40:     }
+41: 
+42:     const { data: employee } = await supabase
+43:    
+<truncated 6189 bytes>
+ const nextDept = String(body?.dept ?? '').trim();
+206: 
+207:     if (!nextRank && !nextDept) {
+208:       return NextResponse.json({ success: false, error: '변경할 내용을 입력해 주세요.' }, { status: 400 });
+209:     }
+210: 
+211:     const profile = await resolveProfile(supabase, userData.user.id, fallbackEmpNo);
+212:     if (!profile) {
+213:       return NextResponse.json({ success: false, error: '프로필을 찾을 수 없습니다.' }, { status: 404 });
+214:     }
+215: 
+216:     const updates = {
+217:       id: profile.id || userData.user.id,
+218:       emp_no: profile.emp_no,
+219:       rank: profile.rank || '',
+220:       position: profile.position || '',
+221:       must_change_password: !!profile.must_change_password,
+222:       is_admin: !!profile.is_admin,
+223:       updated_at: new Date().toISOString(),
+224:     };
+225: 
+226:     if (nextRank) updates.rank = nextRank;
+227: 
+228:     const { error: profileErr } = await supabase
+229:       .from('sa_profiles')
+230:       .upsert(updates, { onConflict: 'id' });
+231:     if (profileErr) {
+232:       return NextResponse.json({ success: false, error: `프로필 수정 실패: ${profileErr.message}` }, { status: 500 });
+233:     }
+234: 
+235:     if (nextDept) {
+236:       const { error: empErr } = await supabase
+237:         .from('sa_employees')
+238:         .update({ dept: nextDept })
+239:         .eq('emp_no', profile.emp_no);
+240:       if (empErr) {
+241:         return NextResponse.json({ success: false, error: `소속 수정 실패: ${empErr.message}` }, { status: 500 });
+242:       }
+243:     }
+244: 
+245:     return NextResponse.json({ success: true, message: '내 정보가 수정되었습니다.' });
+246:   } catch (err) {
+247:     console.error('[Auth Profile PATCH]', err);
+248:     return NextResponse.json({ success: false, error: '서버 오류가 발생했습니다.' }, { status: 500 });
+249:   }
+250: }
+251: 
+The above content shows the entire, complete file contents of the requested file.

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { memo, useState, useEffect } from 'react';
 import { Search, RefreshCw } from 'lucide-react';
@@ -119,7 +119,7 @@ function EmployeeAdminTab({
       }
       await fetchEmployeeAdminData();
       alert(json.message || '직원 정보가 수정되었습니다.');
-      if (refreshData) await refreshData();
+      if (refreshData) await refreshData({ empNo });
     } catch (e) {
       console.error(e);
       alert('직원 정보 수정 중 오류가 발생했습니다.');

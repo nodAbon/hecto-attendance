@@ -1,0 +1,44 @@
+Created At: 2026-06-12T00:29:22Z
+Completed At: 2026-06-12T00:29:22Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 125 to 160
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+125:       }
+126:       if (isSpecialDayTeamDept(dept)) {
+127:         return '19:00';
+128:       }
+129:       return start === '10:00' ? '19:00' : '17:00';
+130:     };
+131: 
+132:     const getSchedulePairForDate = (empNo, dept, dateStr) => {
+133:       const override = overrideMap.get(`${empNo}_${dateStr}`);
+134:       if (override?.scheduleStart) {
+135:         const start = normalizeTime(override.scheduleStart, '08:00');
+136:         return {
+137:           start,
+138:           end: normalizeTime(override.scheduleEnd || inferScheduleEnd(start, dept), inferScheduleEnd(start, dept)),
+139:         };
+140:       }
+141: 
+142:       const baseStart = getDefaultSchedule(empNo);
+143:       return {
+144:         start: normalizeTime(baseStart, '08:00'),
+145:         end: inferScheduleEnd(baseStart, dept),
+146:       };
+147:     };
+148: 
+149:     const isOvernightSchedule = (schedule) => toMinutes(schedule?.end) <= toMinutes(schedule?.start);
+150: 
+151:     const getWorkWindowForDate = (workDate, schedule) => {
+152:       const start = new Date(`${workDate}T${normalizeTime(schedule.start, '08:00')}:00+09:00`);
+153:       const end = new Date(`${workDate}T${normalizeTime(schedule.end, '17:00')}:00+09:00`);
+154:       const overnight = toMinutes(schedule.end) <= toMinutes(schedule.start);
+155:       if (overnight) {
+156:         end.setDate(end.getDate() + 1);
+157:       }
+158: 
+159:       return {
+160:         start: new Date(start.getTime() - ((overnight ? nightCheckinGraceHours : 0) * 60 * 60 * 1000)),
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

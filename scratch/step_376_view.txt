@@ -1,0 +1,59 @@
+Created At: 2026-06-12T00:29:19Z
+Completed At: 2026-06-12T00:29:19Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 644
+Total Bytes: 26479
+Showing lines 200 to 250
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+200:       }
+201:       end.setHours(end.getHours() - 3);
+202:       return end;
+203:     };
+204: 
+205:     const isCheckoutCandidateForLog = (logTime, workDate, schedule, dayLeave = null) => {
+206:       const threshold = getCheckoutThreshold(workDate, schedule, dayLeave);
+207:       if (!threshold) return true;
+208:       const timestamp = new Date(`${String(logTime || '').replace(' ', 'T')}+09:00`).getTime();
+209:       return timestamp >= threshold.getTime();
+210:     };
+211: 
+212:     const assignWorkDateForLog = (log) => {
+213:       const actualDate = String(log.logTime || '').split(' ')[0];
+214:       if (!actualDate) return null;
+215:       if (log.workDate && log.workDate !== actualDate) {
+216:         return log.workDate;
+217:       }
+218: 
+219:       const dept = employeeDeptMap.get(String(log.empNo || '').trim()) || '';
+220:       const prevDate = shiftDate(actualDate, -1);
+221:       const prevSchedule = getSchedulePairForDate(log.empNo, dept, prevDate);
+222:       if (isOvernightSchedule(prevSchedule) && isLogWithinWindow(log.logTime, prevDate, prevSchedule)) {
+223:         return prevDate;
+224:       }
+225: 
+226:       const currentSchedule = getSchedulePairForDate(log.empNo, dept, actualDate);
+227:       if (isOvernightSchedule(currentSchedule) && isLogWithinWindow(log.logTime, actualDate, currentSchedule)) {
+228:         return actualDate;
+229:       }
+230: 
+231:       return actualDate;
+232:     };
+233: 
+234:     const resolveScheduleTimeForDate = (empNo, dept, dateStr) => {
+235:       return getSchedulePairForDate(empNo, dept, dateStr).start;
+236:     };
+237: 
+238:     const employeeDeptMap = new Map((employees || []).map((emp) => [String(emp.empNo || '').trim(), String(emp.dept || '').trim()]));
+239: 
+240:     const logs = (rawLogs || []).map((log) => {
+241:       const workDate = assignWorkDateForLog(log);
+242:       const dept = employeeDeptMap.get(String(log.empNo || '').trim()) || '';
+243:       const schedulePair = getSchedulePairForDate(log.empNo, dept, workDate || String(log.logTime || '').split(' ')[0]);
+244:       const dayLeave = getEmployeeLeaveForDate(log.empNo, String(workDate || String(log.logTime || '').split(' ')[0]).replace(/-/g, ''));
+245:       const roleText = String(log.adjustedRole || '').trim().toLowerCase();
+246:       const isIgnored = roleText.includes('무시') || roleText.includes('ignore');
+247:       const isAdjustedCheckout = Boolean(log.isAdjustedCheckout) || roleText.includes('퇴') || roleText.includes('checkout');
+248:       const isAdjustedCheckin = Boolean(log.isAdjustedCheckin) || roleText.includes('출근') || roleText.includes('checkin');
+249:       const scheduledWorkOrder = getWorkOrder(log.logTime, schedulePair);
+250:       const savedWorkOrder = Number.isFinite(Number(log.workOrder)) ? Number(log.workOrder) : null;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

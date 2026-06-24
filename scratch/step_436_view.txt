@@ -1,0 +1,64 @@
+Created At: 2026-06-12T00:32:35Z
+Completed At: 2026-06-12T00:32:35Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 668
+Total Bytes: 27366
+Showing lines 570 to 625
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+570:       deptDistribution[emp.dept].total++;
+571:       if (emp.status !== '미출근' && emp.status !== '연차') {
+572:         deptDistribution[emp.dept].present++;
+573:         if (emp.isLate) deptDistribution[emp.dept].late++;
+574:       }
+575:     });
+576: 
+577:     const formattedDeptData = Object.keys(deptDistribution).map(dept => ({
+578:       name: dept,
+579:       const dayEmpNos = new Set(dayLogs.map(log => log.Sabun || log.empNo));
+580: 
+581:       if ((d.getDay() === 0 || d.getDay() === 6) && dayEmpNos.size === 0) continue;
+582: 
+583:       weeklyTrend.push({
+584:         date: dStr.substring(5, 10).replace('-', '/'),
+585:         dayName,
+586:         count: dayEmpNos.size,
+587:         rate: totalEmployeesCount > 0 ? Math.round((dayEmpNos.size / totalEmployeesCount) * 100) : 0
+588:       });
+589:     }
+590: 
+591:     // 5. 부서별 분포
+592:     const deptDistribution = {};
+593:     employeeStatuses.forEach(emp => {
+594:       if (!deptDistribution[emp.dept]) {
+595:         deptDistribution[emp.dept] = { total: 0, present: 0, late: 0 };
+596:       }
+597:       deptDistribution[emp.dept].total++;
+598:       if (emp.status !== '미출근' && emp.status !== '연차') {
+599:         deptDistribution[emp.dept].present++;
+600:         if (emp.isLate) deptDistribution[emp.dept].late++;
+601:       }
+602:     });
+603: 
+604:     const formattedDeptData = Object.keys(deptDistribution).map(dept => ({
+605:       name: dept,
+606:       total: deptDistribution[dept].total,
+607:       present: deptDistribution[dept].present,
+608:       late: deptDistribution[dept].late
+609:     }));
+610: 
+611:     // 전체 직원 리스트 정렬본
+612:     const allEmployeesList = Array.from(allEmployeesMap.values()).map(emp => {
+613:       const todayStr = getLocalDateString(now);
+614:       const baseStart = getDefaultSchedule(emp.empNo);
+615:       const baseScheduleTime = normalizeTime(baseStart, '08:00');
+616:       const baseScheduleEndTime = inferScheduleEnd(baseStart, emp.dept);
+617:       const scheduleTime = resolveScheduleTimeForDate(emp.empNo, emp.dept, todayStr);
+618:       return { ...emp, baseScheduleTime, baseScheduleEndTime, scheduleTime };
+619:     }).sort((a, b) => a.name.localeCompare(b.name));
+620:       isDemo,
+621:       error: error || null,
+622:       mode: 'supabase',
+623:       stats: {
+624:         totalEmployees: totalEmployeesCount,
+625:         present: presentCount,
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

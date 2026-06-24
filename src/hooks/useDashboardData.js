@@ -271,6 +271,139 @@ export function useDashboardData({
     fetchCalendarLeaves(calendarMonth);
   }, [calendarMonth, fetchCalendarLeaves]);
 
+  const refreshEmployeeData = useCallback(async (empNo, targetMonth = selectedMonth) => {
+    if (!empNo) return;
+    try {
+      const monthVal = targetMonth || selectedMonth;
+      if (!monthVal) return;
+
+      const url = `/api/attendance?month=${monthVal}&empNo=${empNo}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      const json = await res.json();
+      if (!json?.success) return;
+
+      const updateDataset = (prevData) => {
+        if (!prevData) return prevData;
+
+        const otherLogs = (prevData.allLogs || []).filter(row => row.empNo !== empNo && row.emp_no !== empNo);
+        const otherLeaves = (prevData.leaves || []).filter(row => row.empNo !== empNo && row.emp_no !== empNo);
+        const otherCorrections = (prevData.corrections || []).filter(row => row.emp_no !== empNo);
+        const otherOverrides = (prevData.overrides || []).filter(row => row.emp_no !== empNo);
+        const otherManualCheckins = (prevData.manualCheckins || []).filter(row => row.empNo !== empNo && row.emp_no !== empNo);
+
+        const newLogs = json.allLogs || [];
+        const newLeaves = json.leaves || [];
+        const newCorrections = json.corrections || [];
+        const newOverrides = json.overrides || [];
+        const newManualCheckins = json.manualCheckins || [];
+
+        const mergedLogs = mergeUnique([...otherLogs, ...newLogs], (row) => [
+          row?.id,
+          row?.empNo || row?.emp_no || '',
+          row?.logTime || row?.log_time || '',
+          row?.workDate || row?.work_date || '',
+          row?.eventType || row?.event_type || '',
+          row?.checkType || row?.check_type || '',
+        ].join('|'));
+
+        const mergedLeaves = mergeUnique([...otherLeaves, ...newLeaves], (row) => [
+          row?.id,
+          row?.empNo || row?.emp_no || '',
+          row?.startDate || row?.start_date || '',
+          row?.endDate || row?.end_date || '',
+          row?.leaveName || row?.leave_name || '',
+        ].join('|'));
+
+        const mergedCorrections = mergeUnique([...otherCorrections, ...newCorrections], (row) => [
+          row?.id,
+          row?.emp_no || '',
+          row?.work_date || '',
+          row?.corrected_out_time || '',
+        ].join('|'));
+
+        const mergedOverrides = mergeUnique([...otherOverrides, ...newOverrides], (row) => [
+          row?.id,
+          row?.emp_no || '',
+          row?.work_date || '',
+          row?.schedule_start || '',
+          row?.schedule_end || '',
+          row?.note || '',
+        ].join('|'));
+
+        const mergedManualCheckins = mergeUnique([...otherManualCheckins, ...newManualCheckins], (row) => [
+          row?.id,
+          row?.empNo || row?.emp_no || '',
+          row?.workDate || row?.work_date || '',
+          row?.checkTime || row?.check_time || '',
+          row?.checkType || row?.check_type || '',
+        ].join('|'));
+
+        return {
+          ...prevData,
+          allLogs: mergedLogs,
+          leaves: mergedLeaves,
+          corrections: mergedCorrections,
+          overrides: mergedOverrides,
+          manualCheckins: mergedManualCheckins,
+        };
+      };
+
+      // 1. Update cache for the full month if it exists
+      const cachedFullMonth = monthDataCacheRef.current.get(monthVal);
+      if (cachedFullMonth && cachedFullMonth.json) {
+        cachedFullMonth.json = updateDataset(cachedFullMonth.json);
+      }
+
+      // 2. Set/update employee-specific cache
+      const empCacheKey = `${monthVal}_${empNo}`;
+      monthDataCacheRef.current.set(empCacheKey, { success: true, json, monthKey: monthVal });
+
+      // 3. Update monthlyData state
+      setMonthlyData((prev) => {
+        if (!prev) return null;
+        const isSingleEmpTab = activeTab === 'TRACKER' || activeTab === 'MY_PORTAL';
+        if (isSingleEmpTab) {
+          return mergeMonthlyResponses([{ success: true, json, monthKey: monthVal }]);
+        }
+        return updateDataset(prev);
+      });
+
+      // 4. Update calendar leaves
+      const calendarKey = String(monthVal || '').trim();
+      const cachedCalendarLeaves = calendarLeavesCacheRef.current.get(calendarKey);
+      if (cachedCalendarLeaves) {
+        const otherLeaves = cachedCalendarLeaves.filter(row => row.empNo !== empNo && row.emp_no !== empNo);
+        const newLeaves = json.leaves || [];
+        const mergedCalendarLeaves = mergeUnique([...otherLeaves, ...newLeaves], (row) => [
+          row?.id,
+          row?.empNo || row?.emp_no || '',
+          row?.startDate || row?.start_date || '',
+          row?.endDate || row?.end_date || '',
+          row?.leaveName || row?.leave_name || '',
+        ].join('|'));
+        calendarLeavesCacheRef.current.set(calendarKey, mergedCalendarLeaves);
+      }
+
+      setCalendarLeaves((prev) => {
+        if (!prev) return [];
+        const otherLeaves = prev.filter(row => row.empNo !== empNo && row.emp_no !== empNo);
+        const newLeaves = json.leaves || [];
+        return mergeUnique([...otherLeaves, ...newLeaves], (row) => [
+          row?.id,
+          row?.empNo || row?.emp_no || '',
+          row?.startDate || row?.start_date || '',
+          row?.endDate || row?.end_date || '',
+          row?.leaveName || row?.leave_name || '',
+        ].join('|'));
+      });
+
+      // 5. Silently update today's data
+      await fetchTodayData(true);
+    } catch (e) {
+      console.error('refreshEmployeeData error:', e);
+    }
+  }, [selectedMonth, activeTab, fetchTodayData]);
+
   const refreshAllData = useCallback(async () => {
     monthDataCacheRef.current.clear();
     calendarLeavesCacheRef.current.clear();
@@ -292,5 +425,7 @@ export function useDashboardData({
     calendarLeaves,
     fetchTodayData,
     refreshAllData,
+    refreshEmployeeData,
   };
 }
+

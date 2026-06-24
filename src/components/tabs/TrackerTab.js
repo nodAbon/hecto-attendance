@@ -255,7 +255,7 @@ function TrackerTab({
       if (json.success) {
         setActionMessage({ type: 'success', text: json.message });
         setManualNote('');
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo: activeEmpNo });
       } else {
         setActionMessage({ type: 'error', text: json.error || '요청 처리에 실패했습니다.' });
       }
@@ -294,7 +294,7 @@ function TrackerTab({
       if (json.success) {
         setActionMessage({ type: 'success', text: '수정 요청이 접수되었습니다.' });
         setManualNote('');
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo: activeEmpNo });
       } else {
         setActionMessage({ type: 'error', text: json.error || '수정 요청 처리에 실패했습니다.' });
       }
@@ -342,7 +342,7 @@ function TrackerTab({
       if (json.success) {
         setModalMessage({ type: 'success', text: '수정 요청이 접수되었습니다.' });
         setCorrectionModalNote('');
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo: activeEmpNo });
       } else {
         setModalMessage({ type: 'error', text: json.error || '수정 요청 처리에 실패했습니다.' });
       }
@@ -405,7 +405,7 @@ function TrackerTab({
       if (json.success) {
         setScheduleModalMessage({ type: 'success', text: '근무일정 조정요청이 접수되었습니다.' });
         setScheduleModalNote('');
-        if (refreshData) await refreshData();
+        if (refreshData) await refreshData({ empNo: activeEmpNo });
       } else {
         setScheduleModalMessage({ type: 'error', text: json.error || '근무일정 조정요청에 실패했습니다.' });
       }

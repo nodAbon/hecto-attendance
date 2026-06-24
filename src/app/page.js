@@ -63,6 +63,7 @@ export default function Dashboard() {
     calendarLeaves,
     fetchTodayData,
     refreshAllData,
+    refreshEmployeeData,
   } = useDashboardData({
     activeTab,
     selectedEmployee,
@@ -151,6 +152,7 @@ export default function Dashboard() {
       visibleLeaves={visibleLeaves}
       calendarEmployeeNameLookup={calendarEmployeeNameLookup}
       refreshAllData={refreshAllData}
+      refreshEmployeeData={refreshEmployeeData}
     >
       {myEmpNo && <PushManager empNo={myEmpNo} />}
     </DashboardShell>

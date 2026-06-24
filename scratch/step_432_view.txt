@@ -1,0 +1,37 @@
+Created At: 2026-06-12T00:32:28Z
+Completed At: 2026-06-12T00:32:28Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/attendance/route.js`
+Total Lines: 668
+Total Bytes: 27366
+Showing lines 640 to 668
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+640:           '퇴근': 5, 
+641:           '미출근': 6 
+642:         };
+643:         return (statusPriority[a.status] || 9) - (statusPriority[b.status] || 9) || a.name.localeCompare(b.name);
+644:       }),
+645:       recentLogs: logs.slice(0, 15).map(log => ({
+646:         ...log,
+647:         timeOnly: log.logTime.split(' ')[1].substring(0, 5),
+648:         dateOnly: log.logTime.split(' ')[0].substring(5, 10).replace('-', '/')
+649:       })),
+650:       allLogs: logs,
+651:       allEmployees: allEmployeesList,
+652:       leaves: leaves,
+653:       corrections,
+654:       overrides,
+655:       manualCheckins,
+656:       overtimeSettings
+657:     });
+658: 
+659:   } catch (err) {
+660:     console.error('API attendance error:', err);
+661:     return NextResponse.json({
+662:       success: false,
+663:       error: err.message
+664:     }, { status: 500 });
+665:   }
+666: }
+667: 
+668: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

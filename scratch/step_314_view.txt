@@ -1,0 +1,25 @@
+Created At: 2026-06-12T00:27:34Z
+Completed At: 2026-06-12T00:27:34Z
+File Path: `file:///C:/Users/Owner/.gemini/antigravity/brain/f9ab24ee-ade8-435e-9897-7bf90ff32aa5/walkthrough.md`
+Total Lines: 51
+Total Bytes: 5185
+Showing lines 35 to 51
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+35: * 컴파일 오류 및 런타임 Hydration 깨짐을 야기할 만한 의존성 누락이 전혀 없이 **정상 컴파일(Green Build)**을 통과했습니다.
+36: 
+37: ### 2. 향후 운영상 기대효과
+38: * 특정 탭의 입력이나 클릭(예: 검색 쿼리 입력, 필터 토글 등)이 유발하는 React 상태 갱신이 다른 기능의 불필요한 렌더링을 유발하지 않아 탭 전환과 동작의 **반응 속도가 매우 쾌적해졌습니다.**
+39: * 파일 크기가 줄어들어 향후 코드 검색 및 신규 기능 추가 시의 피로도와 버그 유발 위험이 대폭 축소되었습니다.
+40: 
+41: ---
+42: 
+43: ## 🛠️ 추가 버그 수정 내역
+44: 
+45: ### 1. 기본 출근시간 조정 기능 정상화
+46: * **문제점**: 직원 일정관리 탭에서 기본 출근시간을 변경하고 '기본일정 저장' 버튼을 누르면 API 호출(POST `/api/employees/schedule`)은 발생하지만 값이 서버로 반영되지 않는 문제가 있었습니다.
+47: * **원인**: 백엔드 API 라우트(`src/app/api/employees/schedule/route.js`)는 `schedule` 필드로 기본 근무 시간을 받도록 설계되어 있었으나, 클라이언트 컴포넌트(`src/components/tabs/ScheduleTab.js`)에서는 `scheduleTime` 필드로 잘못 전송하고 있었습니다.
+48: * **해결**: [ScheduleTab.js](file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/components/tabs/ScheduleTab.js) 내 `handleSaveSchedule` 함수의 `fetch` 요청 body 페이로드를 `JSON.stringify({ empNo, scheduleTime })`에서 `JSON.stringify({ empNo, schedule: scheduleTime })`으로 올바르게 수정하였습니다.
+49: * **검증**: 수정 후 프로덕션 빌드(`npm run build`)가 정상적으로 성공(Compiled successfully)함을 완료하였습니다.
+50: 
+51: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

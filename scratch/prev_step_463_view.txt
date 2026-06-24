@@ -1,0 +1,114 @@
+Created At: 2026-05-29T07:39:01Z
+Completed At: 2026-05-29T07:39:01Z
+File Path: `file:///C:/Users/Owner/Documents/antigravity/agitated-raman/src/app/api/auth/login/route.js`
+Total Lines: 124
+Total Bytes: 3788
+Showing lines 1 to 124
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import { NextResponse } from 'next/server';
+2: import { getAdminClient } from '@/lib/supabaseClient';
+3: 
+4: export async function POST(request) {
+5:   try {
+6:     const { identifier, password } = await request.json();
+7: 
+8:     if (!identifier || !password) {
+9:       return NextResponse.json({ error: '아이디와 비밀번호를 입력하세요.' }, { status: 400 });
+10:     }
+11: 
+12:     // 사원번호를 이메일 형식으로 변환
+13:     const email = identifier.includes('@')
+14:       ? identifier
+15:       : `${identifier}@hecto.internal`;
+16: 
+17:     // Supabase Auth 로그인 (서비스 롤 클라이언트로 signInWithPassword)
+18:     const supabase = getAdminClient();
+19:     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+20:       email,
+21:       password,
+22:     });
+23: 
+24:     if (authError) {
+25:       return NextResponse.json(
+26:         { error: '아이디 또는 비밀번호가 올바르지 않습니다.' },
+27:         { status: 401 }
+28:       );
+29:     }
+30: 
+31:     const userId = authData.user.id;
+32:     const accessToken = authData.session.access_token;
+33:     const refreshToken = authData.session.refresh_token;
+34: 
+35:     // 프로필 조회 (must_change_password, is_admin, rank, position)
+36:     const { data: profile } = await supabase
+37:       .from('sa_profiles')
+38:       .select('emp_no, is_admin, must_change_password, rank, position')
+39:       .eq('id', userId)
+40:       .single();
+41: 
+42:     const { data: employe
+<truncated 760 bytes>
+      team: employee?.dept ?? '',
+63:       },
+64:     });
+65: 
+66:     // 쿠키 설정 (7일)
+67:     const cookieOpts = {
+68:       httpOnly: true,
+69:       secure: process.env.NODE_ENV === 'production',
+70:       sameSite: 'lax',
+71:       maxAge: 60 * 60 * 24 * 7,
+72:       path: '/',
+73:     };
+74: 
+75:     response.cookies.set('sb-access-token', accessToken, cookieOpts);
+76:     response.cookies.set('sb-refresh-token', refreshToken, cookieOpts);
+77:     response.cookies.set(
+78:       'must-change-password',
+79:       String(profile?.must_change_password ?? false),
+80:       { ...cookieOpts, httpOnly: false }
+81:     );
+82:     response.cookies.set(
+83:       'user-emp-no',
+84:       profile?.emp_no ?? '',
+85:       { ...cookieOpts, httpOnly: false }
+86:     );
+87:     response.cookies.set(
+88:       'user-is-admin',
+89:       String(resolvedIsAdmin),
+90:       { ...cookieOpts, httpOnly: false }
+91:     );
+92:     response.cookies.set(
+93:       'user-position',
+94:       profile?.position ?? '',
+95:       { ...cookieOpts, httpOnly: false }
+96:     );
+97:     response.cookies.set(
+98:       'user-rank',
+99:       profile?.rank ?? '',
+100:       { ...cookieOpts, httpOnly: false }
+101:     );
+102:     response.cookies.set(
+103:       'user-name',
+104:       employee?.name ?? '',
+105:       { ...cookieOpts, httpOnly: false }
+106:     );
+107:     response.cookies.set(
+108:       'user-login-id',
+109:       authData.user.email?.split('@')[0] || '',
+110:       { ...cookieOpts, httpOnly: false }
+111:     );
+112:     response.cookies.set(
+113:       'user-team',
+114:       employee?.dept ?? '',
+115:       { ...cookieOpts, httpOnly: false }
+116:     );
+117: 
+118:     return response;
+119:   } catch (err) {
+120:     console.error('[Login API]', err);
+121:     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
+122:   }
+123: }
+124: 
+The above content shows the entire, complete file contents of the requested file.
