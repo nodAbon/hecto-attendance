@@ -104,8 +104,13 @@ body {
 .ga-theme {
   display: flex;
   width: 100%;
-  min-width: 1280px;
   min-height: 100vh;
+}
+
+@media (min-width: 769px) {
+  .ga-theme {
+    min-width: 1280px;
+  }
 }
 
 /* ─── Sidebar ───────────────────────────────────────── */
@@ -4007,4 +4012,449 @@ tr:last-child td { border-bottom: none; }
   .tracker-surface .tracker-personal-calendar__month {
     margin-left: 0;
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE HEADER (shown only on mobile via JS)
+═══════════════════════════════════════════════════════ */
+.mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  gap: 8px;
+  min-height: 52px;
+}
+
+.mobile-header__logo {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}
+
+.mobile-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mobile-header__actions .icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE BOTTOM NAV
+═══════════════════════════════════════════════════════ */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--bg-sidebar);
+  border-top: 1px solid var(--border);
+  padding: 4px 0 env(safe-area-inset-bottom, 6px);
+  justify-content: space-around;
+  align-items: stretch;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+[data-theme="light"] .mobile-bottom-nav {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-3);
+  transition: color 0.15s ease;
+  flex: 1;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item--active {
+  color: var(--blue);
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.92);
+}
+
+.mobile-nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 64px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE "MORE" SLIDE-UP PANEL
+═══════════════════════════════════════════════════════ */
+.mobile-more-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(0, 0, 0, 0.45);
+  animation: fadeIn 0.2s ease;
+}
+
+.mobile-more-panel {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 48;
+  background: var(--bg-card);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 75vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+.mobile-more-panel--open {
+  transform: translateY(0);
+}
+
+.mobile-more-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-more-panel__profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-more-panel__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.mobile-more-panel__close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--bg-overlay-sm);
+  border-radius: 50%;
+  color: var(--text-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-more-panel__items {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+}
+
+.mobile-more-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 12px;
+  border: none;
+  background: none;
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.mobile-more-item:active {
+  background: var(--bg-overlay-sm);
+}
+
+.mobile-more-item--active {
+  color: var(--blue);
+  background: rgba(79, 142, 247, 0.08);
+}
+
+.mobile-more-item--danger {
+  color: var(--red);
+}
+
+.mobile-more-panel__footer {
+  border-top: 1px solid var(--border);
+  padding: 4px 12px 8px;
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE RESPONSIVE LAYOUT (≤768px)
+═══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* --- App Shell --- */
+  .ga-theme {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobile-header {
+    display: flex;
+  }
+
+  .mobile-bottom-nav {
+    display: flex;
+  }
+
+  .mobile-more-backdrop {
+    display: block;
+  }
+
+  .mobile-more-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* --- Main content --- */
+  .main-content {
+    padding: 12px 12px 80px;
+    gap: 12px;
+    overflow-x: hidden;
+  }
+
+  /* --- Top bar --- */
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .top-bar h1 {
+    font-size: 16px !important;
+  }
+
+  .top-bar p {
+    font-size: 11px !important;
+  }
+
+  .top-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .top-actions .ui-select {
+    min-width: 0;
+    flex: 1;
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .time-display {
+    display: none;
+  }
+
+  /* --- Cards --- */
+  .card {
+    border-radius: 14px !important;
+  }
+
+  .card-header {
+    padding: 14px 14px 10px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .card-title {
+    font-size: 15px !important;
+  }
+
+  .card-subtitle {
+    font-size: 11px !important;
+  }
+
+  /* --- KPI grid --- */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+
+  .kpi-card {
+    padding: 12px 10px !important;
+    border-radius: 12px !important;
+  }
+
+  .kpi-card .kpi-value {
+    font-size: 22px !important;
+  }
+
+  .kpi-card .kpi-label {
+    font-size: 11px !important;
+  }
+
+  /* --- Tables --- */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+
+  .table {
+    font-size: 12px !important;
+    min-width: 600px;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 6px !important;
+    font-size: 11px !important;
+  }
+
+  /* --- Dashboard specific --- */
+  .dashboard-kpi-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .dashboard-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-panel {
+    min-height: auto !important;
+  }
+
+  /* --- Leave panel --- */
+  .leave-panel__summary {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .leave-panel__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* --- Tracker --- */
+  .tracker-surface .tracker-personal-grid,
+  .tracker-surface .tracker-portal-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tracker-calendar-grid {
+    grid-auto-rows: minmax(60px, auto) !important;
+  }
+
+  .tracker-day-cell {
+    font-size: 10px !important;
+  }
+
+  /* --- Month Search Picker --- */
+  .month-search-picker {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* --- Modals / Overlays (generic) --- */
+  .modal-overlay,
+  [style*="position: fixed"][style*="inset: 0"] {
+    padding: 0 !important;
+  }
+
+  .modal-content,
+  [style*="position: fixed"] > [style*="max-width"] {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* --- Overtime tab cards --- */
+  .card-header > div:last-child {
+    width: 100%;
+  }
+
+  .card-header > div:last-child > div {
+    flex: 1;
+    min-width: 0 !important;
+  }
+
+  /* --- Schedule calendar --- */
+  .schedule-calendar-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* --- Employee list in schedule tab --- */
+  .employee-list-panel {
+    max-height: 200px;
+  }
+}
+
+/* Small phones (≤400px) */
+@media (max-width: 400px) {
+  .main-content {
+    padding: 8px 8px 76px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mobile-nav-label {
+    font-size: 9px;
+  }
+
+  .card-header {
+    padding: 10px 10px 8px !important;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

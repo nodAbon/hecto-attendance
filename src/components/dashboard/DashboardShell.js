@@ -1,9 +1,11 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo } from 'react';
+import React, { Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, RefreshCw, Sun, Moon } from 'lucide-react';
+import Image from 'next/image';
 import AppSidebar from '../AppSidebar';
+import MobileBottomNav from '../MobileBottomNav';
 import { getMainSidebarItems, sidebarActionIcons } from '../../lib/sidebarConfig';
 import dynamic from 'next/dynamic';
 
@@ -99,6 +101,39 @@ export default function DashboardShell({
 }) {
   const router = useRouter();
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const handleMobileNavigate = useCallback((href, tabKey) => {
+    if (href) {
+      const tabMatch = href.match(/\?tab=([A-Z_]+)/);
+      const tab = tabMatch ? tabMatch[1] : null;
+      if (tab === 'TRACKER') setSelectedEmployee(myEmpNo);
+      router.push(href);
+    }
+  }, [myEmpNo, router, setSelectedEmployee]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      localStorage.removeItem('user-is-admin');
+      localStorage.removeItem('user-position');
+      localStorage.removeItem('user-emp-no');
+      localStorage.removeItem('user-name');
+      localStorage.removeItem('user-rank');
+      localStorage.removeItem('user-login-id');
+      localStorage.removeItem('user-team');
+      window.location.href = '/login';
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
+  }, []);
+
   const sidebarItems = useMemo(() => {
     const sourceItems = isAdmin
       ? getMainSidebarItems({ isAdmin: true, isLeader: false })
@@ -168,6 +203,13 @@ export default function DashboardShell({
     );
   }
 
+  const mobileProfile = {
+    name: myName || (isAdmin ? '관리자' : '직원'),
+    rank: myRank,
+    team: myDept,
+    dept: myDept,
+  };
+
   return (
     <div className="ga-theme">
       <AppSidebar
@@ -187,6 +229,28 @@ export default function DashboardShell({
         version="v2.1.0"
         footerActions={footerActions}
       />
+
+      {/* Mobile header */}
+      <div className="mobile-header">
+        <Image
+          src="/HQ.png"
+          alt="HECTO"
+          width={120}
+          height={32}
+          className="mobile-header__logo"
+          priority
+          style={{ objectFit: 'contain' }}
+        />
+        <div className="mobile-header__actions">
+          <button className="icon-btn" onClick={() => fetchTodayData()} disabled={refreshing} title="새로고침">
+            <RefreshCw style={{ width: 15, height: 15, ...(refreshing ? { animation: 'spin 1s linear infinite' } : {}) }} />
+          </button>
+          <button className="icon-btn" onClick={toggleTheme} title={theme === 'dark' ? '라이트 모드' : '다크 모드'}>
+            {theme === 'dark' ? <Sun style={{ width: 15, height: 15 }} /> : <Moon style={{ width: 15, height: 15 }} />}
+          </button>
+        </div>
+      </div>
+
       <Suspense fallback={null}>
         <DashboardTabSync setActiveTab={setActiveTab} />
       </Suspense>
@@ -349,6 +413,16 @@ export default function DashboardShell({
       </main>
 
       {children}
+
+      {/* Mobile bottom navigation */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onNavigate={handleMobileNavigate}
+        isAdmin={isAdmin}
+        isLeader={isLeader}
+        profile={mobileProfile}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
