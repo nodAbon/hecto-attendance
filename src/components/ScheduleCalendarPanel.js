@@ -10,7 +10,7 @@ import { inferNightScheduleEndTime } from '../lib/nightScheduleRules';
 import { resolveSchedulePairForDate } from '../lib/scheduleResolver';
 import { toMinutes, normalizeTime, getAdjustmentMinutes, getScheduleDurationMinutes, formatWeekTotalLabel, formatMonthDayLabel, TIME_OPTIONS } from '../lib/scheduleUtils';
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const CALENDAR_BADGE_BASE_STYLE = {
   paddingInline: 8,
   paddingBlock: 3,
@@ -32,7 +32,8 @@ const getMonthGridCells = (yearMonthStr) => {
   const [year, month] = String(yearMonthStr).split('-').map(Number);
   if (!year || !month) return [];
 
-  const firstDayIndex = new Date(year, month - 1, 1).getDay();
+  const day = new Date(year, month - 1, 1).getDay();
+  const firstDayIndex = day === 0 ? 6 : day - 1;
   const totalDays = new Date(year, month, 0).getDate();
   const prevMonthDays = new Date(year, month - 1, 0).getDate();
   const cells = [];
@@ -581,7 +582,7 @@ export default function ScheduleCalendarPanel({
         <div className="calendar-widget__weekday-grid" style={{ gap: 6, gridTemplateColumns: '112px repeat(7, minmax(0, 1fr))' }}>
           <div aria-hidden="true" />
           {WEEKDAYS.map((day, idx) => (
-            <div key={day} className={`calendar-widget__weekday ${idx === 0 ? 'is-sun' : idx === 6 ? 'is-sat' : ''}`}>
+            <div key={day} className={`calendar-widget__weekday ${idx === 6 ? 'is-sun' : idx === 5 ? 'is-sat' : ''}`}>
               {day}
             </div>
           ))}
@@ -636,7 +637,7 @@ export default function ScheduleCalendarPanel({
                   teamPattern: null,
                 });
                 const hasSchedule = Boolean(resolvedSchedule);
-                const isHoliday = !!getHolidayName(cell.dateStr) || cell.dayOfWeek === '일' || cell.dayOfWeek === '토';
+                const isHoliday = !!getHolidayName(cell.dateStr) || idx === 5 || idx === 6;
                 const holidayName = getHolidayName(cell.dateStr);
                 const showTime = Boolean(dayStats?.in || dayStats?.out);
                 const displayStart = normalizeTime(dayStats?.in || '', '');
@@ -812,7 +813,7 @@ export default function ScheduleCalendarPanel({
               teamPattern: null,
             });
             const hasSchedule = Boolean(resolvedSchedule);
-            const isHoliday = !!getHolidayName(cell.dateStr) || cell.dayOfWeek === '일' || cell.dayOfWeek === '토';
+            const isHoliday = !!getHolidayName(cell.dateStr) || (idx % 7) === 5 || (idx % 7) === 6;
             const holidayName = getHolidayName(cell.dateStr);
             const leaveRows = selectedEmployee ? getEmployeeLeavesForDate(calendarLeaves, selectedEmployee.empNo, cell.dateStr) : [];
             const showTime = Boolean(dayStats?.in || dayStats?.out);

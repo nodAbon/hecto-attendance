@@ -314,8 +314,8 @@ function ScheduleTab({
           </div>
 
           <div className="calendar-widget__weekday-grid">
-            {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
-              <div key={day} className={`calendar-widget__weekday ${idx === 0 ? 'is-sun' : idx === 6 ? 'is-sat' : ''}`}>{day}</div>
+            {['월', '화', '수', '목', '금', '토', '일'].map((day, idx) => (
+              <div key={day} className={`calendar-widget__weekday ${idx === 6 ? 'is-sun' : idx === 5 ? 'is-sat' : ''}`}>{day}</div>
             ))}
           </div>
 

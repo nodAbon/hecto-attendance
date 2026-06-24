@@ -58,13 +58,13 @@ export default function TrackerCalendarSection({
             color: 'var(--text-2)',
           }}
         >
-          <div style={{ color: 'var(--red)' }}>일</div>
           <div>월</div>
           <div>화</div>
           <div>수</div>
           <div>목</div>
           <div>금</div>
           <div style={{ color: 'var(--blue)' }}>토</div>
+          <div style={{ color: 'var(--red)' }}>일</div>
         </div>
 
         <div
@@ -108,8 +108,8 @@ export default function TrackerCalendarSection({
             const scheduleText = hasCustomSchedule ? formatScheduleRange(daySchedule) : '';
 
             let dayNumColor = 'var(--text-1)';
-            if (dayOfWeek === 0 || holidayName) dayNumColor = 'var(--red)';
-            else if (dayOfWeek === 6) dayNumColor = 'var(--blue)';
+            if (dayOfWeek === 6 || holidayName) dayNumColor = 'var(--red)';
+            else if (dayOfWeek === 5) dayNumColor = 'var(--blue)';
 
             const isLateDay = !!stat?.isLate;
 

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useMemo } from 'react';
 import {
@@ -12,7 +12,7 @@ import MonthSearchPicker from './MonthSearchPicker';
 import { getMonthRangeList } from '../lib/dashboardUtils';
 import useHolidayCalendar from '../lib/useHolidayCalendar';
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const LEGEND_PRIORITY = {
   연차: 0,
   공가: 1,
@@ -54,7 +54,8 @@ const formatMonthLabel = (yearMonthStr) => {
 export const getCalendarCells = (yearMonthStr) => {
   if (!yearMonthStr) return [];
   const [year, month] = yearMonthStr.split('-').map(Number);
-  const firstDayIndex = new Date(year, month - 1, 1).getDay();
+  const day = new Date(year, month - 1, 1).getDay();
+  const firstDayIndex = day === 0 ? 6 : day - 1;
   const totalDays = new Date(year, month, 0).getDate();
 
   const cells = [];
@@ -197,7 +198,7 @@ export default function DashboardCalendarWidget({
           {WEEKDAYS.map((day, idx) => (
             <div
               key={`weekday-${idx}`}
-              className={`calendar-widget__weekday ${idx === 0 ? 'is-sun' : idx === 6 ? 'is-sat' : ''}`}
+              className={`calendar-widget__weekday ${idx === 6 ? 'is-sun' : idx === 5 ? 'is-sat' : ''}`}
             >
               {day}
             </div>
@@ -211,8 +212,8 @@ export default function DashboardCalendarWidget({
             }
 
             const dow = idx % 7;
-            const isSun = dow === 0;
-            const isSat = dow === 6;
+            const isSun = dow === 6;
+            const isSat = dow === 5;
             const holidayName = getHolidayName(cell.dateStr);
             const isToday = cell.dateStr === todayStr;
             const isSelected = selectedCalendarDate === cell.dateStr;
