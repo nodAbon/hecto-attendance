@@ -5,14 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, RefreshCw, Sun, Moon } from 'lucide-react';
 import AppSidebar from '../AppSidebar';
 import { getMainSidebarItems, sidebarActionIcons } from '../../lib/sidebarConfig';
-import DashboardTab from '../tabs/DashboardTab';
-import MonthlyTab from '../tabs/MonthlyTab';
-import TrackerTab from '../tabs/TrackerTab';
-import ScheduleTab from '../tabs/ScheduleTab';
-import LeaveTab from '../tabs/LeaveTab';
-import OvertimeTab from '../tabs/OvertimeTab';
-import AdminPanelTabs from '../tabs/AdminPanelTabs';
-import EmployeeAdminTab from '../tabs/EmployeeAdminTab';
+import dynamic from 'next/dynamic';
+
+const DashboardTab = dynamic(() => import('../tabs/DashboardTab'), { ssr: false });
+const MonthlyTab = dynamic(() => import('../tabs/MonthlyTab'), { ssr: false });
+const TrackerTab = dynamic(() => import('../tabs/TrackerTab'), { ssr: false });
+const ScheduleTab = dynamic(() => import('../tabs/ScheduleTab'), { ssr: false });
+const LeaveTab = dynamic(() => import('../tabs/LeaveTab'), { ssr: false });
+const OvertimeTab = dynamic(() => import('../tabs/OvertimeTab'), { ssr: false });
+const AdminPanelTabs = dynamic(() => import('../tabs/AdminPanelTabs'), { ssr: false });
+const EmployeeAdminTab = dynamic(() => import('../tabs/EmployeeAdminTab'), { ssr: false });
 
 function DashboardTabSync({ setActiveTab }) {
   const searchParams = useSearchParams();
@@ -31,7 +33,7 @@ const pageTitles = {
   MY_PORTAL: '개인 근태 포털',
   LEAVES: '연차 사용 현황',
   OVERTIME: '초과근무 관리',
-  MANUAL_APPROVAL: '수동 출퇴근 기록 심사',
+  MANUAL_APPROVAL: '수동 요청 내역',
   USER_REGISTER: '사용자 계정 등록',
   CAPS_UPLOAD: '캡스 출입기록 업로드',
 };
@@ -45,7 +47,7 @@ const pageSubtitles = {
   MY_PORTAL: '본인의 출퇴근 기록과 근무 현황을 확인합니다.',
   LEAVES: '직원들의 연차 및 휴가 사용 현황을 확인합니다.',
   OVERTIME: '지정 기간 동안 직원별 초과근무를 관리합니다.',
-  MANUAL_APPROVAL: '직원들이 수동으로 입력한 출퇴근 기록을 심사합니다.',
+  MANUAL_APPROVAL: '출퇴근 수정 요청과 근무일정 조정 요청을 함께 심사합니다.',
   USER_REGISTER: '로그인 계정과 사원번호 정보를 연결해 등록합니다.',
   CAPS_UPLOAD: '캡스 출입기록 파일을 업로드해 월간 기록에 반영합니다.',
 };
@@ -93,6 +95,7 @@ export default function DashboardShell({
   visibleLeaves,
   calendarEmployeeNameLookup,
   refreshAllData,
+  children,
 }) {
   const router = useRouter();
 
@@ -189,6 +192,7 @@ export default function DashboardShell({
       </Suspense>
 
       <main className="main-content">
+        {activeTab !== 'DASHBOARD' ? (
         <div className="top-bar">
           <div>
             <h1 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-1)' }}>
@@ -229,6 +233,7 @@ export default function DashboardShell({
             <div className="time-display">{time}</div>
           </div>
         </div>
+        ) : null}
 
         {activeTab === 'DASHBOARD' && data && (
           <DashboardTab
@@ -238,6 +243,13 @@ export default function DashboardShell({
             isLeader={isLeader}
             myDept={myDept}
             myEmpNo={myEmpNo}
+            resolvedDeptFilterValue={resolvedDeptFilterValue}
+            deptOptions={deptOptions}
+            hasFullAccess={hasFullAccess}
+            time={time}
+            theme={theme}
+            toggleTheme={toggleTheme}
+            setViewDeptFilter={setViewDeptFilter}
             calendarMonth={calendarMonth}
             setCalendarMonth={setCalendarMonth}
             selectedCalendarDate={selectedCalendarDate}
@@ -254,6 +266,7 @@ export default function DashboardShell({
             setSelectedMonth={setSelectedMonth}
             visibleMonthlyEmployees={visibleMonthlyEmployees}
             monthlyData={monthlyData}
+            refreshData={refreshAllData}
           />
         )}
 
@@ -307,14 +320,16 @@ export default function DashboardShell({
             myPosition={myPosition}
             myDept={myDept}
             refreshData={refreshAllData}
+            selectedMonth={selectedMonth}
           />
         )}
 
-        {['MANUAL_APPROVAL', 'USER_REGISTER', 'CAPS_UPLOAD'].includes(activeTab) && isAdmin && (
+        {['MANUAL_APPROVAL', 'USER_REGISTER', 'CAPS_UPLOAD'].includes(activeTab) && (isAdmin || isLeader) && (
           <AdminPanelTabs
             activeTab={activeTab}
             isAdmin={isAdmin}
             isLeader={isLeader}
+            myDept={myDept}
             monthlyData={monthlyData}
             data={data}
             theme={theme}
@@ -332,6 +347,8 @@ export default function DashboardShell({
           />
         )}
       </main>
+
+      {children}
     </div>
   );
 }

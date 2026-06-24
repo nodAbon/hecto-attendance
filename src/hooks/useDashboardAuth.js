@@ -3,12 +3,7 @@
 import { useEffect, useState } from 'react';
 import { isLeaderPosition } from '../lib/roleUtils';
 import { getTabFromLocation, getCurrentMonthKey } from '../lib/dashboardUtils';
-
-const getCookieValue = (name) => {
-  if (typeof window === 'undefined') return null;
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]*)'));
-  return match ? decodeURIComponent(match[2]) : null;
-};
+import { getCookieValue } from '../lib/authStorage';
 
 export function useDashboardAuth({
   setActiveTab,

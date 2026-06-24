@@ -1,11 +1,113 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getCookieValue } from '../lib/authStorage';
+import { getCurrentMonthKey } from '../lib/dashboardUtils';
+import { shiftMonthKey } from '../lib/kstDate';
 
-const getCookieValue = (name) => {
-  if (typeof window === 'undefined') return null;
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]*)'));
-  return match ? decodeURIComponent(match[2]) : null;
+
+const buildMonthScopeKeys = (monthKey) => {
+  const prev = shiftMonthKey(monthKey, -1);
+  const next = shiftMonthKey(monthKey, 1);
+  return [prev, monthKey, next].map((value) => String(value || '').trim()).filter(Boolean);
+};
+
+const mergeUnique = (items = [], keyFn) => {
+  const seen = new Set();
+  const result = [];
+  (items || []).forEach((item) => {
+    const key = String(keyFn(item) || '').trim();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    result.push(item);
+  });
+  return result;
+};
+
+const mergeMonthlyResponses = (responses = []) => {
+  const succeeded = responses.filter((entry) => entry?.success && entry?.json);
+  if (succeeded.length === 0) return null;
+
+  const pickFirst = (key) => {
+    for (const entry of succeeded) {
+      const value = entry.json?.[key];
+      if (Array.isArray(value) && value.length > 0) return value;
+      if (value && !Array.isArray(value) && typeof value === 'object') return value;
+    }
+    return Array.isArray(succeeded[0].json?.[key]) ? [] : null;
+  };
+
+  const merged = { ...succeeded[0].json };
+  const arrays = {
+    allLogs: [
+      ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.allLogs) ? entry.json.allLogs : [])),
+    ],
+    leaves: [
+      ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.leaves) ? entry.json.leaves : [])),
+    ],
+    corrections: [
+      ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.corrections) ? entry.json.corrections : [])),
+    ],
+    overrides: [
+      ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.overrides) ? entry.json.overrides : [])),
+    ],
+    teamSchedulePatterns: [
+      ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.teamSchedulePatterns) ? entry.json.teamSchedulePatterns : [])),
+    ],
+    manualCheckins: [
+      ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.manualCheckins) ? entry.json.manualCheckins : [])),
+    ],
+  };
+
+  merged.allLogs = mergeUnique(arrays.allLogs, (row) => [
+    row?.id,
+    row?.empNo || row?.emp_no || '',
+    row?.logTime || row?.log_time || '',
+    row?.workDate || row?.work_date || '',
+    row?.eventType || row?.event_type || '',
+    row?.checkType || row?.check_type || '',
+  ].join('|'));
+  merged.leaves = mergeUnique(arrays.leaves, (row) => [
+    row?.id,
+    row?.empNo || row?.emp_no || '',
+    row?.startDate || row?.start_date || '',
+    row?.endDate || row?.end_date || '',
+    row?.leaveName || row?.leave_name || '',
+  ].join('|'));
+  merged.corrections = mergeUnique(arrays.corrections, (row) => [
+    row?.id,
+    row?.emp_no || '',
+    row?.work_date || '',
+    row?.corrected_out_time || '',
+  ].join('|'));
+  merged.overrides = mergeUnique(arrays.overrides, (row) => [
+    row?.id,
+    row?.emp_no || '',
+    row?.work_date || '',
+    row?.schedule_start || '',
+    row?.schedule_end || '',
+    row?.note || '',
+  ].join('|'));
+  merged.teamSchedulePatterns = mergeUnique(arrays.teamSchedulePatterns, (row) => [
+    row?.id,
+    row?.dept || '',
+    row?.work_date || '',
+    row?.schedule_start || '',
+    row?.schedule_end || '',
+  ].join('|'));
+  merged.manualCheckins = mergeUnique(arrays.manualCheckins, (row) => [
+    row?.id,
+    row?.empNo || row?.emp_no || '',
+    row?.workDate || row?.work_date || '',
+    row?.checkTime || row?.check_time || '',
+    row?.checkType || row?.check_type || '',
+  ].join('|'));
+
+  merged.employees = pickFirst('employees') || [];
+  merged.isDemo = succeeded.some((entry) => entry.json?.isDemo);
+  merged.error = null;
+
+  return merged;
 };
 
 export function useDashboardData({
@@ -23,12 +125,15 @@ export function useDashboardData({
   const [monthlyData, setMonthlyData] = useState(null);
   const [monthlyLoading, setMonthlyLoading] = useState(false);
   const [calendarLeaves, setCalendarLeaves] = useState([]);
+  const monthDataCacheRef = useRef(new Map());
+  const calendarLeavesCacheRef = useRef(new Map());
+  const currentMonthKey = getCurrentMonthKey();
 
   const fetchTodayData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const res = await fetch('/api/attendance');
+      const res = await fetch('/api/attendance', { cache: 'no-store' });
       const json = await res.json();
       if (json.success) {
         setData(json);
@@ -46,14 +151,49 @@ export function useDashboardData({
     }
   }, [myEmpNo, selectedEmployee, setSelectedEmployee]);
 
-  const fetchMonthlyData = useCallback(async (monthVal) => {
+  const fetchMonthlyData = useCallback(async (monthVal, empNoFilter = null) => {
     if (!monthVal) return;
     setMonthlyLoading(true);
     try {
-      const res = await fetch('/api/attendance?month=' + monthVal);
-      const json = await res.json();
-      if (json.success) {
-        setMonthlyData(json);
+      const cacheKey = empNoFilter ? `${monthVal}_${empNoFilter}` : monthVal;
+      const cachedTarget = monthDataCacheRef.current.get(cacheKey);
+      let targetPayload = cachedTarget;
+
+      if (!targetPayload) {
+        const url = empNoFilter ? `/api/attendance?month=${monthVal}&empNo=${empNoFilter}` : `/api/attendance?month=${monthVal}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        const json = await res.json();
+        targetPayload = { success: res.ok && json?.success, json, monthKey: monthVal };
+        if (targetPayload.success) {
+          monthDataCacheRef.current.set(cacheKey, targetPayload);
+        }
+      }
+
+      // target month 데이터로 우선 화면 갱신
+      if (targetPayload && targetPayload.success) {
+        const merged = mergeMonthlyResponses([targetPayload]);
+        if (merged) {
+          setMonthlyData(merged);
+          setCalendarLeaves(merged.leaves || []);
+        }
+      }
+
+      // 백그라운드 프리페치 (단일 사번 조회가 아닌 전체 부서 조회 시에만)
+      if (!empNoFilter) {
+        const prevMonth = shiftMonthKey(monthVal, -1);
+        const nextMonth = shiftMonthKey(monthVal, 1);
+        [prevMonth, nextMonth].forEach((m) => {
+          if (!monthDataCacheRef.current.has(m)) {
+            fetch(`/api/attendance?month=${m}`, { cache: 'no-store' })
+              .then(res => res.json())
+              .then(json => {
+                if (json.success) {
+                  monthDataCacheRef.current.set(m, { success: true, json, monthKey: m });
+                }
+              })
+              .catch(e => console.error('Prefetch error:', e));
+          }
+        });
       }
     } catch (e) {
       console.error('Fetch monthly data error:', e);
@@ -62,13 +202,23 @@ export function useDashboardData({
     }
   }, []);
 
+
   const fetchCalendarLeaves = useCallback(async (monthVal) => {
     if (!monthVal) return;
     try {
-      const res = await fetch('/api/attendance?month=' + monthVal);
+      const cacheKey = String(monthVal || '').trim();
+      const cached = calendarLeavesCacheRef.current.get(cacheKey);
+      if (cached) {
+        setCalendarLeaves(cached);
+        return;
+      }
+
+      const res = await fetch('/api/attendance?month=' + monthVal + '&excludeLogs=true', { cache: 'no-store' });
       const json = await res.json();
       if (json.success) {
-        setCalendarLeaves(json.leaves || []);
+        const leaves = json.leaves || [];
+        calendarLeavesCacheRef.current.set(cacheKey, leaves);
+        setCalendarLeaves(leaves);
       }
     } catch (e) {
       console.error('Calendar leaves fetch error:', e);
@@ -76,26 +226,62 @@ export function useDashboardData({
   }, []);
 
   useEffect(() => {
+    let delay = 60000;
+    let timeoutId;
+
+    const schedule = () => {
+      timeoutId = setTimeout(async () => {
+        try {
+          await fetchTodayData(true);
+          delay = 60000; // 성공 시 정상 간격 복구
+        } catch {
+          delay = Math.min(delay * 2, 120000); // 실패 시 최대 2분까지 지수 증가
+        }
+        schedule();
+      }, delay);
+    };
+
     fetchTodayData();
-    const t = setInterval(() => fetchTodayData(true), 15000);
-    return () => clearInterval(t);
+    schedule();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTodayData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchTodayData]);
 
   useEffect(() => {
+    const isSingleEmpTab = activeTab === 'TRACKER' || activeTab === 'MY_PORTAL';
+    const empNoFilter = isSingleEmpTab ? (selectedEmployee || myEmpNo) : null;
+
     if (activeTab === 'MONTHLY' || activeTab === 'TRACKER' || activeTab === 'MY_PORTAL' || activeTab === 'LEAVES' || activeTab === 'EMPLOYEES' || activeTab === 'OVERTIME' || activeTab === 'MANUAL_APPROVAL' || activeTab === 'USER_REGISTER') {
-      fetchMonthlyData(selectedMonth);
+      if (isSingleEmpTab && !empNoFilter) return; // Wait for empNo
+      fetchMonthlyData(selectedMonth, empNoFilter);
     }
-  }, [activeTab, fetchMonthlyData, selectedMonth]);
+  }, [activeTab, fetchMonthlyData, selectedMonth, myEmpNo, selectedEmployee]);
 
   useEffect(() => {
     fetchCalendarLeaves(calendarMonth);
   }, [calendarMonth, fetchCalendarLeaves]);
 
   const refreshAllData = useCallback(async () => {
-    await fetchTodayData(true);
-    await fetchMonthlyData(selectedMonth);
-    await fetchCalendarLeaves(calendarMonth);
-  }, [calendarMonth, fetchCalendarLeaves, fetchMonthlyData, fetchTodayData, selectedMonth]);
+    monthDataCacheRef.current.clear();
+    calendarLeavesCacheRef.current.clear();
+    const isSingleEmpTab = activeTab === 'TRACKER' || activeTab === 'MY_PORTAL';
+    const empNoFilter = isSingleEmpTab ? (selectedEmployee || myEmpNo) : null;
+    await Promise.all([
+      fetchTodayData(true),
+      fetchMonthlyData(selectedMonth, empNoFilter),
+      fetchCalendarLeaves(calendarMonth),
+    ]);
+  }, [calendarMonth, fetchCalendarLeaves, fetchMonthlyData, fetchTodayData, selectedMonth, activeTab, selectedEmployee, myEmpNo]);
 
   return {
     data,

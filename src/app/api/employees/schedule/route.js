@@ -8,7 +8,10 @@ const isManager = (session) => !!session && (isAdminRole(session) || isLeaderPos
 const toScheduleMap = (rows = []) => rows.reduce((acc, row) => {
   const empNo = String(row?.emp_no || '').trim();
   if (!empNo) return acc;
-  acc[empNo] = String(row?.schedule_time || '08:00').substring(0, 5);
+  acc[empNo] = {
+    scheduleStart: String(row?.schedule_time || '08:00').substring(0, 5),
+    scheduleEnd: String(row?.schedule_end_time || '').substring(0, 5),
+  };
   return acc;
 }, {});
 
@@ -48,7 +51,12 @@ export async function POST(request) {
 
     const body = await request.json();
     const payload = body?.empNo
-      ? { [body.empNo]: body.schedule }
+      ? {
+          [body.empNo]: {
+            scheduleTime: body.scheduleStart || body.schedule || '',
+            scheduleEndTime: body.scheduleEnd || null,
+          },
+        }
       : (body?.schedules || {});
 
     if (!payload || Object.keys(payload).length === 0) {

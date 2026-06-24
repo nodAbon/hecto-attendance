@@ -1,3 +1,5 @@
+import { getHolidayNameByDate } from './holidayCalendar.js';
+
 const HOLIDAYS_2025 = {
   '2025-01-01': '신정',
   '2025-01-28': '설연휴',
@@ -140,13 +142,13 @@ export const LEAVE_DASHBOARD_GROUPS = [
 ];
 
 export function getHolidayName(dateStr) {
-  return ALL_HOLIDAYS[dateStr] || null;
+  return getHolidayNameByDate(dateStr) || ALL_HOLIDAYS[dateStr] || null;
 }
 
 export function isDateHoliday(dateStr) {
   const d = new Date(dateStr);
   const day = d.getDay();
-  return day === 0 || day === 6 || !!ALL_HOLIDAYS[dateStr];
+  return day === 0 || day === 6 || !!getHolidayNameByDate(dateStr) || !!ALL_HOLIDAYS[dateStr];
 }
 
 const normalizeDept = (value = '') => String(value || '').trim().replace(/\s+/g, '');

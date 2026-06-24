@@ -4,23 +4,54 @@ import { isAdminRole } from '@/lib/roleUtils';
 
 const normalizeIdentifier = (value) => String(value ?? '').trim();
 
+const getCandidateEmails = (identifier) => {
+  const normalized = normalizeIdentifier(identifier);
+  if (!normalized) return [];
+  if (normalized.includes('@')) return [normalized];
+
+  const configuredDomains = [
+    process.env.LOGIN_EMAIL_DOMAINS,
+    process.env.NEXT_PUBLIC_LOGIN_EMAIL_DOMAINS,
+  ]
+    .filter(Boolean)
+    .flatMap((value) => String(value).split(','))
+    .map((value) => normalizeIdentifier(value))
+    .filter(Boolean);
+
+  const fallbackDomains = ['hecto.internal', 'hecto.co.kr'];
+  const domains = Array.from(new Set([...configuredDomains, ...fallbackDomains]));
+
+  return domains.map((domain) => `${normalized}@${domain}`);
+};
+
 export async function POST(request) {
   try {
     const { identifier, password } = await request.json();
 
     if (!identifier || !password) {
-      return NextResponse.json({ error: '아이디 또는 비밀번호를 입력해주세요.' }, { status: 400 });
+      return NextResponse.json({ error: '아이디와 비밀번호를 입력해주세요.' }, { status: 400 });
     }
 
     const supabase = getAdminClient();
-    const email = identifier.includes('@')
-      ? normalizeIdentifier(identifier)
-      : `${normalizeIdentifier(identifier)}@hecto.internal`;
+    const candidateEmails = getCandidateEmails(identifier);
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    let authData = null;
+    let authError = null;
+
+    for (const email of candidateEmails) {
+      const result = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (result?.data?.user && result?.data?.session) {
+        authData = result.data;
+        authError = null;
+        break;
+      }
+
+      authError = result?.error || null;
+    }
 
     if (authError || !authData?.user || !authData?.session) {
       return NextResponse.json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 });

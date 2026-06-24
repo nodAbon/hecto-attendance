@@ -1,21 +1,11 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Search, RefreshCw } from 'lucide-react';
+import React, { memo, useState, useEffect, useMemo } from 'react';
+import { Search, RefreshCw } from 'lucide-react';
 import { getCalendarCells } from '../DashboardCalendarWidget';
+import MonthSearchPicker from '../MonthSearchPicker';
+import { getMonthRangeList } from '../../lib/dashboardUtils';
 import { inferNightScheduleEndTime, isNightTeamDept } from '../../lib/nightScheduleRules';
-
-const getMonthsList = () => {
-  const list = [];
-  const now = new Date();
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const yr = d.getFullYear();
-    const mo = String(d.getMonth() + 1).padStart(2, '0');
-    list.push(yr + '-' + mo);
-  }
-  return list;
-};
 
 const SCHEDULE_TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = String(Math.floor(i / 2)).padStart(2, '0');
@@ -23,7 +13,7 @@ const SCHEDULE_TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return h + ':' + m;
 });
 
-export default function ScheduleTab({
+function ScheduleTab({
   isAdmin,
   isLeader,
   selectedMonth,
@@ -32,6 +22,7 @@ export default function ScheduleTab({
   visibleScheduleEmployees,
   refreshData,
 }) {
+  const monthOptions = useMemo(() => getMonthRangeList(240, 240), []);
   const [empSearchQuery, setEmpSearchQuery] = useState('');
   const [scheduleSelectedEmpNo, setScheduleSelectedEmpNo] = useState('');
   const [tempSchedules, setTempSchedules] = useState({});
@@ -219,25 +210,20 @@ export default function ScheduleTab({
             <h3 className="card-title">직원 근무일정 캘린더</h3>
             <p className="card-subtitle">직원을 선택해 기본 근무일정과 날짜별 예외 근무시간을 관리합니다.</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button type="button" className="icon-btn" onClick={() => {
-              const list = getMonthsList();
-              const idx = list.indexOf(selectedMonth);
-              setSelectedMonth(list[Math.min(idx + 1, list.length - 1)] || selectedMonth);
-            }} title="이전 월">
-              <ChevronLeft />
-            </button>
-            <select className="ui-select" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-              {getMonthsList().map((month) => <option key={month} value={month}>{month}</option>)}
-            </select>
-            <button type="button" className="icon-btn" onClick={() => {
-              const list = getMonthsList();
-              const idx = list.indexOf(selectedMonth);
-              setSelectedMonth(list[Math.max(idx - 1, 0)] || selectedMonth);
-            }} title="다음 월">
-              <ChevronRight />
-            </button>
-          </div>
+          <MonthSearchPicker
+            label="선택 월"
+            value={selectedMonth}
+            onChange={setSelectedMonth}
+            monthOptions={monthOptions}
+            onPrev={() => {
+              const idx = monthOptions.indexOf(selectedMonth);
+              setSelectedMonth(monthOptions[Math.max(idx - 1, 0)] || selectedMonth);
+            }}
+            onNext={() => {
+              const idx = monthOptions.indexOf(selectedMonth);
+              setSelectedMonth(monthOptions[Math.min(idx + 1, monthOptions.length - 1)] || selectedMonth);
+            }}
+          />
         </div>
 
         <div style={{
@@ -495,3 +481,5 @@ export default function ScheduleTab({
     </div>
   );
 }
+
+export default memo(ScheduleTab);

@@ -1,649 +1,1511 @@
-import React from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, User } from 'lucide-react';
-import { getEmployeeDailyScheduleOptionsForDept, getScheduleBadgeLabel } from '../lib/nightScheduleRules';
-import { uiText } from '../lib/uiText';
+﻿'use client';
 
-const WEEKDAYS = uiText.page.calendar.weekdays;
-const BATCH_COPY = uiText.scheduleBatch;
-const CALENDAR_COPY = uiText.scheduleCalendar;
-const COMMON_COPY = uiText.common;
+import React, { useEffect, useMemo, useState } from 'react';
+import { Trash2 } from 'lucide-react';
+import MonthSearchPicker from './MonthSearchPicker';
+import { formatLocalDateStr } from './DashboardCalendarWidget';
+import { clampToHalfHourSteps, formatHalfHourSteps, getYearWeekNumber, isExternalBusinessDept, isManagedAttendanceDept } from '../lib/dashboardUtils';
+import { getHolidayName, getLeaveMeta } from '../lib/leaveRules';
+import { inferNightScheduleEndTime } from '../lib/nightScheduleRules';
+import { resolveSchedulePairForDate } from '../lib/scheduleResolver';
+import { toMinutes, normalizeTime, getAdjustmentMinutes, getScheduleDurationMinutes, formatWeekTotalLabel, formatMonthDayLabel, TIME_OPTIONS } from '../lib/scheduleUtils';
 
-const getCalendarCells = (yearMonthStr) => {
-  const [year, month] = yearMonthStr.split('-').map(Number);
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const CALENDAR_BADGE_BASE_STYLE = {
+  paddingInline: 8,
+  paddingBlock: 3,
+  borderRadius: '999px',
+  fontSize: 8.5,
+  lineHeight: 1.1,
+};
+const makeCalendarBadgeStyle = (background, color, borderColor = background) => ({
+  ...CALENDAR_BADGE_BASE_STYLE,
+  background,
+  color,
+  borderColor,
+});
+
+const pad2 = (value) => String(value).padStart(2, '0');
+
+const getMonthGridCells = (yearMonthStr) => {
+  if (!yearMonthStr) return [];
+  const [year, month] = String(yearMonthStr).split('-').map(Number);
+  if (!year || !month) return [];
+
   const firstDayIndex = new Date(year, month - 1, 1).getDay();
   const totalDays = new Date(year, month, 0).getDate();
-
+  const prevMonthDays = new Date(year, month - 1, 0).getDate();
   const cells = [];
-  for (let i = 0; i < firstDayIndex; i += 1) {
-    cells.push({ empty: true });
+
+  for (let offset = firstDayIndex - 1; offset >= 0; offset -= 1) {
+    const day = prevMonthDays - offset;
+    const prevDate = new Date(year, month - 2, day);
+    cells.push({
+      empty: false,
+      dayNum: day,
+      dateStr: `${prevDate.getFullYear()}-${pad2(prevDate.getMonth() + 1)}-${pad2(prevDate.getDate())}`,
+      inCurrentMonth: false,
+    });
   }
+
   for (let day = 1; day <= totalDays; day += 1) {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    cells.push({ empty: false, dayNum: day, dateStr });
+    cells.push({
+      empty: false,
+      dayNum: day,
+      dateStr: `${year}-${pad2(month)}-${pad2(day)}`,
+      inCurrentMonth: true,
+    });
   }
+
+  const nextTarget = 42 - cells.length;
+  for (let day = 1; day <= nextTarget; day += 1) {
+    const nextDate = new Date(year, month - 1, totalDays + day);
+    cells.push({
+      empty: false,
+      dayNum: day,
+      dateStr: `${nextDate.getFullYear()}-${pad2(nextDate.getMonth() + 1)}-${pad2(nextDate.getDate())}`,
+      inCurrentMonth: false,
+    });
+  }
+
   return cells;
 };
 
 const formatMonthLabel = (yearMonthStr) => {
-  const [year, month] = yearMonthStr.split('-').map(Number);
+  const [year, month] = String(yearMonthStr || '').split('-').map(Number);
+  if (!year || !month) return '';
   return `${year}년 ${month}월`;
 };
 
-const formatLocalDateStr = (date = new Date()) => {
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
-};
-
-const normalizeTime = (value) => String(value || '').trim().substring(0, 5);
-
-const formatCompactDate = (dateStr = '') => {
-  if (!dateStr) return '';
-  const [, month, day] = String(dateStr).split('-');
-  if (!month || !day) return String(dateStr);
-  return `${Number(month)}/${Number(day)}`;
-};
-
-const summarizeDateRanges = (dateStrings = []) => {
-  const sorted = Array.from(new Set((dateStrings || []).map((date) => String(date || ''))))
-    .filter(Boolean)
-    .sort();
-
-  if (sorted.length === 0) return '';
-
-  const ranges = [];
-  let rangeStart = sorted[0];
-  let previous = sorted[0];
-
-  const asDate = (dateStr) => {
-    const [year, month, day] = String(dateStr).split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
-
-  for (let i = 1; i < sorted.length; i += 1) {
-    const current = sorted[i];
-    const expected = asDate(previous);
-    expected.setDate(expected.getDate() + 1);
-    const expectedStr = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}-${String(expected.getDate()).padStart(2, '0')}`;
-
-    if (expectedStr !== current) {
-      ranges.push([rangeStart, previous]);
-      rangeStart = current;
-    }
-    previous = current;
-  }
-  ranges.push([rangeStart, previous]);
-
-  return ranges.map(([start, end]) => (
-    start === end
-      ? formatCompactDate(start)
-      : `${formatCompactDate(start)} ~ ${formatCompactDate(end)}`
-  )).join(', ');
-};
-
-const buildDailyStats = (logs, empNo) => {
-  const stats = {};
-  const empDayLogs = {};
-
-  (logs || [])
-    .filter((log) => String(log?.empNo || '') === String(empNo || ''))
-    .filter((log) => !String(log?.adjustedRole || log?.eventType || '').includes('무시'))
-    .forEach((log) => {
-      const logTime = String(log?.logTime || '');
-      const parts = logTime.split(' ');
-      const dateStr = String(log?.workDate || parts[0] || '');
-      const timePart = parts[1];
-      const timeStr = String(timePart || '').substring(0, 5);
-      if (!dateStr || !timeStr) return;
-
-      if (!empDayLogs[dateStr]) {
-        empDayLogs[dateStr] = [];
-      }
-      empDayLogs[dateStr].push({ timeStr, log });
+const buildOverrideMap = (rows = []) => {
+  const map = new Map();
+  (rows || []).forEach((row) => {
+    const key = String(row?.work_date || row?.workDate || '').trim();
+    if (!key) return;
+    const note = String(row?.note || row?.reason || '').trim();
+    map.set(key, {
+      workDate: key,
+      scheduleStart: normalizeTime(row?.schedule_start || row?.scheduleStart || row?.start || ''),
+      scheduleEnd: normalizeTime(row?.schedule_end || row?.scheduleEnd || row?.end || ''),
+      allowOvertime: row?.allow_overtime !== false && row?.allowOvertime !== false,
+      note,
+      removed: note === '__SCHEDULE_REMOVED__',
+      raw: row,
     });
-
-  Object.entries(empDayLogs).forEach(([dateStr, entries]) => {
-    const sorted = [...entries].sort((a, b) => (a.log.workOrder ?? 0) - (b.log.workOrder ?? 0) || a.timeStr.localeCompare(b.timeStr));
-    const first = sorted[0];
-    const checkoutEntries = sorted.filter((entry) => {
-      const role = String(entry.log.adjustedRole || entry.log.eventType || '').trim().toLowerCase();
-      return entry.log.isCheckoutCandidate || entry.log.isAdjustedCheckout || role.includes('퇴') || role.includes('checkout');
-    });
-    const last = checkoutEntries[checkoutEntries.length - 1];
-
-    let checkOutTime = null;
-    if (last) {
-      if (last.log.correctedOutTime) {
-        checkOutTime = last.log.correctedOutTime.split(' ')[1]?.substring(0, 5);
-      } else {
-        checkOutTime = last.timeStr;
-      }
-      if (sorted.length === 1 && !last.log.isAdjustedCheckout && !String(last.log.adjustedRole || last.log.eventType || '').includes('퇴')) {
-        checkOutTime = null;
-      }
-    }
-
-    stats[dateStr] = {
-      in: first.timeStr,
-      out: checkOutTime,
-    };
   });
-
-  return stats;
+  return map;
 };
+
+const getEmployeeLeavesForDate = (calendarLeaves, empNo, dateStr) => {
+  const compact = String(dateStr || '').replace(/-/g, '');
+  return (calendarLeaves || [])
+    .filter((leave) => String(leave.empNo || leave.emp_no || '').trim() === String(empNo || '').trim())
+    .filter((leave) => compact >= String(leave.startDate || leave.start_date || '') && compact <= String(leave.endDate || leave.end_date || ''));
+};
+
+const getManualCheckinsForDate = (manualCheckins, empNo, dateStr) => {
+  const compact = String(dateStr || '').replace(/-/g, '');
+  return (manualCheckins || [])
+    .filter((row) => String(row.empNo || row.emp_no || '').trim() === String(empNo || '').trim())
+    .filter((row) => String(row.admin_decision || '').trim() === 'approved')
+    .filter((row) => {
+      const rowDate = String(row.workDate || row.work_date || '').replace(/-/g, '');
+      return rowDate === compact;
+    })
+    .sort((a, b) => String(a.check_time || a.checkTime || '').localeCompare(String(b.check_time || b.checkTime || '')));
+};
+
+const formatManualTime = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(text);
+  if (hasTimezone) {
+    const date = new Date(text);
+    if (!Number.isNaN(date.getTime())) {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Seoul',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    }
+  }
+  if (text.includes('T')) return text.split('T')[1].substring(0, 5);
+  if (text.includes(' ')) return text.split(' ')[1].substring(0, 5);
+  return text.substring(0, 5);
+};
+
+function CompactOverrideRow({ item, active, onClick, onDelete }) {
+  const label = item.removed
+    ? '근무일정 없음'
+    : item.scheduleStart && item.scheduleEnd
+      ? `${item.scheduleStart}-${item.scheduleEnd}`
+      : '예외 적용';
+  const labelStyle = item.removed
+    ? {
+        paddingInline: 8,
+        paddingBlock: 3,
+        background: 'rgba(148, 163, 184, 0.16)',
+        color: '#475569',
+        borderColor: 'rgba(148, 163, 184, 0.34)',
+      }
+    : {
+        paddingInline: 8,
+        paddingBlock: 3,
+        background: 'rgba(34, 197, 94, 0.14)',
+        color: 'var(--green)',
+        borderColor: 'rgba(34, 197, 94, 0.30)',
+      };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      style={{
+        width: '100%',
+        textAlign: 'left',
+        border: '1px solid var(--border)',
+        borderRadius: 14,
+        background: active ? 'rgba(91, 136, 214, 0.08)' : 'var(--bg-overlay-sm)',
+        padding: '10px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{item.workDate}</span>
+          <span className="calendar-day__state-tag" style={labelStyle}>
+            {label}
+          </span>
+          {item.allowOvertime === false ? (
+            <span
+              className="calendar-day__state-tag"
+              style={{
+                paddingInline: 8,
+                paddingBlock: 3,
+                background: 'rgba(208, 107, 107, 0.12)',
+                color: 'var(--red)',
+                borderColor: 'rgba(208, 107, 107, 0.24)',
+              }}
+            >
+              초과근무 비허용
+            </span>
+          ) : null}
+        </div>
+        {item.note && !item.removed ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap', color: 'var(--text-2)', fontSize: 12 }}>
+            <span>{item.note}</span>
+          </div>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label="예외 삭제"
+        title="예외 삭제"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete?.(item);
+        }}
+        style={{ width: 30, height: 30, flexShrink: 0, color: 'var(--red)' }}
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
 
 export default function ScheduleCalendarPanel({
   month,
   onMonthChange,
-  deptOptions = [],
-  deptFilter,
-  onDeptFilterChange,
-  employeeOptions = [],
-  employeeFilter,
-  onEmployeeFilterChange,
+  monthOptions = [],
   selectedEmployee,
-  selectedEmployeeEmpNo,
-  selectedEmployeeBaseSchedule = '08:00',
+  selectedEmployeeBaseScheduleStart = '',
+  selectedEmployeeBaseScheduleEnd = '',
   selectedEmployeeBaseScheduleLabel = '',
   selectedEmployeeOverrides = [],
-  monthlyLogs = [],
-  selectedDate,
-  onPickDate,
-  onSubmitOverride,
-  onCancelOverride,
-  onDeleteOverride,
-  overrideTarget,
-  overrideDate,
-  overrideStart,
-  onChangeOverrideDate,
-  onChangeOverrideStart,
-  overrideNote,
-  onChangeOverrideNote,
-  canChangeDept = true,
-  showBatchNightTools = false,
-  batchNightMode = false,
+  manualCheckins = [],
+  dailyAttendanceMap = {},
+  calendarLeaves = [],
+  selectedEmployeeLogs = [],
+  selectedDate = '',
   selectedBatchDates = [],
+  batchMode = false,
+  onToggleBatchMode,
   onToggleBatchDate,
-  batchPatternCode = 'N1',
-  onChangeBatchPatternCode,
-  batchNightNote = '',
-  onChangeBatchNightNote,
-  onApplyBatchNightPattern,
-  batchNightSaving = false,
-  onToggleBatchNightMode,
-  onBatchDateMouseDown,
-  onBatchDateMouseEnter,
-  onBatchDateMouseUp,
-  batchNightStart = '08:00',
-  batchNightEnd = '17:00',
-  onChangeBatchNightStart,
-  onChangeBatchNightEnd,
-  batchTargetDept = '',
-  batchTargetEmployeeDept = '',
+  onPickDate,
+  overrideStart = '08:00',
+  overrideEnd = '17:00',
+  allowOvertime = true,
+  onChangeOverrideStart,
+  onChangeOverrideEnd,
+  onToggleAllowOvertime,
+  overrideNote = '',
+  onChangeOverrideNote,
+  onSubmitOverride,
+  onDeleteOverride,
+  onRestoreOverride,
+  onRemoveOverride,
+  onChangeOverrideDate,
+  onRefreshData,
+  baseScheduleStart = '',
+  baseScheduleEnd = '',
+  onChangeBaseScheduleStart,
+  onChangeBaseScheduleEnd,
+  onSaveBaseSchedule,
+  modalSaving = false,
 }) {
-  const cells = getCalendarCells(month);
-  const overrideMap = new Map((selectedEmployeeOverrides || []).map((row) => [row.work_date, row]));
-  const dailyStats = buildDailyStats(monthlyLogs, selectedEmployeeEmpNo);
-  const monthLabel = formatMonthLabel(month);
   const todayStr = formatLocalDateStr();
-  const baseSchedule = normalizeTime(selectedEmployeeBaseSchedule) || '08:00';
-  const baseScheduleLabel = String(selectedEmployeeBaseScheduleLabel || '').trim() || baseSchedule;
-  const selectedEmployeeDept = String(selectedEmployee?.dept || '').trim();
-  const showDeptPicker = !!canChangeDept;
-  const selectedBatchSet = new Set((selectedBatchDates || []).map((date) => String(date || '')));
-  const batchScheduleOptions = getEmployeeDailyScheduleOptionsForDept(batchTargetEmployeeDept || selectedEmployee?.dept || '');
-  const selectedBatchSummary = summarizeDateRanges(selectedBatchDates);
-  const isWeeklyCustomSchedule = batchPatternCode === 'CUSTOM';
-  const handleDayClick = (dateStr, override) => {
-    if (batchNightMode) {
+  const cells = useMemo(() => getMonthGridCells(month), [month]);
+  const overrideMap = useMemo(() => buildOverrideMap(selectedEmployeeOverrides), [selectedEmployeeOverrides]);
+  const selectedDates = useMemo(
+    () => Array.from(new Set((selectedBatchDates || []).map((date) => String(date || '').trim()).filter(Boolean))).sort(),
+    [selectedBatchDates]
+  );
+  const activeDate = selectedDate || selectedDates[0] || '';
+  const activeOverride = activeDate ? overrideMap.get(activeDate) || null : null;
+
+  const baseStart = String(
+    selectedEmployeeBaseScheduleStart
+    || selectedEmployee?.baseScheduleTime
+    || selectedEmployee?.scheduleTime
+    || '08:00'
+  ).slice(0, 5) || '08:00';
+  const derivedBaseEnd = inferNightScheduleEndTime({ dept: selectedEmployee?.dept || '', start: baseStart, end: '' });
+  const baseEnd = String(
+    selectedEmployeeBaseScheduleEnd
+    || selectedEmployee?.baseScheduleEndTime
+    || selectedEmployee?.scheduleEndTime
+    || derivedBaseEnd
+    || '17:00'
+  ).slice(0, 5) || derivedBaseEnd || '17:00';
+  const isManagedDept = Boolean(selectedEmployee && isManagedAttendanceDept(selectedEmployee.dept));
+  const currentScheduleLabel = selectedEmployeeBaseScheduleLabel || `${baseStart} - ${baseEnd}`;
+
+  const selectedManualCheckins = useMemo(() => {
+    if (!selectedEmployee) return [];
+    const targetDate = String(activeDate || '').slice(0, 10);
+    return (manualCheckins || [])
+      .filter((row) => String(row.empNo || row.emp_no || '').trim() === String(selectedEmployee.empNo || '').trim())
+      .filter((row) => {
+        const rowDate = String(row.workDate || row.work_date || '').slice(0, 10);
+        if (targetDate) return rowDate === targetDate;
+        return rowDate.startsWith(String(month || '').slice(0, 7));
+      })
+      .sort((a, b) => String(a.workDate || a.work_date || '').localeCompare(String(b.workDate || b.work_date || '')) || String(a.check_time || a.checkTime || '').localeCompare(String(b.check_time || b.checkTime || '')));
+  }, [activeDate, manualCheckins, month, selectedEmployee]);
+
+  const selectedDayLogs = useMemo(() => {
+    if (!selectedEmployee || !activeDate) return [];
+    const empNo = String(selectedEmployee.empNo || '').trim();
+    const targetDate = String(activeDate || '').slice(0, 10);
+    return (selectedEmployeeLogs || [])
+      .filter((row) => String(row.empNo || row.emp_no || '').trim() === empNo)
+      .filter((row) => String(row.workDate || row.work_date || '').slice(0, 10) === targetDate)
+      .sort((a, b) => String(a.logTime || a.log_time || '').localeCompare(String(b.logTime || b.log_time || '')));
+  }, [activeDate, selectedEmployee, selectedEmployeeLogs]);
+  const selectedDayRawLogs = useMemo(() => {
+    if (!selectedEmployee || !activeDate) return [];
+    const empNo = String(selectedEmployee.empNo || '').trim();
+    const targetDate = String(activeDate || '').slice(0, 10);
+    return (selectedEmployeeLogs || [])
+      .filter((row) => String(row.empNo || row.emp_no || '').trim() === empNo)
+      .filter((row) => String(row.workDate || row.work_date || '').slice(0, 10) === targetDate)
+      .filter((row) => !row.isManual)
+      .sort((a, b) => String(a.logTime || a.log_time || '').localeCompare(String(b.logTime || b.log_time || '')));
+  }, [activeDate, selectedEmployee, selectedEmployeeLogs]);
+  const activeCheckinAdjustment = useMemo(() => {
+    return selectedDayLogs.find((log) => {
+      const role = String(log.adjustedRole || log.eventType || '').trim();
+      return Boolean(log.isAdjustedCheckin || log.isManual || role.includes('출'));
+    }) || null;
+  }, [selectedDayLogs]);
+  const hasCheckoutCorrection = useMemo(() => {
+    return selectedDayLogs.some((log) => (
+      Boolean(log.correctedOutTime)
+      || Boolean(log.isAdjustedCheckout)
+      || Boolean(log.isManual && String(log.eventType || '').includes('퇴'))
+      || String(log.adjustedRole || log.eventType || '').trim().includes('퇴')
+    ));
+  }, [selectedDayLogs]);
+  const hasSavedAttendanceCorrection = Boolean(activeCheckinAdjustment || hasCheckoutCorrection);
+
+  const pendingManualCheckins = useMemo(() => {
+    return selectedManualCheckins.filter((row) => String(row.adminDecision || row.admin_decision || '').trim() === 'pending');
+  }, [selectedManualCheckins]);
+
+  const [correctionType, setCorrectionType] = useState('퇴근');
+  const [correctionTime, setCorrectionTime] = useState('');
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [correctionSaving, setCorrectionSaving] = useState(false);
+  const [selectedManualDeleteIds, setSelectedManualDeleteIds] = useState([]);
+
+  useEffect(() => {
+    setSelectedManualDeleteIds([]);
+  }, [selectedEmployee?.empNo, activeDate]);
+
+  useEffect(() => {
+    const firstLog = selectedDayRawLogs[0] || null;
+    const lastLog = selectedDayRawLogs[selectedDayRawLogs.length - 1] || null;
+    const fallbackTime = correctionType === '출근'
+      ? formatManualTime(firstLog?.logTime || firstLog?.log_time || '')
+      : formatManualTime(lastLog?.correctedOutTime || lastLog?.logTime || lastLog?.log_time || '');
+    setCorrectionTime(fallbackTime || '');
+  }, [activeDate, correctionType, selectedDayRawLogs]);
+
+  const selectedSummary = !selectedDates.length
+    ? '날짜를 선택하세요'
+    : selectedDates.length === 1
+      ? selectedDates[0]
+      : `${selectedDates.length}개 날짜 선택`;
+  const allSelectedHaveSchedule = selectedDates.length > 0 && selectedDates.every((dateStr) => {
+    const override = overrideMap.get(dateStr) || null;
+    const resolvedSchedule = resolveSchedulePairForDate({
+      dept: selectedEmployee?.dept || '',
+      dateStr,
+      baseScheduleStart: baseStart,
+      baseScheduleEnd: baseEnd,
+      override,
+      teamPattern: null,
+    });
+    return Boolean(resolvedSchedule?.start && resolvedSchedule?.end);
+  });
+
+  const weekRows = useMemo(() => {
+    const rows = [];
+    const empDept = String(selectedEmployee?.dept || '').trim();
+    const empNo = String(selectedEmployee?.empNo || '').trim();
+
+    for (let rowIndex = 0; rowIndex < cells.length; rowIndex += 7) {
+      const rowCells = cells.slice(rowIndex, rowIndex + 7);
+      const dateCells = rowCells.filter((cell) => !cell.empty);
+      const displayCell = rowCells.find((cell) => !cell.empty && cell.inCurrentMonth) || dateCells[0] || null;
+      const totalMinutes = dateCells.reduce((sum, cell) => {
+        const override = overrideMap.get(cell.dateStr) || null;
+        const resolvedSchedule = resolveSchedulePairForDate({
+          dept: empDept,
+          dateStr: cell.dateStr,
+          baseScheduleStart: baseStart,
+          baseScheduleEnd: baseEnd,
+          override,
+          teamPattern: null,
+        });
+        if (!resolvedSchedule?.start || !resolvedSchedule?.end) return sum;
+
+        const scheduleMinutes = Math.max(0, getScheduleDurationMinutes(resolvedSchedule.start, resolvedSchedule.end) - 60);
+        const dayStats = dailyAttendanceMap?.[empNo]?.[cell.dateStr] || null;
+        const canAdjust = isExternalBusinessDept(empDept) && (!override || override.allowOvertime !== false);
+        const adjustmentMinutes = canAdjust
+          ? getAdjustmentMinutes({
+            scheduleEnd: resolvedSchedule.end,
+            actualOut: String(dayStats?.out || '').trim(),
+          })
+          : 0;
+        const roundedAdjustmentMinutes = clampToHalfHourSteps(adjustmentMinutes);
+
+        return sum + scheduleMinutes + roundedAdjustmentMinutes;
+      }, 0);
+
+      rows.push({
+        key: `week-${rowIndex / 7}`,
+        label: `${getYearWeekNumber(displayCell?.dateStr) || rowIndex / 7 + 1}주차`,
+        range: dateCells.length > 0
+          ? `${formatMonthDayLabel(dateCells[0].dateStr)}~${formatMonthDayLabel(dateCells[dateCells.length - 1].dateStr)}`
+          : '',
+        totalLabel: formatWeekTotalLabel(totalMinutes),
+        cells: rowCells,
+      });
+    }
+
+    return rows;
+  }, [baseEnd, baseStart, cells, dailyAttendanceMap, overrideMap, selectedEmployee?.dept, selectedEmployee?.empNo]);
+
+  const handleCalendarPick = (cell) => {
+    if (!selectedEmployee || cell.empty) return;
+    const dateStr = cell.dateStr;
+    const override = overrideMap.get(dateStr) || null;
+    if (batchMode) {
+      onToggleBatchDate?.(dateStr, override);
+      onChangeOverrideDate?.(dateStr, override);
       return;
     }
+    onChangeOverrideDate?.(dateStr, override);
     onPickDate?.(dateStr, override);
   };
 
+  const handleSaveAttendanceCorrection = async () => {
+    if (!selectedEmployee || !activeDate || !correctionTime) return;
+    const empNo = String(selectedEmployee.empNo || '').trim();
+    const timePart = String(correctionTime || '').slice(0, 5);
+    setCorrectionSaving(true);
+    try {
+      const res = await fetch('/api/attendance/correction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empNo,
+          workDate: activeDate,
+          correctionType,
+          correctionTime: `${activeDate}T${timePart}:00+09:00`,
+          reason: correctionReason || '',
+        }),
+      });
+      const json = await res.json();
+      if (!json?.success) throw new Error(json?.error || `${correctionType} 보정에 실패했습니다.`);
+      if (typeof onRefreshData === 'function') {
+        await onRefreshData();
+      }
+      onChangeOverrideDate?.(activeDate, activeOverride || overrideMap.get(activeDate) || null);
+      alert('근태 보정이 저장되었습니다.');
+    } catch (err) {
+      alert(err.message || '근태 보정 저장 중 오류가 발생했습니다.');
+    } finally {
+      setCorrectionSaving(false);
+    }
+  };
+
+  const handleDeleteAttendanceCorrection = async () => {
+    if (!selectedEmployee || !activeDate || !hasSavedAttendanceCorrection) return;
+    if (!window.confirm('해당 보정을 삭제하고 원래 기록으로 되돌릴까요?')) return;
+    const empNo = String(selectedEmployee.empNo || '').trim();
+    setCorrectionSaving(true);
+    try {
+      const correctionTypeToDelete = activeCheckinAdjustment ? '출근' : '퇴근';
+      const res = await fetch('/api/attendance/correction', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empNo, workDate: activeDate, correctionType: correctionTypeToDelete }),
+      });
+      const json = await res.json();
+      if (!json?.success) throw new Error(json?.error || `${correctionTypeToDelete} 보정 삭제에 실패했습니다.`);
+      if (typeof onRefreshData === 'function') {
+        await onRefreshData();
+      }
+      alert('보정이 삭제되었습니다.');
+    } catch (err) {
+      alert(err.message || '보정 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setCorrectionSaving(false);
+    }
+  };
+
+  const handleManualDecision = async (id, decision) => {
+    if (!id || !decision) return;
+    if (!window.confirm(decision === 'approved' ? '해당 요청을 승인할까요?' : '해당 요청을 반려할까요?')) return;
+    try {
+      const res = await fetch('/api/attendance/manual-checkin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, decision }),
+      });
+      const json = await res.json();
+      if (!json?.success) throw new Error(json?.error || '결재 처리에 실패했습니다.');
+      if (typeof onRefreshData === 'function') {
+        await onRefreshData();
+      }
+      if (typeof onChangeOverrideDate === 'function' && activeDate) {
+        onChangeOverrideDate(activeDate, activeOverride || null);
+      }
+      alert(decision === 'approved' ? '승인 처리되었습니다.' : '반려 처리되었습니다.');
+    } catch (err) {
+      alert(err.message || '결재 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteSelectedManualCheckins = async () => {
+    if (!selectedManualDeleteIds.length) return;
+    if (!window.confirm(`선택한 수동 기록 ${selectedManualDeleteIds.length}건을 삭제할까요?`)) return;
+
+    setCorrectionSaving(true);
+    try {
+      const res = await fetch('/api/attendance/correction', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedManualDeleteIds }),
+      });
+      const json = await res.json();
+      if (!json?.success) throw new Error(json?.error || '수동 기록 삭제에 실패했습니다.');
+      setSelectedManualDeleteIds([]);
+      if (typeof onRefreshData === 'function') {
+        await onRefreshData();
+      }
+      alert('선택한 수동 기록이 삭제되었습니다.');
+    } catch (err) {
+      alert(err.message || '수동 기록 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setCorrectionSaving(false);
+    }
+  };
+
   return (
-    <div className="card schedule-calendar-panel" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div className="calendar-widget__header">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
-          <div className="calendar-widget__eyebrow">{CALENDAR_COPY.eyebrow}</div>
-          <div className="calendar-widget__title">{monthLabel} {CALENDAR_COPY.monthSuffix}</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '2px' }}>
-            <span className="legend-pill">
-              <CalendarDays className="legend-dot-sm" style={{ color: 'var(--blue)' }} />
-              {CALENDAR_COPY.legendBaseSchedule}
-            </span>
-            <span className="legend-pill">
-              <Clock3 className="legend-dot-sm" style={{ color: 'var(--purple)' }} />
-              {CALENDAR_COPY.legendOverride}
-            </span>
-            <span className="legend-pill">
-              <User className="legend-dot-sm" style={{ color: 'var(--red)' }} />
-              {CALENDAR_COPY.legendToday}
-            </span>
-            <span className="legend-pill">
-              <strong>{selectedEmployee?.name || CALENDAR_COPY.selectedEmployeeFallback}</strong>
-            </span>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.38fr) minmax(330px, 0.62fr)', gap: 14, alignItems: 'start' }}>
+      <div className="schedule-modal-calendar card" style={{ padding: 16, gap: 12 }}>
+        <div className="card-header" style={{ paddingBottom: 0, borderBottom: 'none', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>일자별 근무일정 조정</div>
+            <h3 className="card-title" style={{ marginTop: 4 }}>{formatMonthLabel(month)} 캘린더</h3>
+            <p className="card-subtitle">날짜를 선택해 기본 근무일정과 예외를 함께 관리합니다.</p>
           </div>
+
+          <MonthSearchPicker
+            label="달력 범위"
+            value={month}
+            onChange={(nextMonth) => onMonthChange?.(nextMonth)}
+            monthOptions={monthOptions}
+            onPrev={() => {
+              const idx = monthOptions.indexOf(month);
+              if (idx > 0) onMonthChange?.(monthOptions[idx - 1]);
+            }}
+            onNext={() => {
+              const idx = monthOptions.indexOf(month);
+              if (idx >= 0 && idx < monthOptions.length - 1) onMonthChange?.(monthOptions[idx + 1]);
+            }}
+            placeholder="YYYY-MM 검색"
+          />
         </div>
-        <div className="calendar-widget__nav">
-          <button type="button" className="calendar-widget__nav-btn" onClick={() => onMonthChange?.('prev')} aria-label="이전 달">
-            <ChevronLeft style={{ width: 16, height: 16 }} />
-          </button>
-          <button type="button" className="calendar-widget__nav-btn" onClick={() => onMonthChange?.('next')} aria-label="다음 달">
-            <ChevronRight style={{ width: 16, height: 16 }} />
-          </button>
+
+        <div className="calendar-widget__weekday-grid" style={{ gap: 6, gridTemplateColumns: '112px repeat(7, minmax(0, 1fr))' }}>
+          <div aria-hidden="true" />
+          {WEEKDAYS.map((day, idx) => (
+            <div key={day} className={`calendar-widget__weekday ${idx === 0 ? 'is-sun' : idx === 6 ? 'is-sat' : ''}`}>
+              {day}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gap: 8 }}>
+          {weekRows.map((week) => (
+            <div
+              key={week.key}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '112px repeat(7, minmax(0, 1fr))',
+                gap: 6,
+                alignItems: 'stretch',
+              }}
+            >
+              <div
+                style={{
+                  minHeight: 88,
+                  borderRadius: 18,
+                  border: '1px solid var(--border)',
+                  background: 'linear-gradient(180deg, rgba(91, 136, 214, 0.10), rgba(91, 136, 214, 0.04))',
+                  padding: '10px 10px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  gap: 4,
+                }}
+              >
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-1)' }}>{week.label}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-2)', lineHeight: 1.25 }}>{week.range}</div>
+                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 800, color: 'var(--blue)' }}>
+                  {week.totalLabel}
+                </div>
+              </div>
+
+              {week.cells.map((cell, idx) => {
+                if (cell.empty) return <div key={`empty-${week.key}-${idx}`} className="calendar-widget__spacer" />;
+
+                const isToday = cell.dateStr === todayStr;
+                const isSelected = selectedDates.includes(cell.dateStr) || activeDate === cell.dateStr;
+                const override = overrideMap.get(cell.dateStr) || null;
+                const dayStats = dailyAttendanceMap?.[selectedEmployee?.empNo || '']?.[cell.dateStr] || null;
+                const manualRows = selectedEmployee ? getManualCheckinsForDate(manualCheckins, selectedEmployee.empNo, cell.dateStr) : [];
+                const leaveRows = selectedEmployee ? getEmployeeLeavesForDate(calendarLeaves, selectedEmployee.empNo, cell.dateStr) : [];
+                const resolvedSchedule = resolveSchedulePairForDate({
+                  dept: selectedEmployee?.dept || '',
+                  dateStr: cell.dateStr,
+                  baseScheduleStart: baseStart,
+                  baseScheduleEnd: baseEnd,
+                  override,
+                  teamPattern: null,
+                });
+                const hasSchedule = Boolean(resolvedSchedule);
+                const isHoliday = !!getHolidayName(cell.dateStr) || cell.dayOfWeek === '일' || cell.dayOfWeek === '토';
+                const holidayName = getHolidayName(cell.dateStr);
+                const showTime = Boolean(dayStats?.in || dayStats?.out);
+                const displayStart = normalizeTime(dayStats?.in || '', '');
+                const displayEnd = normalizeTime(dayStats?.out || '', '');
+                const resolvedStart = resolvedSchedule ? normalizeTime(resolvedSchedule.start || baseStart, baseStart) : '';
+                const resolvedEnd = resolvedSchedule ? normalizeTime(resolvedSchedule.end || baseEnd, baseEnd) : '';
+                const isSameAsBase = Boolean(
+                  resolvedSchedule
+                  && resolvedStart === baseStart
+                  && resolvedEnd === baseEnd
+                );
+                const isLate = Boolean(dayStats?.isLate);
+                const adjustedSchedule = resolvedSchedule && !isSameAsBase;
+                const scheduleBadge = adjustedSchedule && resolvedStart && resolvedEnd
+                  ? `${resolvedStart}-${resolvedEnd}`
+                  : '';
+                const adjustmentBadge = (() => {
+                  if (!selectedEmployee || !isExternalBusinessDept(selectedEmployee.dept)) return '';
+                  if (!resolvedSchedule?.end) return '';
+                  if (override && override.allowOvertime === false) return '';
+                  const actualOut = String(dayStats?.out || '').trim();
+                  if (!actualOut) return '';
+                  const adjustmentMinutes = getAdjustmentMinutes({
+                    scheduleEnd: resolvedSchedule.end,
+                    actualOut,
+                  });
+                  if (adjustmentMinutes <= 0) return '';
+                  const halfHours = Number(formatHalfHourSteps(adjustmentMinutes));
+                  if (!Number.isFinite(halfHours) || halfHours <= 0) return '';
+                  return `조정 ${halfHours.toFixed(1)}`;
+                })();
+                const overtimeBadge = override && override.allowOvertime === false && isExternalBusinessDept(selectedEmployee?.dept)
+                  ? '초과근무 비허용'
+                  : '';
+                return (
+                  <button
+                    key={cell.dateStr}
+                    type="button"
+                    className={[
+                      'calendar-day',
+                      override ? 'has-override' : '',
+                      isSelected ? 'is-selected' : '',
+                      isToday ? 'is-today' : '',
+                      isHoliday ? 'is-holiday' : '',
+                      !hasSchedule ? 'is-empty-schedule' : '',
+                    ].filter(Boolean).join(' ')}
+                    onClick={() => handleCalendarPick(cell)}
+                    disabled={!selectedEmployee}
+                    style={{
+                      minHeight: 88,
+                      background: !cell.inCurrentMonth
+                        ? 'rgba(148, 163, 184, 0.12)'
+                        : isLate
+                          ? 'rgba(245, 158, 11, 0.12)'
+                          : undefined,
+                      opacity: cell.inCurrentMonth ? 1 : 0.62,
+                      color: cell.inCurrentMonth ? undefined : 'rgba(71, 85, 105, 0.82)',
+                    }}
+                  >
+                    <div className="calendar-day__top">
+                      <span className="calendar-day__number">{cell.dayNum}</span>
+                      {holidayName ? <span className="calendar-day__holiday">{holidayName}</span> : null}
+                      <div className="calendar-day__tag-stack">
+                        {isToday ? (
+                          <span className="calendar-day__state-tag" style={makeCalendarBadgeStyle('rgba(239, 68, 68, 0.12)', 'var(--red)', 'rgba(239, 68, 68, 0.28)')}>
+                            오늘
+                          </span>
+                        ) : null}
+                        {isLate ? (
+                          <span
+                            className="calendar-day__state-tag"
+                            style={makeCalendarBadgeStyle('rgba(245, 158, 11, 0.16)', '#b45309', 'rgba(245, 158, 11, 0.34)')}
+                          >
+                            지각
+                          </span>
+                        ) : null}
+                        {adjustmentBadge ? (
+                          <span
+                            className="calendar-day__state-tag"
+                            style={makeCalendarBadgeStyle('rgba(220, 38, 38, 0.12)', '#b91c1c', 'rgba(220, 38, 38, 0.28)')}
+                          >
+                            {adjustmentBadge}
+                          </span>
+                        ) : null}
+                        {manualRows.length > 0 ? (
+                          <span
+                            className="calendar-day__state-tag"
+                            style={makeCalendarBadgeStyle('rgba(148, 163, 184, 0.16)', '#475569', 'rgba(148, 163, 184, 0.34)')}
+                          >
+                            {manualRows.length > 1 ? `수동 ${manualRows.length}` : '수동'}
+                          </span>
+                        ) : null}
+                        {overtimeBadge ? (
+                          <span
+                            className="calendar-day__state-tag"
+                            style={makeCalendarBadgeStyle('rgba(208, 107, 107, 0.12)', 'var(--red)', 'rgba(208, 107, 107, 0.24)')}
+                          >
+                            {overtimeBadge}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {showTime ? (
+                      <div className="calendar-day__time-block" style={{ gap: 2 }}>
+                        {displayStart ? <span className="calendar-day__time-main is-in">출근 {displayStart}</span> : null}
+                        {displayEnd ? <span className="calendar-day__time-main is-out">퇴근 {displayEnd}</span> : null}
+                      </div>
+                    ) : null}
+
+                    {scheduleBadge || leaveRows.length > 0 ? (
+                      <div className="calendar-day__leave-list" style={{ marginTop: 2 }}>
+                        {scheduleBadge ? (
+                          <span
+                            className="calendar-day__state-tag"
+                            style={makeCalendarBadgeStyle('rgba(34, 197, 94, 0.14)', 'var(--green)', 'rgba(34, 197, 94, 0.30)')}
+                          >
+                            {scheduleBadge}
+                          </span>
+                        ) : null}
+                        {leaveRows.map((leave, leaveIndex) => {
+                          const leaveMeta = getLeaveMeta(leave, dayStats);
+                          const leaveLabel = String(leaveMeta?.label || leaveMeta?.rawLabel || '').trim();
+                          return (
+                            <span
+                              key={`${String(leave.empNo || leave.emp_no || leaveIndex)}-${leaveIndex}`}
+                              className={`calendar-detail__name-chip ${String(leaveMeta?.variantClassName || '').trim()}`.trim()}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                maxWidth: '100%',
+                                paddingInline: 8,
+                                paddingBlock: 3,
+                                borderRadius: '999px',
+                                background: leaveMeta.bg,
+                                color: leaveMeta.color,
+                                whiteSpace: 'nowrap',
+                                fontWeight: 600,
+                                fontSize: 8.5,
+                                lineHeight: 1.1,
+                                border: '1px solid transparent',
+                                borderColor: leaveMeta.borderColor || 'transparent',
+                              }}
+                            >
+                              {leaveLabel}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        <div className="calendar-widget__grid" style={{ gap: 6, display: 'none' }}>
+          {cells.map((cell, idx) => {
+            if (cell.empty) return <div key={`empty-${idx}`} className="calendar-widget__spacer" />;
+
+            const isToday = cell.dateStr === todayStr;
+            const isSelected = selectedDates.includes(cell.dateStr) || activeDate === cell.dateStr;
+            const override = overrideMap.get(cell.dateStr) || null;
+            const dayStats = dailyAttendanceMap?.[selectedEmployee?.empNo || '']?.[cell.dateStr] || null;
+            const manualRows = selectedEmployee ? getManualCheckinsForDate(manualCheckins, selectedEmployee.empNo, cell.dateStr) : [];
+            const resolvedSchedule = resolveSchedulePairForDate({
+              dept: selectedEmployee?.dept || '',
+              dateStr: cell.dateStr,
+              baseScheduleStart: baseStart,
+              baseScheduleEnd: baseEnd,
+              override,
+              teamPattern: null,
+            });
+            const hasSchedule = Boolean(resolvedSchedule);
+            const isHoliday = !!getHolidayName(cell.dateStr) || cell.dayOfWeek === '일' || cell.dayOfWeek === '토';
+            const holidayName = getHolidayName(cell.dateStr);
+            const leaveRows = selectedEmployee ? getEmployeeLeavesForDate(calendarLeaves, selectedEmployee.empNo, cell.dateStr) : [];
+            const showTime = Boolean(dayStats?.in || dayStats?.out);
+            const displayStart = normalizeTime(dayStats?.in || '', '');
+            const displayEnd = normalizeTime(dayStats?.out || '', '');
+            const resolvedStart = resolvedSchedule ? normalizeTime(resolvedSchedule.start || baseStart, baseStart) : '';
+            const resolvedEnd = resolvedSchedule ? normalizeTime(resolvedSchedule.end || baseEnd, baseEnd) : '';
+            const isSameAsBase = Boolean(
+              resolvedSchedule
+              && resolvedStart === baseStart
+              && resolvedEnd === baseEnd
+            );
+            const isLate = Boolean(dayStats?.isLate);
+            const adjustedSchedule = resolvedSchedule && !isSameAsBase;
+            const scheduleBadge = adjustedSchedule && resolvedStart && resolvedEnd
+              ? `${resolvedStart}-${resolvedEnd}`
+              : '';
+            const adjustmentBadge = (() => {
+              if (!selectedEmployee || !isExternalBusinessDept(selectedEmployee.dept)) return '';
+              if (!resolvedSchedule?.end) return '';
+              if (override && override.allowOvertime === false) return '';
+              const actualOut = String(dayStats?.out || '').trim();
+              if (!actualOut) return '';
+              const adjustmentMinutes = getAdjustmentMinutes({
+                scheduleEnd: resolvedSchedule.end,
+                actualOut,
+              });
+              if (adjustmentMinutes <= 0) return '';
+              const halfHours = Number(formatHalfHourSteps(adjustmentMinutes));
+              if (!Number.isFinite(halfHours) || halfHours <= 0) return '';
+              return `조정 ${halfHours.toFixed(1)}`;
+            })();
+            const overtimeBadge = override && override.allowOvertime === false && isExternalBusinessDept(selectedEmployee?.dept)
+              ? '초과근무 비허용'
+              : '';
+
+            return (
+              <button
+                key={cell.dateStr}
+                type="button"
+                className={[
+                  'calendar-day',
+                  override ? 'has-override' : '',
+                  isSelected ? 'is-selected' : '',
+                  isToday ? 'is-today' : '',
+                  isHoliday ? 'is-holiday' : '',
+                  !hasSchedule ? 'is-empty-schedule' : '',
+                ].filter(Boolean).join(' ')}
+                onClick={() => handleCalendarPick(cell)}
+                disabled={!selectedEmployee}
+                style={{
+                  minHeight: 88,
+                  background: !hasSchedule && isManagedDept
+                    ? 'rgba(100, 116, 139, 0.08)'
+                    : isLate
+                      ? 'rgba(245, 158, 11, 0.12)'
+                      : isHoliday
+                        ? 'rgba(239, 68, 68, 0.04)'
+                        : resolvedSchedule
+                          ? 'linear-gradient(180deg, rgba(91, 136, 214, 0.18), rgba(91, 136, 214, 0.08)), var(--bg-card-2)'
+                          : undefined,
+                  borderColor: resolvedSchedule ? 'rgba(91, 136, 214, 0.46)' : undefined,
+                }}
+              >
+                <div className="calendar-day__top">
+                  <span className="calendar-day__number">{cell.dayNum}</span>
+                  {holidayName ? <span className="calendar-day__holiday">{holidayName}</span> : null}
+                  <div className="calendar-day__tag-stack">
+                        {isToday ? (
+                          <span className="calendar-day__state-tag" style={makeCalendarBadgeStyle('rgba(239, 68, 68, 0.12)', 'var(--red)', 'rgba(239, 68, 68, 0.28)')}>
+                            오늘
+                          </span>
+                        ) : null}
+                    {isLate ? (
+                      <span
+                        className="calendar-day__state-tag"
+                        style={makeCalendarBadgeStyle('rgba(245, 158, 11, 0.16)', '#b45309', 'rgba(245, 158, 11, 0.34)')}
+                      >
+                            지각
+                      </span>
+                    ) : null}
+                    {adjustmentBadge ? (
+                      <span
+                        className="calendar-day__state-tag"
+                        style={makeCalendarBadgeStyle('rgba(220, 38, 38, 0.12)', '#b91c1c', 'rgba(220, 38, 38, 0.28)')}
+                      >
+                        {adjustmentBadge}
+                      </span>
+                    ) : null}
+                    {manualRows.length > 0 ? (
+                      <span
+                        className="calendar-day__state-tag"
+                        style={makeCalendarBadgeStyle('rgba(148, 163, 184, 0.16)', '#475569', 'rgba(148, 163, 184, 0.34)')}
+                      >
+                        {manualRows.length > 1 ? `수동 ${manualRows.length}` : '수동'}
+                      </span>
+                    ) : null}
+                    {overtimeBadge ? (
+                      <span
+                        className="calendar-day__state-tag"
+                        style={makeCalendarBadgeStyle('rgba(208, 107, 107, 0.12)', 'var(--red)', 'rgba(208, 107, 107, 0.24)')}
+                      >
+                        {overtimeBadge}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                {showTime ? (
+                      <div className="calendar-day__time-block" style={{ gap: 2 }}>
+                        {displayStart ? <span className="calendar-day__time-main is-in">출근 {displayStart}</span> : null}
+                        {displayEnd ? <span className="calendar-day__time-main is-out">퇴근 {displayEnd}</span> : null}
+                  </div>
+                ) : null}
+
+                {scheduleBadge || leaveRows.length > 0 ? (
+                  <div className="calendar-day__leave-list" style={{ marginTop: 2 }}>
+                    {scheduleBadge ? (
+                      <span
+                        className="calendar-day__state-tag"
+                        style={makeCalendarBadgeStyle('rgba(34, 197, 94, 0.14)', 'var(--green)', 'rgba(34, 197, 94, 0.30)')}
+                      >
+                        {scheduleBadge}
+                      </span>
+                    ) : null}
+                    {leaveRows.map((leave, index) => {
+                      const leaveMeta = getLeaveMeta(leave, dayStats);
+                      const leaveLabel = String(leaveMeta?.label || leaveMeta?.rawLabel || '').trim();
+                      return (
+                        <span
+                          key={`${String(leave.empNo || leave.emp_no || index)}-${index}`}
+                          className={`calendar-detail__name-chip ${String(leaveMeta?.variantClassName || '').trim()}`.trim()}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            maxWidth: '100%',
+                            paddingInline: 8,
+                            paddingBlock: 3,
+                            borderRadius: '999px',
+                            background: leaveMeta.bg,
+                            color: leaveMeta.color,
+                            whiteSpace: 'nowrap',
+                            fontWeight: 600,
+                            fontSize: 8.5,
+                            lineHeight: 1.1,
+                            border: '1px solid transparent',
+                            borderColor: leaveMeta.borderColor || 'transparent',
+                          }}
+                        >
+                          {leaveLabel}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.85fr)',
-        gap: '16px',
-        alignItems: 'start'
-      }}>
-        <div className="calendar-widget">
-          <div style={{ display: 'grid', gridTemplateColumns: showDeptPicker ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: '10px' }}>
-            {showDeptPicker && (
+      <div className="schedule-modal-side card" style={{ padding: 16, gap: 12 }}>
+        <div
+          style={{
+            padding: '10px 12px',
+            borderRadius: 16,
+            border: '1px solid var(--border)',
+            background: 'var(--bg-overlay-sm)',
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <div>
-              <div className="form-label">부서 선택</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>월 기본 근무일정</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', marginTop: 2 }}>
+                {selectedEmployeeBaseScheduleLabel || `${baseStart} - ${baseEnd}`}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="login-btn"
+              onClick={onSaveBaseSchedule}
+              disabled={modalSaving || !selectedEmployee}
+              style={{ marginTop: 0, minWidth: 90, paddingInline: 12, background: 'var(--blue)', color: '#fff' }}
+            >
+              {modalSaving ? '저장 중...' : '저장'}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span className="form-label" style={{ margin: 0 }}>출근시간</span>
               <select
                 className="ui-select"
-                value={deptFilter}
-                onChange={(e) => onDeptFilterChange?.(e.target.value)}
-                disabled={!canChangeDept}
-                style={{ width: '100%' }}
+                value={baseScheduleStart}
+                onChange={(e) => onChangeBaseScheduleStart?.(e.target.value)}
+                disabled={!selectedEmployee || modalSaving}
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 30, fontSize: 11 }}
               >
-                {deptOptions.map((dept) => (
-                  <option key={dept} value={dept}>{dept}</option>
+                {TIME_OPTIONS.map((time) => (
+                  <option key={`base-start-${time}`} value={time}>{time}</option>
                 ))}
               </select>
-            </div>
-            )}
-            <div>
-              <div className="form-label">직원 선택</div>
+            </label>
+
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span className="form-label" style={{ margin: 0 }}>퇴근시간</span>
               <select
                 className="ui-select"
-                value={employeeFilter}
-                onChange={(e) => onEmployeeFilterChange?.(e.target.value)}
-                style={{ width: '100%' }}
+                value={baseScheduleEnd}
+                onChange={(e) => onChangeBaseScheduleEnd?.(e.target.value)}
+                disabled={!selectedEmployee || modalSaving}
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 30, fontSize: 11 }}
               >
-                {employeeOptions.length === 0 ? (
-                  <option value="">선택 가능한 직원이 없습니다</option>
-                ) : (
-                  employeeOptions.map((emp) => (
-                    <option key={emp.empNo} value={emp.empNo}>
-                      {emp.name} ({emp.empNo})
-                    </option>
-                  ))
-                )}
+                {TIME_OPTIONS.map((time) => (
+                  <option key={`base-end-${time}`} value={time}>{time}</option>
+                ))}
               </select>
-            </div>
+            </label>
+          </div>
+        </div>
+
+        <form onSubmit={onSubmitOverride} style={{ display: 'grid', gap: 12 }}>
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 18,
+            border: '1px solid var(--border)',
+            background: 'var(--bg-overlay-sm)',
+            display: 'grid',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>선택 날짜</div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>
+              <input
+                type="checkbox"
+                checked={batchMode}
+                onChange={(e) => onToggleBatchMode?.(e.target.checked)}
+              />
+              다중선택
+            </label>
           </div>
 
-          <div className="calendar-widget__legend">
-            <div className="calendar-widget__legend-item">
-              <span className="calendar-widget__legend-swatch" style={{ background: 'var(--amber)' }} />
-              {CALENDAR_COPY.legendOverride}
-            </div>
-            <div className="calendar-widget__legend-item">
-              <span className="calendar-widget__legend-swatch" style={{ background: 'var(--red)' }} />
-              {CALENDAR_COPY.legendToday}
-            </div>
-          </div>
-
-          <div className="calendar-widget__weekday-grid">
-            {WEEKDAYS.map((day, idx) => (
-              <div
-                key={`weekday-${idx}`}
-                className={`calendar-widget__weekday ${idx === 0 ? 'is-sun' : idx === 6 ? 'is-sat' : ''}`}
-              >
-                {day}
+          <div style={{ display: 'grid', gap: 6, maxHeight: 132, overflow: 'auto' }}>
+            {selectedDates.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                캘린더에서 날짜를 선택하세요.
               </div>
-            ))}
-          </div>
-
-          <div className="calendar-widget__grid">
-            {cells.map((cell, idx) => {
-              if (cell.empty) {
-                return <div key={`empty-${idx}`} className="calendar-widget__spacer" />;
-              }
-
-              const override = overrideMap.get(cell.dateStr);
-              const isSelected = selectedDate === cell.dateStr;
-              const isBatchSelected = selectedBatchSet.has(cell.dateStr);
-              const isToday = cell.dateStr === todayStr;
-              const actualIn = normalizeTime(dailyStats[cell.dateStr]?.in);
-              const actualOut = normalizeTime(dailyStats[cell.dateStr]?.out);
-              const badgeLabel = override
-                ? getScheduleBadgeLabel({
-                  dept: selectedEmployeeDept,
-                  start: override.schedule_start,
-                  end: override.schedule_end,
-                  isOverride: true,
-                })
-                : CALENDAR_COPY.baseTag;
-
-              return (
-                <button
-                  key={cell.dateStr}
-                  type="button"
-                  className={[
-                    'calendar-day',
-                    isToday ? 'is-today' : '',
-                    isSelected ? 'is-selected' : '',
-                    isBatchSelected ? 'is-selected' : '',
-                    override ? 'has-override' : 'is-base',
-                  ].filter(Boolean).join(' ')}
-                  onMouseDown={(e) => onBatchDateMouseDown?.(cell.dateStr, e)}
-                  onMouseEnter={(e) => onBatchDateMouseEnter?.(cell.dateStr, e)}
-                  onMouseUp={(e) => onBatchDateMouseUp?.(cell.dateStr, e)}
-                  onClick={() => handleDayClick(cell.dateStr, override)}
+            ) : (
+              selectedDates.map((dateStr) => (
+                <label
+                  key={dateStr}
                   style={{
-                    ...(isBatchSelected
-                      ? {
-                        boxShadow: 'inset 0 0 0 2px rgba(168, 85, 247, 0.85), 0 0 0 1px rgba(168, 85, 247, 0.2)',
-                        background: 'linear-gradient(180deg, rgba(168, 85, 247, 0.16), rgba(79, 70, 229, 0.10))',
-                      }
-                      : null),
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '7px 9px',
+                    borderRadius: 12,
+                    border: '1px solid var(--border)',
+                    background: activeDate === dateStr ? 'rgba(91, 136, 214, 0.08)' : 'transparent',
+                    fontSize: 12.5,
+                    color: 'var(--text-1)',
+                    cursor: 'pointer',
                   }}
                 >
-                  <div className="calendar-day__top">
-                    <span className="calendar-day__number">{cell.dayNum}</span>
-                    <div className="calendar-day__tag-stack">
-                      {isToday && <span className="calendar-day__state-tag is-today-tag">{CALENDAR_COPY.todayTag}</span>}
-                      {override && (
-                        <span className="calendar-day__state-tag is-override-tag">{badgeLabel}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="calendar-day__time-block">
-                    {actualIn && (
-                      <span className="calendar-day__time-main is-in">
-                        {CALENDAR_COPY.checkinLabel} {actualIn}
-                      </span>
-                    )}
-                    {actualOut && (
-                      <span className="calendar-day__time-main is-out">
-                        {CALENDAR_COPY.checkoutLabel} {actualOut}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="calendar-day__leave-list">
-                    <span className="calendar-day__leave-more">
-                      {CALENDAR_COPY.clickToAdjust}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="calendar-detail schedule-calendar-detail" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
-          <div className="calendar-detail__title" style={{ marginBottom: '4px' }}>
-            <span className="calendar-detail__date">
-              {selectedEmployee ? `${selectedEmployee.name} (${selectedEmployee.empNo})` : CALENDAR_COPY.selectedEmployeeFallback}
-            </span>
-          </div>
-          <div style={{ display: 'grid', gap: '10px' }}>
-            <div className="leave-panel__summary-chip" style={{ justifyContent: 'space-between' }}>
-              <span>{CALENDAR_COPY.departmentLabel}</span>
-              <strong>{selectedEmployee?.dept || '-'}</strong>
-            </div>
-            <div className="leave-panel__summary-chip" style={{ justifyContent: 'space-between' }}>
-              <span>{CALENDAR_COPY.baseScheduleSummaryLabel}</span>
-              <strong>{baseScheduleLabel}</strong>
-            </div>
-            <div className="leave-panel__summary-chip" style={{ justifyContent: 'space-between' }}>
-              <span>{CALENDAR_COPY.selectedDateSummaryLabel}</span>
-              <strong>{selectedDate || CALENDAR_COPY.noDateSelected}</strong>
-            </div>
-          </div>
-
-          <div style={{ marginTop: '8px' }}>
-            <div className="calendar-detail__title" style={{ marginBottom: '8px' }}>
-              {CALENDAR_COPY.selectedOverridesTitle}
-            </div>
-            {selectedEmployeeOverrides.length === 0 ? (
-              <div className="calendar-detail__empty">{CALENDAR_COPY.noOverrides}</div>
-            ) : (
-              selectedEmployeeOverrides.map((row) => {
-                const start = normalizeTime(row.schedule_start);
-                const end = normalizeTime(row.schedule_end);
-                return (
-                  <div key={`${row.emp_no}-${row.work_date}`} className="calendar-detail__item" style={{ alignItems: 'center' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                      <span className="calendar-detail__item-name">{row.work_date}</span>
-                      <span className="calendar-detail__item-detail">
-                        {start ? `${CALENDAR_COPY.checkinLabel} ${start}` : ''}
-                        {start && end ? ' · ' : ''}
-                        {end ? `${CALENDAR_COPY.checkoutLabel} ${end}` : ''}
-                        {row.note ? ` · ${row.note}` : ''}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="login-btn"
-                      style={{ marginTop: 0, padding: '6px 10px' }}
-                      onClick={() => onDeleteOverride?.({ empNo: selectedEmployeeEmpNo, workDate: row.work_date })}
-                    >
-                      {CALENDAR_COPY.delete}
-                    </button>
-                  </div>
-                );
-              })
+                  <input
+                    type="checkbox"
+                    checked
+                    disabled={!batchMode}
+                    onChange={() => onToggleBatchDate?.(dateStr, overrideMap.get(dateStr) || null)}
+                  />
+                  <span>{dateStr}</span>
+                </label>
+              ))
             )}
           </div>
-        </div>
-      </div>
 
-      <form onSubmit={onSubmitOverride} style={{ display: 'grid', gap: '12px' }}>
-        <div className="calendar-detail__title" style={{ marginTop: '4px' }}>
-          {CALENDAR_COPY.adjustTitle}
-        </div>
-        {overrideTarget ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: '12px',
-            alignItems: 'end'
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
             <div>
-              <div className="form-label">{CALENDAR_COPY.adjustDateLabel}</div>
-              <input
-                type="date"
-                className="form-input"
-                value={overrideDate}
-                onChange={(e) => onChangeOverrideDate?.(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <div className="form-label">{CALENDAR_COPY.adjustStartLabel}</div>
+              <div className="form-label">출근시간</div>
               <select
                 className="ui-select"
                 value={overrideStart}
                 onChange={(e) => onChangeOverrideStart?.(e.target.value)}
-                required
+                disabled={!selectedEmployee || selectedDates.length === 0}
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 30, fontSize: 11 }}
               >
-                {Array.from({ length: 48 }, (_, i) => {
-                  const h = String(Math.floor(i / 2)).padStart(2, '0');
-                  const m = i % 2 === 0 ? '00' : '30';
-                  const time = `${h}:${m}`;
-                  return <option key={time} value={time}>{time}</option>;
-                })}
+                {TIME_OPTIONS.map((time) => (
+                  <option key={time} value={time}>{time}</option>
+                ))}
               </select>
             </div>
+
             <div>
-              <div className="form-label">{CALENDAR_COPY.adjustNoteLabel}</div>
-              <input
-                type="text"
-                className="form-input"
-                value={overrideNote}
-                onChange={(e) => onChangeOverrideNote?.(e.target.value)}
-                placeholder={CALENDAR_COPY.adjustNotePlaceholder}
+              <div className="form-label">퇴근시간</div>
+              <select
+                className="ui-select"
+                value={overrideEnd}
+                onChange={(e) => onChangeOverrideEnd?.(e.target.value)}
+                disabled={!selectedEmployee || selectedDates.length === 0}
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 30, fontSize: 11 }}
+              >
+                {TIME_OPTIONS.map((time) => (
+                  <option key={time} value={time}>{time}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 12px',
+              borderRadius: 14,
+              border: '1px solid var(--border)',
+              background: 'var(--bg-overlay-sm)',
+              fontSize: 12.5,
+              fontWeight: 700,
+              color: 'var(--text-1)',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={allowOvertime}
+              onChange={(e) => onToggleAllowOvertime?.(e.target.checked)}
+              disabled={!selectedEmployee || selectedDates.length === 0}
+            />
+            초과근무 허용
+          </label>
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="login-btn"
+              onClick={() => onRemoveOverride?.(selectedDates)}
+              style={{ marginTop: 0, background: 'rgba(100, 116, 139, 0.12)', color: 'var(--text-1)' }}
+              disabled={!selectedEmployee || selectedDates.length === 0 || modalSaving || !allSelectedHaveSchedule}
+            >
+              삭제
+            </button>
+            <button
+              type="button"
+              className="login-btn"
+              onClick={() => onRestoreOverride?.(selectedDates)}
+              style={{ marginTop: 0, background: 'rgba(91, 136, 214, 0.12)', color: 'var(--blue)' }}
+              disabled={!selectedEmployee || selectedDates.length === 0 || modalSaving || !allSelectedHaveSchedule}
+            >
+              복원
+            </button>
+            <button
+              type="submit"
+              className="login-btn"
+              disabled={!selectedEmployee || selectedDates.length === 0 || modalSaving}
+              style={{ marginTop: 0, background: 'var(--blue)', color: '#fff' }}
+            >
+              {modalSaving ? '저장 중...' : selectedDates.length > 1 ? `${selectedDates.length}개 ${allSelectedHaveSchedule ? '저장' : '생성'}` : (allSelectedHaveSchedule ? '저장' : '생성')}
+            </button>
+          </div>
+        </div>
+        </form>
+
+        <div
+          style={{
+            padding: '12px 14px',
+            borderRadius: 18,
+            border: '1px solid var(--border)',
+            background: 'var(--bg-overlay-sm)',
+            display: 'grid',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>근태 보정</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', marginTop: 2 }}>
+                선택 날짜 반영
+              </div>
+            </div>
+            <span className="calendar-day__state-tag" style={makeCalendarBadgeStyle('rgba(148, 163, 184, 0.14)', '#475569', 'rgba(148, 163, 184, 0.26)')}>
+              별도 카드
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', gap: 10, alignItems: 'center' }}>
+              <label className="form-label" style={{ margin: 0 }}>선택 날짜</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+                <strong style={{ color: 'var(--text-1)' }}>{activeDate || '-'}</strong>
+                {hasSavedAttendanceCorrection ? (
+                  <span
+                    className="calendar-day__state-tag"
+                    style={makeCalendarBadgeStyle(
+                      'rgba(91, 136, 214, 0.14)',
+                      'var(--blue)',
+                      'rgba(91, 136, 214, 0.34)'
+                    )}
+                  >
+                    보정 적용
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', gap: 10, alignItems: 'center' }}>
+              <label className="form-label" style={{ margin: 0 }}>원본 출입기록</label>
+              <strong style={{ color: 'var(--text-1)' }}>
+                {selectedDayRawLogs.length > 0
+                  ? `${formatManualTime(selectedDayRawLogs[0]?.logTime || selectedDayRawLogs[0]?.log_time || '') || '-'}`
+                  : '-'}
+                {selectedDayRawLogs.length > 1
+                  ? ` ~ ${formatManualTime(selectedDayRawLogs[selectedDayRawLogs.length - 1]?.logTime || selectedDayRawLogs[selectedDayRawLogs.length - 1]?.log_time || '') || '-'}`
+                  : ''}
+              </strong>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', gap: 10, alignItems: 'center' }}>
+              <label className="form-label" style={{ margin: 0 }}>보정 대상</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, width: '100%' }}>
+                {['출근', '퇴근'].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className="calendar-day__state-tag"
+                    onClick={() => setCorrectionType(type)}
+                    style={{
+                      ...makeCalendarBadgeStyle(
+                        correctionType === type ? 'rgba(91, 136, 214, 0.18)' : 'rgba(148, 163, 184, 0.12)',
+                        correctionType === type ? 'var(--blue)' : '#64748b',
+                        correctionType === type ? 'rgba(91, 136, 214, 0.42)' : 'rgba(148, 163, 184, 0.24)'
+                      ),
+                      width: '100%',
+                      minWidth: 0,
+                      minHeight: 36,
+                      paddingInline: 12,
+                      paddingBlock: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      justifyContent: 'center',
+                      whiteSpace: 'nowrap',
+                      boxShadow: correctionType === type ? '0 0 0 2px rgba(91, 136, 214, 0.14)' : 'none',
+                      transform: correctionType === type ? 'translateY(-1px)' : 'none',
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', gap: 10, alignItems: 'center' }}>
+              <label className="form-label" style={{ margin: 0 }}>보정 시간</label>
+              <select
+                className="ui-select"
+                value={correctionTime}
+                onChange={(e) => setCorrectionTime(e.target.value)}
+                disabled={!selectedEmployee || !activeDate}
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 30, fontSize: 11 }}
+              >
+                <option value="">시간 선택</option>
+                {TIME_OPTIONS.map((time) => (
+                  <option key={`correction-${time}`} value={time}>{time}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div className="form-label" style={{ margin: 0 }}>사유 / 메모</div>
+              <textarea
+                className="ui-textarea"
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="예: 야근 후 퇴근 누락, 보정 요청 반영"
+                disabled={!selectedEmployee || !activeDate}
+                style={{ minHeight: 112, width: '100%' }}
               />
             </div>
-          </div>
-        ) : (
-          <div className="calendar-detail__empty" style={{ padding: '14px 0' }}>
-            {CALENDAR_COPY.noTargetMessage}
-          </div>
-        )}
 
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="login-btn"
-            style={{ marginTop: 0, padding: '9px 16px' }}
-            onClick={onCancelOverride}
-          >
-            {CALENDAR_COPY.cancelSelection}
-          </button>
-          <button
-            type="submit"
-            className="login-btn"
-            style={{ marginTop: 0, padding: '9px 16px' }}
-            disabled={!overrideTarget}
-          >
-            {CALENDAR_COPY.applyAdjustment}
-          </button>
-        </div>
-      </form>
-
-      {showBatchNightTools && (
-        <div className="card" style={{ padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div className="card-header" style={{ paddingBottom: 0, borderBottom: "none" }}>
-            <div>
-              <h3 className="card-title">{BATCH_COPY.title}</h3>
-              <p className="card-subtitle">{BATCH_COPY.subtitle}</p>
-            </div>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-              <span className="badge purple">{batchNightMode ? BATCH_COPY.modeBadgeOn : BATCH_COPY.modeBadgeOff}</span>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {hasSavedAttendanceCorrection ? (
+                <button
+                  type="button"
+                  className="login-btn"
+                  onClick={handleDeleteAttendanceCorrection}
+                  disabled={!selectedEmployee || !activeDate || correctionSaving}
+                  style={{ marginTop: 0, marginRight: 8, background: 'rgba(239, 68, 68, 0.12)', color: 'var(--red)', minWidth: 130 }}
+                >
+                  {correctionSaving ? '삭제 중...' : '보정 삭제'}
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="ui-btn"
-                onClick={() => onToggleBatchNightMode?.()}
-                style={{ padding: "7px 12px" }}
+                className="login-btn"
+                onClick={handleSaveAttendanceCorrection}
+                disabled={!selectedEmployee || !activeDate || !correctionTime || correctionSaving}
+                style={{ marginTop: 0, background: 'var(--blue)', color: '#fff', minWidth: 130 }}
               >
-                {batchNightMode ? BATCH_COPY.switchToNormal : BATCH_COPY.switchToBatch}
+                {correctionSaving ? '저장 중...' : '보정 저장'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gap: 8, minHeight: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>
+              수동 내역
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <span className="calendar-day__state-tag" style={makeCalendarBadgeStyle('rgba(245, 158, 11, 0.14)', '#b45309', 'rgba(245, 158, 11, 0.28)')}>
+                대기 {pendingManualCheckins.length}건
+              </span>
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{selectedManualCheckins.length}건</div>
+              <button
+                type="button"
+                className="login-btn"
+                onClick={handleDeleteSelectedManualCheckins}
+                disabled={!selectedManualDeleteIds.length || correctionSaving}
+                style={{ marginTop: 0, background: 'rgba(239, 68, 68, 0.12)', color: 'var(--red)', minWidth: 72, paddingInline: 10, height: 30, fontSize: 12 }}
+              >
+                {correctionSaving ? '삭제 중...' : `선택 삭제${selectedManualDeleteIds.length ? ` (${selectedManualDeleteIds.length})` : ''}`}
               </button>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "12px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div className="form-label">{BATCH_COPY.targetDeptLabel}</div>
-              <div className="leave-panel__summary-chip" style={{ justifyContent: "space-between" }}>
-                <strong>{batchTargetDept || BATCH_COPY.targetDeptPlaceholder}</strong>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-                {selectedEmployee?.dept ? `${BATCH_COPY.targetDeptSubLabel}: ${selectedEmployee.dept}` : ''}
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div className="form-label">{BATCH_COPY.patternLabel}</div>
-              <select
-                className="ui-select"
-                value={batchPatternCode}
-                onChange={(e) => onChangeBatchPatternCode?.(e.target.value)}
+          <div style={{ display: 'grid', gap: 8, maxHeight: 220, overflow: 'auto' }}>
+            {selectedManualCheckins.length === 0 ? (
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 14,
+                  border: '1px dashed var(--border)',
+                  color: 'var(--text-3)',
+                  fontSize: 12.5,
+                  background: 'var(--bg-overlay-sm)',
+                }}
               >
-                {batchScheduleOptions.map((preset) => (
-                  <option key={preset.code} value={preset.code}>{preset.label}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div className="form-label">{BATCH_COPY.selectedCountLabel}</div>
-              <div className="leave-panel__summary-chip">
-                <strong>{selectedBatchDates.length}{COMMON_COPY.units.day}</strong>
+                수동 출퇴근 기록이 없습니다.
               </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div className="form-label">{BATCH_COPY.memoLabel}</div>
-              <input
-                type="text"
-                className="form-input"
-                value={batchNightNote}
-                onChange={(e) => onChangeBatchNightNote?.(e.target.value)}
-                placeholder={BATCH_COPY.memoPlaceholder}
-              />
-            </div>
-          </div>
+            ) : selectedManualCheckins.map((row, index) => {
+              const workDate = String(row.workDate || row.work_date || '').slice(0, 10);
+              const checkType = String(row.checkType || row.check_type || '수동').trim();
+              const isScheduleRequest = checkType.includes('근무일정') || checkType.includes('일정');
+              const checkTime = formatManualTime(row.checkTime || row.check_time);
+              const noteTextRaw = String(row.note || '').trim();
+              let noteText = noteTextRaw;
+              try {
+                const parsedNote = noteTextRaw ? JSON.parse(noteTextRaw) : null;
+                if (parsedNote && typeof parsedNote === 'object') {
+                  noteText = String(parsedNote.reason || '').trim();
+                }
+              } catch {
+                noteText = noteTextRaw;
+              }
+              if (isScheduleRequest) {
+                noteText = noteText || '-';
+              }
+              const decision = String(row.adminDecision || row.admin_decision || '').trim();
+              const rowId = String(row.id || '').trim();
+              const checkTypeText = checkType.includes('근무일정')
+                ? '근무일정조정'
+                : checkType.includes('출근')
+                  ? '출근'
+                  : checkType.includes('퇴근')
+                    ? '퇴근'
+                    : '수동';
+              const checkTypeStyle = checkTypeText === '출근'
+                ? {
+                    background: 'rgba(95, 169, 113, 0.16)',
+                    color: 'var(--green)',
+                    borderColor: 'rgba(95, 169, 113, 0.34)',
+                  }
+                : checkTypeText === '퇴근'
+                  ? {
+                      background: 'rgba(91, 136, 214, 0.16)',
+                      color: 'var(--blue)',
+                      borderColor: 'rgba(91, 136, 214, 0.34)',
+                    }
+                  : {
+                      background: 'rgba(168, 85, 247, 0.14)',
+                      color: 'var(--purple)',
+                      borderColor: 'rgba(168, 85, 247, 0.28)',
+                    };
+              const decisionLabel = decision === 'approved' ? '승인 완료' : decision === 'rejected' ? '반려 처리' : '대기';
+              const decisionColor = decision === 'approved'
+                ? 'var(--green)'
+                : decision === 'rejected'
+                  ? 'var(--red)'
+                  : 'var(--amber)';
 
-          {isWeeklyCustomSchedule && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <div className="form-label">{BATCH_COPY.weeklyStartLabel}</div>
-                <input
-                  type="time"
-                  step="60"
-                  className="form-input"
-                  value={batchNightStart}
-                  onChange={(e) => onChangeBatchNightStart?.(e.target.value)}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <div className="form-label">{BATCH_COPY.weeklyEndLabel}</div>
-                <input
-                  type="time"
-                  step="60"
-                  className="form-input"
-                  value={batchNightEnd}
-                  onChange={(e) => onChangeBatchNightEnd?.(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <div className="form-label">{BATCH_COPY.selectedDatesLabel}</div>
-            <div className="leave-panel__summary-chip" style={{ justifyContent: "space-between", gap: "8px" }}>
-              <span>{selectedBatchSummary || BATCH_COPY.selectedDatesHelp}</span>
-              <strong>{selectedBatchDates.length}{COMMON_COPY.units.day}</strong>
-            </div>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {selectedBatchDates.length === 0 ? (
-                <div className="calendar-detail__empty" style={{ padding: "12px 0" }}>
-                  {BATCH_COPY.selectedDatesEmpty}
+              return (
+                <div
+                  key={String(row.id || index)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 14,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-overlay-sm)',
+                    display: 'grid',
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      {rowId ? (
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedManualDeleteIds.includes(rowId)}
+                            onChange={(e) => {
+                              setSelectedManualDeleteIds((prev) => (
+                                e.target.checked
+                                  ? Array.from(new Set([...prev, rowId]))
+                                  : prev.filter((id) => id !== rowId)
+                              ));
+                            }}
+                            style={{ width: 14, height: 14 }}
+                          />
+                        </label>
+                      ) : null}
+                      <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-1)' }}>{workDate}</span>
+                      <span
+                        className="calendar-day__state-tag"
+                        style={{
+                          paddingInline: 8,
+                          paddingBlock: 3,
+                          background: checkTypeStyle.background,
+                          color: checkTypeStyle.color,
+                          borderColor: checkTypeStyle.borderColor,
+                        }}
+                      >
+                        {checkTypeText}
+                      </span>
+                      {!isScheduleRequest && checkTime ? (
+                        <span style={{ fontSize: 13, color: 'var(--text-1)', fontWeight: 700 }}>{checkTime}</span>
+                      ) : null}
+                    </div>
+                    <span
+                      className="calendar-day__state-tag"
+                      style={{
+                        paddingInline: 8,
+                        paddingBlock: 3,
+                        background: decision === 'approved'
+                          ? 'rgba(16, 185, 129, 0.16)'
+                          : decision === 'rejected'
+                            ? 'rgba(239, 68, 68, 0.16)'
+                            : 'rgba(245, 158, 11, 0.16)',
+                        color: decisionColor,
+                        borderColor: decision === 'approved'
+                          ? 'rgba(16, 185, 129, 0.34)'
+                          : decision === 'rejected'
+                            ? 'rgba(239, 68, 68, 0.34)'
+                            : 'rgba(245, 158, 11, 0.34)',
+                      }}
+                    >
+                      {decisionLabel}
+                    </span>
+                  </div>
+                  {noteText ? (
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.4 }}>
+                      {noteText}
+                    </div>
+                  ) : null}
+                  {decision === 'pending' ? (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="login-btn"
+                        onClick={() => handleManualDecision(row.id, 'approved')}
+                        style={{ marginTop: 0, background: 'rgba(16, 185, 129, 0.14)', color: 'var(--green)', minWidth: 84 }}
+                      >
+                        승인
+                      </button>
+                      <button
+                        type="button"
+                        className="login-btn"
+                        onClick={() => handleManualDecision(row.id, 'rejected')}
+                        style={{ marginTop: 0, background: 'rgba(239, 68, 68, 0.12)', color: 'var(--red)', minWidth: 84 }}
+                      >
+                        반려
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-              ) : (
-                selectedBatchDates.map((dateStr) => (
-                  <span
-                    key={dateStr}
-                    className="badge"
-                    style={{ background: "rgba(168, 85, 247, 0.15)", color: "#d8b4fe", border: "1px solid rgba(168, 85, 247, 0.25)" }}
-                  >
-                    {formatCompactDate(dateStr)}
-                  </span>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="login-btn"
-              style={{ marginTop: 0, padding: "9px 16px" }}
-              onClick={() => onToggleBatchDate?.("__clear__")}
-              disabled={selectedBatchDates.length === 0}
-            >
-              {BATCH_COPY.clearSelection}
-            </button>
-            <button
-              type="button"
-              className="login-btn"
-              style={{ marginTop: 0, padding: "9px 16px", background: "var(--purple)" }}
-              onClick={() => onApplyBatchNightPattern?.()}
-              disabled={batchNightSaving || selectedBatchDates.length === 0 || !selectedEmployee?.empNo}
-            >
-              {batchNightSaving ? BATCH_COPY.saving : BATCH_COPY.submit}
-            </button>
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
+

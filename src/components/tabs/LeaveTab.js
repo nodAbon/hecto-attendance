@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import DashboardCalendarWidget from '../DashboardCalendarWidget';
 import {
   getHolidayName,
@@ -9,9 +9,7 @@ import {
   sortCalendarLeaves,
 } from '../../lib/leaveRules';
 
-const getLeaveVariantClass = (meta) => {
-  return String(meta?.variantClassName || '').trim();
-};
+const getLeaveVariantClass = (meta) => String(meta?.variantClassName || '').trim();
 
 function getSelectedDayLeaves(selectedDate, leaves, employeeNameLookup) {
   if (!selectedDate) return [];
@@ -40,9 +38,9 @@ function LeaveDetailPanel({ selectedDate, leaves, employeeNameLookup }) {
     <aside className="card leave-overview-panel">
       <div className="leave-overview-panel__header">
         <div>
-          <div className="calendar-widget__eyebrow">상세 내역</div>
+          <div className="calendar-widget__eyebrow">휴가 상세</div>
           <div className="calendar-widget__title">
-            {selectedDate || '날짜를 선택해주세요'}
+            {selectedDate || '날짜를 선택해 주세요'}
           </div>
         </div>
         <div className="leave-overview-panel__count">
@@ -52,7 +50,7 @@ function LeaveDetailPanel({ selectedDate, leaves, employeeNameLookup }) {
 
       {!selectedDate ? (
         <div className="leave-overview-panel__empty">
-          왼쪽 캘린더에서 날짜를 클릭하면 해당 날짜의 휴가 인원이 카드 형태로 표시됩니다.
+          왼쪽 캘린더에서 날짜를 누르면 해당 날짜의 휴가 인원과 휴가 유형을 바로 확인할 수 있습니다.
         </div>
       ) : (
         <>
@@ -109,7 +107,7 @@ function LeaveDetailPanel({ selectedDate, leaves, employeeNameLookup }) {
   );
 }
 
-export default function LeaveTab({
+function LeaveTab({
   selectedMonth,
   setSelectedMonth,
   calendarMonth,
@@ -121,16 +119,19 @@ export default function LeaveTab({
   return (
     <div className="leave-overview-layout">
       <div className="leave-overview-calendar">
-        <DashboardCalendarWidget
-          calendarMonth={selectedMonth || calendarMonth}
-          setCalendarMonth={setSelectedMonth}
-          calendarLeaves={visibleLeaves}
-          employeeNameLookup={calendarEmployeeNameLookup}
-          selectedCalendarDate={leaveCalendarDate}
-          setSelectedCalendarDate={setLeaveCalendarDate}
-          eyebrow="전사 휴가 현황"
-          hideSelectedDetail
-        />
+        <div className="leave-overview-calendar__frame">
+          <DashboardCalendarWidget
+            calendarMonth={selectedMonth || calendarMonth}
+            setCalendarMonth={setSelectedMonth}
+            calendarLeaves={visibleLeaves}
+            employeeNameLookup={calendarEmployeeNameLookup}
+            selectedCalendarDate={leaveCalendarDate}
+            setSelectedCalendarDate={setLeaveCalendarDate}
+            eyebrow="연차 사용 현황"
+            hideSelectedDetail
+            hideLegend
+          />
+        </div>
       </div>
 
       <LeaveDetailPanel
@@ -141,3 +142,5 @@ export default function LeaveTab({
     </div>
   );
 }
+
+export default memo(LeaveTab);

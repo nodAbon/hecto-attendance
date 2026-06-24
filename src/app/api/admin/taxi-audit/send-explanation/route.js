@@ -15,7 +15,7 @@ export async function POST(request) {
     const body = await request.json();
     const row = body?.row || body || {};
 
-    if (!String(row.empNo || '').trim()) {
+    if (!String(row.empNo || row.memberIdentifier || '').trim()) {
       return NextResponse.json({ error: '직원 식별 정보가 없습니다.' }, { status: 400 });
     }
 
@@ -23,7 +23,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: `${String(row.employeeName || row.empNo || '직원')}에게 소명 요청 메일을 발송했습니다.`,
+      message: `${String(row.employeeName || row.empNo || row.memberIdentifier || '직원')}에게 소명 요청 메일을 발송했습니다.`,
       recipientEmail: result.recipientEmail,
       messageId: result.messageId,
     });

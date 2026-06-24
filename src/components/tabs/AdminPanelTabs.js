@@ -1,15 +1,67 @@
-'use client';
+﻿'use client';
 
-import React, { useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { CheckCircle, Plus, Upload } from 'lucide-react';
+import { getKstDateKey, shiftKstDateKey } from '../../lib/kstDate';
 
 const rankOptions = ['선임', '책임', '수석', '상무보', '상무', '전무', '대표이사'];
 const positionOptions = ['팀원', '팀장', '실장', '대표이사'];
 
-export default function AdminPanelTabs({
+const formatKstTimePart = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '-';
+
+  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(raw);
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  const parseTarget = hasTimezone ? raw : `${normalized}+09:00`;
+  const date = new Date(parseTarget);
+
+  if (Number.isNaN(date.getTime())) {
+    if (raw.includes('T')) return raw.split('T')[1].substring(0, 5);
+    if (raw.includes(' ')) return raw.split(' ')[1].substring(0, 5);
+    return raw.substring(0, 5);
+  }
+
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
+const parseRequestNote = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch (err) {
+    // ignore
+  }
+  return { reason: raw };
+};
+
+const getKstDateOnlyPart = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    return raw.slice(0, 10);
+  }
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+};
+
+function AdminPanelTabs({
   activeTab,
   isAdmin,
   isLeader,
+  myDept,
   monthlyData,
   employeeAdminData,
   data,
@@ -17,6 +69,11 @@ export default function AdminPanelTabs({
   refreshData,
 }) {
   // --- Manual Approval States & Handlers ---
+  const [manualDateFrom, setManualDateFrom] = useState(() => shiftKstDateKey(getKstDateKey(new Date()), -7));
+  const [manualDateTo, setManualDateTo] = useState(() => getKstDateKey(new Date()));
+  const [manualStatusFilter, setManualStatusFilter] = useState('all');
+  const [manualNameQuery, setManualNameQuery] = useState('');
+
   const handleDecideCheckin = async (id, decision) => {
     try {
       const res = await fetch('/api/attendance/manual-checkin', {
@@ -128,6 +185,104 @@ export default function AdminPanelTabs({
   const [capsUploadLoading, setCapsUploadLoading] = useState(false);
   const [capsUploadResult, setCapsUploadResult] = useState(null);
 
+  const filteredManualCheckins = useMemo(() => {
+    const requests = monthlyData?.manualCheckins || [];
+    if (isAdmin) return requests;
+    if (!isLeader) return [];
+    const deptKey = String(myDept || '').trim().replace(/\s+/g, '');
+    if (!deptKey) return [];
+    const employeeDeptMap = new Map(
+      (monthlyData?.allEmployees || data?.allEmployees || [])
+        .map((emp) => [String(emp.empNo || '').trim(), String(emp.dept || '').trim()])
+        .filter(([empNo]) => !!empNo)
+    );
+    return requests.filter((req) => {
+      const empDept = String(employeeDeptMap.get(String(req.emp_no || '').trim()) || '').trim().replace(/\s+/g, '');
+      return empDept && empDept === deptKey;
+    });
+  }, [monthlyData?.manualCheckins, monthlyData?.allEmployees, data?.allEmployees, isAdmin, isLeader, myDept]);
+
+  const visibleManualCheckins = useMemo(() => {
+    return (filteredManualCheckins || []).filter((req) => {
+      const workDate = String(req.work_date || '').slice(0, 10);
+      const createdDate = getKstDateOnlyPart(req.created_at);
+      const statusKey = String(req.admin_decision || 'pending');
+      const emp = (monthlyData?.allEmployees || data?.allEmployees || []).find((e) => String(e.empNo || '').trim() === String(req.emp_no || '').trim());
+      const empName = String(emp?.name || '').trim();
+      if (manualDateFrom && workDate < manualDateFrom && createdDate < manualDateFrom) return false;
+      if (manualDateTo && workDate > manualDateTo && createdDate > manualDateTo) return false;
+      if (manualStatusFilter !== 'all' && statusKey !== manualStatusFilter) return false;
+      if (manualNameQuery && !empName.includes(manualNameQuery.trim())) return false;
+      return true;
+    });
+  }, [filteredManualCheckins, manualDateFrom, manualDateTo, manualStatusFilter, manualNameQuery, monthlyData?.allEmployees, data?.allEmployees]);
+
+  const approvalRows = useMemo(() => {
+    const allLogs = monthlyData?.allLogs || [];
+    const employeeMap = new Map(
+      (monthlyData?.allEmployees || data?.allEmployees || [])
+        .map((emp) => [String(emp.empNo || '').trim(), emp])
+        .filter(([empNo]) => !!empNo)
+    );
+
+    const sortedManualCheckins = [...visibleManualCheckins].sort((a, b) => {
+      const aDate = String(a.work_date || '').slice(0, 10);
+      const bDate = String(b.work_date || '').slice(0, 10);
+      if (aDate !== bDate) return aDate.localeCompare(bDate);
+
+      const aCreated = String(a.created_at || a.decided_at || a.check_time || '');
+      const bCreated = String(b.created_at || b.decided_at || b.check_time || '');
+      if (aCreated !== bCreated) return aCreated.localeCompare(bCreated);
+
+      const aName = String(employeeMap.get(String(a.emp_no || '').trim())?.name || '');
+      const bName = String(employeeMap.get(String(b.emp_no || '').trim())?.name || '');
+      return aName.localeCompare(bName);
+    });
+
+    return sortedManualCheckins.map((req) => {
+      const emp = employeeMap.get(String(req.emp_no || '').trim()) || null;
+      const reqDate = String(req.work_date || '').slice(0, 10);
+      const reqType = String(req.check_type || '').trim();
+      const isCheckinFix = reqType.includes('출근');
+      const isCheckoutFix = reqType.includes('퇴근');
+      const isScheduleRequest = reqType.includes('일정');
+      const requestMeta = parseRequestNote(req.note);
+      const dayLogs = allLogs.filter((log) => String(log.empNo || '').trim() === String(req.emp_no || '').trim() && String(log.workDate || '').slice(0, 10) === reqDate);
+      const rawDayLogs = dayLogs.filter((log) => !log.isManual);
+      const sortedLogs = [...rawDayLogs].sort((a, b) => String(a.logTime || '').localeCompare(String(b.logTime || '')));
+      const requestTime = formatKstTimePart(req.check_time);
+      const requestCreatedAt = req.created_at
+        ? new Date(req.created_at).toLocaleTimeString('ko-KR', {
+            hour12: false,
+            timeZone: 'Asia/Seoul',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '-';
+      const originalTime = isCheckinFix
+        ? formatKstTimePart(sortedLogs[0]?.logTime)
+        : isCheckoutFix
+          ? formatKstTimePart(sortedLogs[sortedLogs.length - 1]?.logTime)
+          : isScheduleRequest
+            ? `${String(emp?.scheduleTime || emp?.baseScheduleTime || '-').substring(0, 5)}${String(emp?.scheduleEndTime || emp?.baseScheduleEndTime || '') ? ` - ${String(emp?.scheduleEndTime || emp?.baseScheduleEndTime || '').substring(0, 5)}` : ''}`
+            : '';
+      const displayRequestTime = isScheduleRequest
+        ? `${String(requestMeta.scheduleStart || '').substring(0, 5) || '-'}${String(requestMeta.scheduleEnd || '').trim() ? ` - ${String(requestMeta.scheduleEnd || '').substring(0, 5)}` : ''}`
+        : requestTime;
+      const reasonText = String(requestMeta.reason || '').trim() || '-';
+
+      return {
+        req,
+        emp,
+        originalTime,
+        requestTime: displayRequestTime,
+        requestCreatedAt,
+        isScheduleRequest,
+        reasonText,
+      };
+    });
+  }, [visibleManualCheckins, monthlyData?.allLogs, monthlyData?.allEmployees, data?.allEmployees]);
+
   const handleCapsAttendanceUpload = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -181,72 +336,133 @@ export default function AdminPanelTabs({
     return (
       <div className="card">
         <div className="card-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
-          <h3 className="card-title">수동 출퇴근 결재 요청</h3>
-          <p className="card-subtitle">직원이 출입 오류나 누락으로 수동 기입 제출한 내역 목록입니다.</p>
+          <h3 className="card-title">수동 요청 내역</h3>
+          <p className="card-subtitle">출퇴근 수정 요청과 근무일정 조정 요청을 함께 심사합니다.</p>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gap: '12px',
+          marginBottom: '14px',
+          padding: '14px',
+          borderRadius: '14px',
+          border: '1px solid var(--border)',
+          background: 'var(--bg-overlay-sm)',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 600 }}>시작일</label>
+            <input
+              type="date"
+              value={manualDateFrom}
+              onChange={(e) => setManualDateFrom(e.target.value)}
+              className="form-input"
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 600 }}>종료일</label>
+            <input
+              type="date"
+              value={manualDateTo}
+              onChange={(e) => setManualDateTo(e.target.value)}
+              className="form-input"
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 600 }}>상태</label>
+            <select
+              value={manualStatusFilter}
+              onChange={(e) => setManualStatusFilter(e.target.value)}
+              className="form-input"
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
+            >
+              <option value="all">전체</option>
+              <option value="pending">대기중</option>
+              <option value="approved">승인완료</option>
+              <option value="rejected">반려됨</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: 600 }}>사원명</label>
+            <input
+              type="text"
+              value={manualNameQuery}
+              onChange={(e) => setManualNameQuery(e.target.value)}
+              className="form-input"
+              placeholder="이름 검색"
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
+            />
+          </div>
         </div>
 
         <div className="table-wrapper">
-          <table className="table">
+          <table className="table manual-approval-table">
             <thead>
               <tr>
+                <th>대상일자</th>
+                <th>요청 시각</th>
                 <th>사원명</th>
                 <th>기록 구분</th>
-                <th>기록 시각</th>
-                <th>대상 일자</th>
-                <th>사유</th>
+                <th>수정 전 시간</th>
+                <th>수정 요청 시간</th>
+                <th style={{ width: '18%' }}>사유</th>
                 <th>결재 상태</th>
                 <th className="text-right">결정</th>
               </tr>
             </thead>
             <tbody>
-              {(!monthlyData?.manualCheckins || monthlyData.manualCheckins.length === 0) ? (
+              {(!visibleManualCheckins || visibleManualCheckins.length === 0) ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px' }}>
-                    제출된 수동 출퇴근 요청 내역이 없습니다.
+                  <td colSpan="9" style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px' }}>
+                    수동 출퇴근 기록 심사 요청 내역이 없습니다.
                   </td>
                 </tr>
               ) : (
-                monthlyData.manualCheckins.map((req, i) => {
-                  const emp = (monthlyData?.allEmployees || []).find(e => e.empNo === req.emp_no);
+                approvalRows.map((row, i) => {
+                  const { req, emp, originalTime, requestTime, requestCreatedAt } = row;
                   return (
                     <tr key={i}>
-                      <td style={{ fontWeight: 700, color: 'var(--text-1)' }}>{emp ? emp.name : req.emp_no} ({req.emp_no})</td>
+                      <td className="table-compact-date">{req.work_date}</td>
+                      <td className="table-compact-time">{requestCreatedAt}</td>
+                      <td style={{ fontWeight: 700, color: 'var(--text-1)' }}>{emp ? emp.name : '-'}</td>
                       <td>
-                        <span className={'badge ' + (req.check_type === '출근' ? 'green' : 'gray')}>
-                          {req.check_type}
+                        <span className={'badge ' + (row.isScheduleRequest ? 'blue' : req.check_type === '출근' ? 'green' : 'gray')}>
+                          {row.isScheduleRequest ? '근무일정조정' : req.check_type}
                         </span>
                       </td>
-                      <td className="time-display">
-                        {new Date(req.check_time).toLocaleTimeString('ko-KR', { hour12: false })}
-                      </td>
-                      <td className="time-display">{req.work_date}</td>
-                      <td>{req.note}</td>
+                      <td className="table-compact-time">{originalTime || '-'}</td>
+                      <td className="table-compact-time" style={{ color: 'var(--blue)' }}>{requestTime}</td>
+                      <td className="table-compact-note" style={{ maxWidth: '220px' }}>{row.reasonText}</td>
                       <td>
                         <span className={'badge ' + (
-                          req.admin_decision === 'approved' ? 'green' : 
-                          req.admin_decision === 'rejected' ? 'red' : 'amber'
+                          req.admin_decision === 'approved' ? 'blue' :
+                          req.admin_decision === 'rejected' ? 'gray' : 'amber'
                         )}>
-                          {req.admin_decision === 'approved' ? '승인완료' : 
+                          {req.admin_decision === 'approved' ? '승인완료' :
                            req.admin_decision === 'rejected' ? '반려됨' : '대기중'}
                         </span>
                       </td>
-                      <td className="text-right" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        {req.admin_decision === null && (
-                          <>
-                            <button 
-                              onClick={() => handleDecideCheckin(req.id, 'approved')}
-                              style={{ padding: '4px 10px', background: 'var(--green)', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
-                            >
-                              승인
-                            </button>
-                            <button 
-                              onClick={() => handleDecideCheckin(req.id, 'rejected')}
-                              style={{ padding: '4px 10px', background: 'var(--red)', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
-                            >
-                              반려
-                            </button>
-                          </>
-                        )}
+                      <td className="text-right">
+                        <div className="manual-approval-actions">
+                          {req.admin_decision === null && (
+                            <>
+                              <button
+                                onClick={() => handleDecideCheckin(req.id, 'approved')}
+                                className="manual-approval-btn manual-approval-btn--approve"
+                              >
+                                승인
+                              </button>
+                              <button
+                                onClick={() => handleDecideCheckin(req.id, 'rejected')}
+                                className="manual-approval-btn manual-approval-btn--reject"
+                              >
+                                반려
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -258,7 +474,6 @@ export default function AdminPanelTabs({
       </div>
     );
   }
-
   if (activeTab === 'USER_REGISTER' && isAdmin) {
     return (
       <div className="card" style={{ maxWidth: '600px', margin: '0 auto', background: 'rgba(255, 255, 255, 0.02)', backdropFilter: 'blur(30px)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
@@ -533,3 +748,5 @@ export default function AdminPanelTabs({
 
   return null;
 }
+
+export default memo(AdminPanelTabs);

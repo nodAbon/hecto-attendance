@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -13,16 +13,8 @@ import { useDashboardAuth } from '../hooks/useDashboardAuth';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useDashboardViewModel } from '../hooks/useDashboardViewModel';
 import DashboardShell from '../components/dashboard/DashboardShell';
+import PushManager from '../components/PushManager';
 
-// Import Tabs
-import DashboardTab from '../components/tabs/DashboardTab';
-import MonthlyTab from '../components/tabs/MonthlyTab';
-import TrackerTab from '../components/tabs/TrackerTab';
-import ScheduleTab from '../components/tabs/ScheduleTab';
-import LeaveTab from '../components/tabs/LeaveTab';
-import OvertimeTab from '../components/tabs/OvertimeTab';
-import AdminPanelTabs from '../components/tabs/AdminPanelTabs';
-import EmployeeAdminTab from '../components/tabs/EmployeeAdminTab';
 
 function DashboardTabSync({ setActiveTab }) {
   const searchParams = useSearchParams();
@@ -159,7 +151,9 @@ export default function Dashboard() {
       visibleLeaves={visibleLeaves}
       calendarEmployeeNameLookup={calendarEmployeeNameLookup}
       refreshAllData={refreshAllData}
-    />
+    >
+      {myEmpNo && <PushManager empNo={myEmpNo} />}
+    </DashboardShell>
   );
 }
 

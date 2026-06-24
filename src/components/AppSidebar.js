@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { sidebarCategories } from '../lib/sidebarConfig';
 
 function SidebarAction({ action }) {
   const Icon = action.icon;
@@ -58,6 +59,15 @@ export default function AppSidebar({
     ...(Array.isArray(profileBadges) ? profileBadges : []),
   ];
 
+  const groupedItems = items.reduce((acc, item) => {
+    const key = item.category || '기타';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+
+  const categoryOrder = ['일반', '부서', '관리자', ...Object.keys(groupedItems).filter((key) => !['일반', '부서', '관리자'].includes(key))];
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -74,32 +84,44 @@ export default function AppSidebar({
       </div>
 
       <nav className="tab-menu">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const className = `tab-btn${item.active ? ' active' : ''}`;
-          const icon = Icon ? <Icon className="h-4 w-4" style={item.iconStyle} /> : null;
-          const label = <span>{item.label}</span>;
-
-          if (item.href) {
-            return (
-              <Link key={item.key || item.href || item.label} href={item.href} className={className} style={{ textDecoration: 'none' }}>
-                {icon}
-                {label}
-              </Link>
-            );
-          }
+        {categoryOrder.map((category) => {
+          const sectionItems = groupedItems[category];
+          if (!sectionItems?.length) return null;
 
           return (
-            <button
-              key={item.key || item.label}
-              type="button"
-              className={className}
-              onClick={item.onClick}
-              aria-pressed={item.active ? 'true' : 'false'}
-            >
-              {icon}
-              {label}
-            </button>
+            <div key={category} className="sidebar-section">
+              <div className="sidebar-section-title">{category}</div>
+              <div className="sidebar-section-items">
+                {sectionItems.map((item) => {
+                  const Icon = item.icon;
+                  const className = `tab-btn${item.active ? ' active' : ''}`;
+                  const icon = Icon ? <Icon className="h-4 w-4" style={item.iconStyle} /> : null;
+                  const label = <span>{item.label}</span>;
+
+                  if (item.href) {
+                    return (
+                      <Link key={item.key || item.href || item.label} href={item.href} className={className} style={{ textDecoration: 'none' }}>
+                        {icon}
+                        {label}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={item.key || item.label}
+                      type="button"
+                      className={className}
+                      onClick={item.onClick}
+                      aria-pressed={item.active ? 'true' : 'false'}
+                    >
+                      {icon}
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>

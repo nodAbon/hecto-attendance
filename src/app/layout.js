@@ -29,6 +29,7 @@ export default function RootLayout({ children }) {
       <head>
         <title>헥토큐앤엠 근태관리시스템</title>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body>
         {children}

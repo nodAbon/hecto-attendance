@@ -18,10 +18,12 @@ const ADMIN_KEYWORDS = [
 
 const LEADER_KEYWORDS = [
   '팀장',
-  '파트장',
+  '리더',
   '실장',
   '부서장',
   '센터장',
+  '파트장',
+  '파트 리더',
 ];
 
 const EXECUTIVE_KEYWORDS = [
@@ -32,8 +34,6 @@ const EXECUTIVE_KEYWORDS = [
   '상무',
   '이사',
   '본부장',
-  '부문장',
-  '지사장',
   '임원',
 ];
 

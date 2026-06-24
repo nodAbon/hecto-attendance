@@ -1,12 +1,12 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { Search, RefreshCw } from 'lucide-react';
 
 const rankOptions = ['선임', '책임', '수석', '상무보', '상무', '전무', '대표이사'];
 const positionOptions = ['팀원', '팀장', '실장', '대표이사'];
 
-export default function EmployeeAdminTab({
+function EmployeeAdminTab({
   isAdmin,
   data,
   monthlyData,
@@ -415,3 +415,5 @@ export default function EmployeeAdminTab({
     </div>
   );
 }
+
+export default memo(EmployeeAdminTab);

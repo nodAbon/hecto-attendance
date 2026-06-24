@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth';
 import { fetchHolidayWork, saveHolidayWork } from '@/lib/supabaseDb';
+import { getKstMonthKey } from '@/lib/kstDate';
 
 export async function GET(request) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month') || new Date().toISOString().substring(0, 7);
+    const month = searchParams.get('month') || getKstMonthKey();
 
     const holidayWorks = await fetchHolidayWork(month);
     return NextResponse.json({ success: true, holidayWorks });

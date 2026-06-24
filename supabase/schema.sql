@@ -128,6 +128,7 @@ CREATE TABLE IF NOT EXISTS SA_schedule_overrides (
   work_date      DATE NOT NULL,
   schedule_start TIME,                 -- 해당 날짜 출근 기준시간
   schedule_end   TIME,                 -- 해당 날짜 퇴근 기준시간
+  allow_overtime BOOLEAN NOT NULL DEFAULT TRUE,
   note           TEXT,
   created_by     UUID REFERENCES auth.users(id),
   created_at     TIMESTAMPTZ DEFAULT NOW(),
@@ -149,6 +150,7 @@ CREATE TABLE IF NOT EXISTS SA_attendance_log_adjustments (
 CREATE TABLE IF NOT EXISTS SA_employee_schedules (
   emp_no        VARCHAR(20) PRIMARY KEY REFERENCES SA_employees(emp_no) ON DELETE CASCADE,
   schedule_time TIME NOT NULL DEFAULT '08:00:00',
+  schedule_end_time TIME,
   updated_by    UUID REFERENCES auth.users(id),
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()

@@ -3,6 +3,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { isAdminRole, isExecutivePosition, isLeaderPosition } from '@/lib/roleUtils';
+import { isManagedAttendanceDept, clampToHalfHourSteps } from '@/lib/dashboardUtils';
+import {
+  buildScheduleOverrideMap,
+  buildTeamSchedulePatternMap,
+  resolveAllowOvertimeForSchedule,
+  resolveSchedulePairForDate,
+} from '@/lib/scheduleResolver';
+import { getAdjustmentMinutes, getScheduleDurationMinutes } from '@/lib/scheduleUtils';
 
 const TARGET_DEPTS = ['사업개발팀', '사업관리1팀', '사업관리2팀', '사업관리3팀'];
 const WEEK_HOURS_MINUTES = 40 * 60;
@@ -56,6 +64,7 @@ export default function OvertimeTab({
   myPosition,
   myDept,
   refreshData,
+  selectedMonth,
 }) {
   const [roundsData, setRoundsData] = useState({});
   const [savingEmp, setSavingEmp] = useState(null);
@@ -141,13 +150,13 @@ export default function OvertimeTab({
 
       setRangeLoading(true);
       try {
-        const responses = await Promise.all(
-          periodMonths.map(async (month) => {
-            const res = await fetch(`/api/attendance?month=${month}`);
-            const json = await res.json();
-            return json?.success ? json : null;
-          })
-        );
+        const monthsToFetch = periodMonths.filter((month) => month !== selectedMonth);
+        const responses = [];
+        for (const month of monthsToFetch) {
+          const res = await fetch(`/api/attendance?month=${month}`);
+          const json = await res.json();
+          responses.push(json?.success ? json : null);
+        }
 
         if (cancelled) return;
 
@@ -217,7 +226,10 @@ export default function OvertimeTab({
     }
   };
 
-  const getOvertimeStats = (empNo, startDate, endDate) => {
+  const getOvertimeStats = (emp, startDate, endDate) => {
+    const empNo = emp.empNo;
+    const dept = String(emp.dept || '').trim();
+
     if (!startDate || !endDate || !monthlyData) {
       return {
         averageWeeklyMinutes: 0,
@@ -228,11 +240,16 @@ export default function OvertimeTab({
     const logs = rangeData.logs || monthlyData.allLogs || [];
     const leaves = rangeData.leaves || monthlyData.leaves || [];
     const corrections = rangeData.corrections || monthlyData.corrections || [];
-    const correctionMap = new Map();
+    const overrides = monthlyData.overrides || [];
+    const teamPatterns = monthlyData.teamSchedulePatterns || [];
 
+    const correctionMap = new Map();
     corrections.forEach((c) => {
       correctionMap.set(`${c.emp_no}_${c.work_date}`, c.corrected_out_time);
     });
+
+    const scheduleOverrideMap = buildScheduleOverrideMap(overrides);
+    const teamPatternMap = buildTeamSchedulePatternMap(teamPatterns);
 
     const dailyLogs = {};
     logs
@@ -252,38 +269,67 @@ export default function OvertimeTab({
       const leave = leaves.find((row) => row.empNo === empNo && dateCompact >= row.startDate && dateCompact <= row.endDate);
       const leaveWorkedMinutes = getLeaveWorkedMinutes(leave);
 
+      const override = scheduleOverrideMap.get(`${empNo}_${dateStr}`);
+      const teamPattern = teamPatternMap.get(`${String(dept).replace(/\s+/g, '')}_${dateStr}`) || null;
+      
+      const schedulePair = resolveSchedulePairForDate({
+        dept,
+        dateStr,
+        baseScheduleStart: emp?.baseScheduleTime || emp?.scheduleTime || '08:00',
+        baseScheduleEnd: emp?.baseScheduleEndTime || emp?.scheduleEndTime || '',
+        override,
+        teamPattern,
+      });
+
+      const allowOvertime = isManagedAttendanceDept(dept)
+        ? resolveAllowOvertimeForSchedule({
+            resolvedSchedule: schedulePair?.start && schedulePair?.end ? schedulePair : null,
+            override,
+            fallbackAllowOvertime: schedulePair?.start === '10:00' && schedulePair?.end === '19:00',
+          })
+        : false;
+
       const dayLogs = (dailyLogs[dateStr] || []).slice().sort((a, b) => {
         const orderA = Number.isFinite(Number(a.workOrder)) ? Number(a.workOrder) : 0;
         const orderB = Number.isFinite(Number(b.workOrder)) ? Number(b.workOrder) : 0;
         return orderA - orderB || String(a.logTime || '').localeCompare(String(b.logTime || ''));
       });
 
-      let dayWorkMinutes = 0;
-      if (dayLogs.length > 0) {
+      const scheduleMinutes = schedulePair
+        ? Math.max(0, getScheduleDurationMinutes(schedulePair.start, schedulePair.end) - 60)
+        : 0;
+
+      let dayTotalMinutes = 0;
+      if (schedulePair) {
+        dayTotalMinutes = scheduleMinutes;
+
         const firstLog = dayLogs[0];
         const correctedOut = correctionMap.get(`${empNo}_${dateStr}`);
-        const inTime = getTimePart(firstLog.logTime);
+        const inTime = firstLog ? getTimePart(firstLog.logTime) : '';
         let outTime = null;
 
         if (correctedOut) {
           outTime = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
-        } else {
-          const lastLog = dayLogs.length >= 2 ? dayLogs[dayLogs.length - 1] : null;
+        } else if (dayLogs.length >= 2 && firstLog) {
+          const lastLog = dayLogs[dayLogs.length - 1];
           if (lastLog && lastLog.logTime !== firstLog.logTime) {
             outTime = getTimePart(lastLog.logTime);
           }
         }
 
-        if (inTime && outTime) {
-          const [inH, inM] = inTime.split(':').map(Number);
-          const [outH, outM] = outTime.split(':').map(Number);
-          let diff = (outH * 60 + outM) - (inH * 60 + inM);
-          if (diff < 0) diff += 24 * 60;
-          dayWorkMinutes = diff >= 300 ? diff - 60 : diff;
+        if (inTime && outTime && allowOvertime) {
+          const overtimeMinutes = getAdjustmentMinutes({
+            scheduleEnd: schedulePair.end,
+            actualOut: outTime,
+          });
+          dayTotalMinutes += clampToHalfHourSteps(overtimeMinutes);
         }
+
+        dayTotalMinutes = Math.min(24 * 60, dayTotalMinutes + leaveWorkedMinutes);
+      } else {
+         dayTotalMinutes = Math.min(24 * 60, dayTotalMinutes + leaveWorkedMinutes);
       }
 
-      const dayTotalMinutes = Math.min(24 * 60, dayWorkMinutes + leaveWorkedMinutes);
       dayTotals.set(dateStr, dayTotalMinutes);
     }
 
@@ -386,7 +432,7 @@ export default function OvertimeTab({
                     startDate: '2026-04-01',
                     endDate: '2026-06-26',
                   };
-                  const stats = getOvertimeStats(emp.empNo, empRound.startDate, empRound.endDate);
+                  const stats = getOvertimeStats(emp, empRound.startDate, empRound.endDate);
                   const residual = formatResidual(stats.residualMinutes);
                   const averageText = formatDuration(stats.averageWeeklyMinutes);
 

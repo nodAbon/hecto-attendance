@@ -1,18 +1,11 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth';
 import { getAdminClient } from '@/lib/supabaseClient';
+import { getKstDateKey, shiftKstDateKey, getKstDateTimeKey } from '@/lib/kstDate';
 import { deleteAttendanceLogAdjustment, saveAttendanceLogAdjustment } from '@/lib/supabaseDb';
 import { isAdminRole, isExecutivePosition, isLeaderPosition } from '@/lib/roleUtils';
 
 export const dynamic = 'force-dynamic';
-
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-
-const getLocalDateString = (date) => {
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60 * 1000);
-  return localDate.toISOString().split('T')[0];
-};
 
 const parseDateInput = (value, fallback) => {
   const text = String(value || '').trim();
@@ -20,11 +13,7 @@ const parseDateInput = (value, fallback) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : fallback;
 };
 
-const shiftDate = (dateStr, days) => {
-  const next = new Date(`${dateStr}T00:00:00+09:00`);
-  next.setDate(next.getDate() + days);
-  return getLocalDateString(next);
-};
+const shiftDate = (dateStr, days) => shiftKstDateKey(dateStr, days);
 
 const formatAttendanceLogTime = (row = {}) => {
   if (row.a_time && String(row.a_time).length >= 14) {
@@ -34,11 +23,10 @@ const formatAttendanceLogTime = (row = {}) => {
 
   if (row.log_time) {
     const date = new Date(row.log_time);
-    const kst = new Date(date.getTime() + KST_OFFSET_MS);
-    return kst.toISOString().replace('T', ' ').substring(0, 19);
+    return getKstDateTimeKey(date);
   }
 
-  return new Date().toISOString().replace('T', ' ').substring(0, 19);
+  return getKstDateTimeKey();
 };
 
 const eventTypeFromFlag = (flag1) => {
@@ -94,7 +82,7 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const empNo = String(searchParams.get('empNo') || '').trim();
-    const today = getLocalDateString(new Date());
+    const today = getKstDateKey(new Date());
     const from = parseDateInput(searchParams.get('from'), today);
     const to = parseDateInput(searchParams.get('to'), today);
 
@@ -212,7 +200,14 @@ export async function POST(request) {
     const attendanceId = Number(body.attendanceId);
     const empNo = String(body.empNo || '').trim();
     const workDate = parseDateInput(body.workDate, '');
-    const adjustedRole = normalizeRole(body.adjustedRole);
+    const rawAdjustedRole = String(body.adjustedRole || '').trim();
+    const adjustedRole = normalizeRole(rawAdjustedRole) || (
+      rawAdjustedRole === '출근'
+      || rawAdjustedRole === '퇴근'
+      || rawAdjustedRole === '무시하기'
+        ? rawAdjustedRole
+        : ''
+    );
     const note = String(body.note || '').trim();
 
     if (!attendanceId || !empNo || !workDate) {

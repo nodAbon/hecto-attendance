@@ -1,0 +1,2 @@
+ALTER TABLE sa_schedule_overrides
+ADD COLUMN IF NOT EXISTS allow_overtime BOOLEAN NOT NULL DEFAULT TRUE;

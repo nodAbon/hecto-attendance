@@ -16,7 +16,7 @@ export async function POST(request) {
       return NextResponse.json({ error: '관리자 또는 팀장 권한이 필요합니다.' }, { status: 403 });
     }
 
-    const { empNo, workDate, scheduleStart, scheduleEnd, note } = await request.json();
+    const { empNo, workDate, scheduleStart, scheduleEnd, allowOvertime, note, removed } = await request.json();
     if (!empNo || !workDate || !scheduleStart) {
       return NextResponse.json({ error: '필수 값이 누락되었습니다.' }, { status: 400 });
     }
@@ -26,8 +26,10 @@ export async function POST(request) {
       workDate,
       scheduleStart,
       scheduleEnd: scheduleEnd || null,
+      allowOvertime: allowOvertime !== false,
       note: note || '',
-      userId: session.userId
+      userId: session.userId,
+      removed: Boolean(removed),
     });
 
     return NextResponse.json({ success: true, message: '근무시간이 저장되었습니다.' });

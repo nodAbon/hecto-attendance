@@ -13,54 +13,48 @@ import {
   Moon,
   User,
 } from 'lucide-react';
-import { uiText } from './uiText';
 import { canViewOvertimeMenu, isExecutivePosition } from './overtimeRules';
 
-const BASE_ITEMS = [
-  { href: '/?tab=DASHBOARD', label: uiText.sidebar.dashboard, icon: LayoutDashboard },
-  { href: '/?tab=TRACKER', label: uiText.sidebar.tracker, icon: Calendar },
+const GENERAL_ITEMS = [
+  { href: '/?tab=DASHBOARD', label: '대시보드', icon: LayoutDashboard, iconStyle: { color: 'var(--blue)' }, category: '일반' },
+  { href: '/?tab=TRACKER', label: '근무 트래커', icon: Calendar, iconStyle: { color: 'var(--green)' }, category: '일반' },
+  { href: '/?tab=LEAVES', label: '연차 현황', icon: CalendarDays, iconStyle: { color: 'var(--purple)' }, category: '일반' },
 ];
 
-const LEADER_AND_ADMIN_ITEMS = [
-  { href: '/?tab=MONTHLY', label: uiText.sidebar.monthly, icon: CalendarDays },
-  { href: '/?tab=EMPLOYEES', label: uiText.sidebar.employees, icon: Users },
-  { href: '/attendance-records', label: uiText.sidebar.attendanceRecords, icon: Clock },
+const LEADER_ITEMS = [
+  { href: '/?tab=MONTHLY', label: '월간 근태보고', icon: CalendarDays, iconStyle: { color: 'var(--green)' }, category: '부서' },
+  { href: '/?tab=EMPLOYEES', label: '직원 일정관리', icon: Users, iconStyle: { color: 'var(--orange)' }, category: '부서' },
+  { href: '/attendance-records', label: '출입기록 조회 및 조정', icon: Clock, iconStyle: { color: 'var(--blue)' }, category: '부서' },
+  { href: '/?tab=OVERTIME', label: '초과근무 관리', icon: Clock, iconStyle: { color: 'var(--amber)' }, category: '부서' },
+  { href: '/?tab=MANUAL_APPROVAL', label: '수동 요청 내역', icon: CheckCircle, iconStyle: { color: 'var(--red)' }, category: '부서' },
 ];
 
-const LEAVE_ITEM = { href: '/?tab=LEAVES', label: uiText.sidebar.leaves, icon: CalendarDays, iconStyle: { color: 'var(--purple)' } };
-const OVERTIME_ITEM = { href: '/?tab=OVERTIME', label: uiText.sidebar.overtime, icon: Clock, iconStyle: { color: 'var(--amber)' } };
-
-const ADMIN_ONLY_ITEMS = [
-  { href: '/?tab=MANUAL_APPROVAL', label: uiText.sidebar.manualApproval, icon: CheckCircle },
-  { href: '/?tab=USER_REGISTER', label: uiText.sidebar.userRegister, icon: Plus },
-  { href: '/?tab=CAPS_UPLOAD', label: uiText.sidebar.capsUpload, icon: Upload },
-  { href: '/admin/ical-subscriptions', label: '비공개 iCal 구독', icon: CalendarDays },
-  { href: '/admin/taxi-audit', label: '택시 이용내역', icon: CarTaxiFront, activeHref: '/admin/taxi-audit' },
+const ADMIN_ITEMS = [
+  { href: '/?tab=USER_REGISTER', label: '신규 계정 등록', icon: Plus, iconStyle: { color: 'var(--green)' }, category: '관리자' },
+  { href: '/?tab=CAPS_UPLOAD', label: '캡스 업로드', icon: Upload, iconStyle: { color: 'var(--blue)' }, category: '관리자' },
+  { href: '/admin/ical-subscriptions', label: '비공개 iCal 구독', icon: CalendarDays, iconStyle: { color: 'var(--purple)' }, category: '관리자' },
+  { href: '/admin/taxi-audit', label: '택시 이용내역', icon: CarTaxiFront, iconStyle: { color: 'var(--pink)' }, activeHref: '/admin/taxi-audit', category: '관리자' },
+  { href: '/admin/employees', label: '직원 관리', icon: Users, iconStyle: { color: 'var(--indigo)' }, activeHref: '/admin/employees', category: '관리자' },
 ];
+
+function canSeeLeaderItems({ isAdmin, isLeader, position }) {
+  return isAdmin || isLeader || isExecutivePosition(position);
+}
 
 export function getMainSidebarItems({ isAdmin = false, isLeader = false, dept = '', position = '' } = {}) {
-  const items = [...BASE_ITEMS];
-  const canViewAllTeams = isAdmin || isLeader || isExecutivePosition(position);
+  const items = [...GENERAL_ITEMS];
 
-  if (canViewAllTeams) {
-    items.push(...LEADER_AND_ADMIN_ITEMS);
-  }
-
-  items.push(LEAVE_ITEM);
-
-  if (canViewOvertimeMenu({ isAdmin, isLeader, position, dept })) {
-    items.push(OVERTIME_ITEM);
+  if (canSeeLeaderItems({ isAdmin, isLeader, position })) {
+    items.push(...LEADER_ITEMS);
   }
 
   if (isAdmin) {
-    items.push(
-      { href: '/admin/employees', label: uiText.sidebar.employeeAdmin, icon: Users, activeHref: '/admin/employees' },
-      ...ADMIN_ONLY_ITEMS,
-    );
-    return items;
+    items.push(...ADMIN_ITEMS);
+  } else if (canViewOvertimeMenu({ isAdmin, isLeader, position, dept }) && !items.some((item) => item.href === '/?tab=OVERTIME')) {
+    items.push(LEADER_ITEMS.find((item) => item.href === '/?tab=OVERTIME'));
   }
 
-  return items;
+  return items.filter(Boolean);
 }
 
 export function getMyPageSidebarItems({ isAdmin = false, isLeader = false, dept = '', position = '' } = {}) {
@@ -69,12 +63,9 @@ export function getMyPageSidebarItems({ isAdmin = false, isLeader = false, dept 
 
 export function getAdminEmployeeSidebarItems() {
   return [
-    ...BASE_ITEMS,
-    ...LEADER_AND_ADMIN_ITEMS,
-    { href: '/admin/employees', label: uiText.sidebar.employeeAdmin, icon: Users, activeHref: '/admin/employees', active: true },
-    ...ADMIN_ONLY_ITEMS,
-    LEAVE_ITEM,
-    OVERTIME_ITEM,
+    ...GENERAL_ITEMS,
+    ...LEADER_ITEMS,
+    ...ADMIN_ITEMS,
   ];
 }
 
@@ -84,3 +75,5 @@ export const sidebarActionIcons = {
   dark: Moon,
   mypage: User,
 };
+
+export const sidebarCategories = ['일반 팀원', '팀장', '관리자'];

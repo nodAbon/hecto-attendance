@@ -21,6 +21,7 @@ export async function POST(request) {
     const workDates = Array.isArray(body?.workDates) ? body.workDates.map((date) => String(date || '').trim()).filter(Boolean) : [];
     const scheduleStart = String(body?.scheduleStart || '').trim();
     const scheduleEnd = String(body?.scheduleEnd || '').trim();
+    const allowOvertime = body?.allowOvertime !== false;
     const note = String(body?.note || '').trim();
 
     if (!empNo || workDates.length === 0 || !scheduleStart) {
@@ -32,6 +33,7 @@ export async function POST(request) {
       workDates,
       scheduleStart,
       scheduleEnd: scheduleEnd || null,
+      allowOvertime,
       note,
       userId: session.userId,
     });

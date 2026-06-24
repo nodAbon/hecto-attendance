@@ -43,23 +43,10 @@ export const canManageService2NightSchedule = ({ isAdmin = false, dept = '', pos
 
 export const getEmployeeDailyScheduleOptionsForDept = (dept = '') => {
   const copy = uiText.scheduleBatch;
-  if (isNightTeamDept(dept)) {
-    return [
-      { code: 'N1', label: copy.optionNight1, start: '18:00', end: '06:00' },
-      { code: 'N2', label: copy.optionNight2, start: '20:00', end: '08:00' },
-    ];
-  }
-
-  if (isSpecialDayTeamDept(dept)) {
-    return [
-      { code: 'D10', label: copy.optionDay10, start: '10:00', end: '19:00' },
-      { code: 'CUSTOM', label: copy.optionCustom, start: '', end: '' },
-    ];
-  }
-
   return [
     { code: 'D08', label: copy.optionDay08, start: '08:00', end: '17:00' },
     { code: 'D09', label: copy.optionDay09, start: '09:00', end: '18:00' },
+    { code: 'D10', label: copy.optionDay10, start: '10:00', end: '19:00' },
     { code: 'CUSTOM', label: copy.optionCustom, start: '', end: '' },
   ];
 };

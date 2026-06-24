@@ -1,7 +1,6 @@
-'use client';
+﻿'use client';
 
-import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useMemo } from 'react';
 import {
   getHolidayName,
   sortCalendarLeaves,
@@ -9,17 +8,22 @@ import {
   getLeaveDisplayName,
   LEAVE_TYPE_META,
 } from '../lib/leaveRules';
+import MonthSearchPicker from './MonthSearchPicker';
+import { getMonthRangeList } from '../lib/dashboardUtils';
+import useHolidayCalendar from '../lib/useHolidayCalendar';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const LEGEND_PRIORITY = {
-  '연차': 0,
-  '공가': 1,
-  '오전반차': 2,
-  '오후반차': 3,
-  '오전반반차': 4,
-  '오후반반차': 5,
-  '경조휴가': 6,
-  '기타휴가': 7,
+  연차: 0,
+  공가: 1,
+  '공가 [오전]': 2,
+  '4시간휴가 [오전]': 3,
+  '4시간휴가 [오후]': 4,
+  '2시간휴가B [08-10]': 5,
+  '2시간휴가D [10-12]': 6,
+  '2시간휴가G [14-16]': 7,
+  '2시간휴가H [15-17]': 8,
+  '2시간휴가J [17-19]': 9,
 };
 
 const getLeaveVariantClass = (meta) => {
@@ -76,10 +80,15 @@ export default function DashboardCalendarWidget({
   setSelectedCalendarDate,
   eyebrow = '오늘의 미니 캘린더',
   hideSelectedDetail = false,
+  compact = false,
+  hideLegend = false,
+  bare = false,
 }) {
   const todayStr = formatLocalDateStr();
+  useHolidayCalendar(calendarMonth);
   const cells = getCalendarCells(calendarMonth);
   const CALENDAR_LEGENDS = buildCalendarLegends(calendarLeaves);
+  const monthOptions = useMemo(() => getMonthRangeList(240, 240), []);
 
   const moveMonth = (delta) => {
     const [y, m] = calendarMonth.split('-').map(Number);
@@ -102,11 +111,11 @@ export default function DashboardCalendarWidget({
       <div className="calendar-detail">
         <div className="calendar-detail__title">
           <span className="calendar-detail__date">{selectedCalendarDate}</span>
-          {holidayName && <span className="calendar-detail__holiday">공휴일 {holidayName}</span>}
+          {holidayName && <span className="calendar-detail__holiday">怨듯쑕??{holidayName}</span>}
         </div>
 
         {dayLeaves.length === 0 ? (
-          <div className="calendar-detail__empty">휴가가 없습니다</div>
+          <div className="calendar-detail__empty">?닿?媛 ?놁뒿?덈떎</div>
         ) : (
           <div className="calendar-detail__grid">
             {Object.values(
@@ -148,46 +157,41 @@ export default function DashboardCalendarWidget({
   };
 
   return (
-    <div className="card" style={{ padding: '16px' }}>
-      <div className="calendar-widget">
+    <div className={`calendar-widget-shell${bare ? ' is-bare' : ''}`} style={bare ? { padding: 0, background: 'transparent', border: 'none', boxShadow: 'none' } : { padding: '16px' }}>
+      <div className={`calendar-widget${compact ? ' is-compact' : ''}`}>
         <div className="calendar-widget__header">
           <div>
             <div className="calendar-widget__eyebrow">{eyebrow}</div>
             <div className="calendar-widget__title">{formatMonthLabel(calendarMonth)} 달력</div>
           </div>
-          <div className="calendar-widget__nav">
-            <button
-              type="button"
-              className="calendar-widget__nav-btn"
-              onClick={() => moveMonth(-1)}
-              aria-label="이전 달"
-              title="이전 달"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              type="button"
-              className="calendar-widget__nav-btn"
-              onClick={() => moveMonth(1)}
-              aria-label="다음 달"
-              title="다음 달"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <MonthSearchPicker
+            label=""
+            value={calendarMonth}
+            onChange={(month) => {
+              setSelectedCalendarDate(null);
+              setCalendarMonth(month);
+            }}
+            monthOptions={monthOptions}
+            onPrev={() => moveMonth(-1)}
+            onNext={() => moveMonth(1)}
+            placeholder="YYYY-MM 검색"
+            className="calendar-widget__month-picker"
+          />
         </div>
 
-        <div className="calendar-widget__legend">
-          {CALENDAR_LEGENDS.map((item, idx) => (
-            <div
-              key={`${item.label}-${idx}`}
-              className={`calendar-widget__legend-item ${item.label === '연차' ? 'is-annual' : ''}`}
-            >
-              <span className="calendar-widget__legend-swatch" style={{ background: item.color }} />
-              <span>{item.label}</span>
-            </div>
-          ))}
-        </div>
+        {!hideLegend && (
+          <div className="calendar-widget__legend">
+            {CALENDAR_LEGENDS.map((item, idx) => (
+              <div
+                key={`${item.label}-${idx}`}
+                className={`calendar-widget__legend-item ${item.label === '?곗감' ? 'is-annual' : ''}`}
+              >
+                <span className="calendar-widget__legend-swatch" style={{ background: item.color }} />
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="calendar-widget__weekday-grid">
           {WEEKDAYS.map((day, idx) => (
@@ -278,7 +282,7 @@ export default function DashboardCalendarWidget({
                         key={`${String(leave.empNo || leave.empName || '')}-${String(leave.startDate || '')}-${String(leave.leaveName || '')}-${li}`}
                         className="calendar-day__leave-pill"
                         style={{ background: meta.bg, borderColor: meta.border, color: meta.color }}
-                        title={`${String(getLeaveDisplayName(leave, employeeNameLookup) || '')} · ${String(meta.label || '')}`}
+                        title={`${String(getLeaveDisplayName(leave, employeeNameLookup) || '')} 쨌 ${String(meta.label || '')}`}
                       >
                         {getLeaveDisplayName(leave, employeeNameLookup)}
                       </span>
@@ -298,3 +302,4 @@ export default function DashboardCalendarWidget({
     </div>
   );
 }
+
