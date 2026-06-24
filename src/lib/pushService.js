@@ -1,13 +1,31 @@
 import webpush from 'web-push';
 import { getAdminClient } from './supabaseClient';
 
-webpush.setVapidDetails(
-  'mailto:admin@nodabons.com', // Replace with a real email
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+let isVapidSet = false;
+
+const initWebPush = () => {
+  if (isVapidSet) return true;
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.warn('VAPID keys not set. Push notifications will not work.');
+    return false;
+  }
+  try {
+    webpush.setVapidDetails(
+      'mailto:admin@nodabons.com', // Replace with a real email
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+    isVapidSet = true;
+    return true;
+  } catch (err) {
+    console.error('Failed to set VAPID details', err);
+    return false;
+  }
+};
 
 export const sendPushNotification = async (empNo, title, body, url = '/') => {
+  if (!initWebPush()) return;
+
   const supabase = getAdminClient();
 
   const { data: subscriptions, error } = await supabase
