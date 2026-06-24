@@ -125,29 +125,45 @@ export const getYearWeekStartKey = (dateStr = '') => {
   if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return '';
 
   const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const yearStartWeekStart = new Date(yearStart);
-  yearStartWeekStart.setUTCDate(yearStartWeekStart.getUTCDate() - yearStartWeekStart.getUTCDay());
+  const day = date.getUTCDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const monday = new Date(date.getTime() - diff * 86400000);
 
-  const dateWeekStart = new Date(date);
-  dateWeekStart.setUTCDate(dateWeekStart.getUTCDate() - dateWeekStart.getUTCDay());
-
-  return toUtcDateOnly(dateWeekStart < yearStartWeekStart ? yearStartWeekStart : dateWeekStart);
+  return toUtcDateOnly(monday);
 };
 
 export const getYearWeekNumber = (dateStr = '') => {
-  const weekStartKey = getYearWeekStartKey(dateStr);
-  if (!weekStartKey) return null;
-
   const parts = String(dateStr || '').split('-').map(Number);
-  const year = parts[0];
-  if (!year) return null;
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return null;
 
-  const yearStart = new Date(Date.UTC(year, 0, 1));
-  const yearStartWeekStart = new Date(yearStart);
-  yearStartWeekStart.setUTCDate(yearStartWeekStart.getUTCDate() - yearStartWeekStart.getUTCDay());
-  const weekStart = new Date(`${weekStartKey}T00:00:00Z`);
-  return Math.floor((weekStart - yearStartWeekStart) / (7 * 86400000)) + 1;
+  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  const year = date.getUTCFullYear();
+
+  const getMondayOfJan1 = (y) => {
+    const jan1 = new Date(Date.UTC(y, 0, 1));
+    const day = jan1.getUTCDay();
+    const diff = day === 0 ? 6 : day - 1;
+    return new Date(jan1.getTime() - diff * 86400000);
+  };
+
+  const mNext = getMondayOfJan1(year + 1);
+  const mCurr = getMondayOfJan1(year);
+  const mPrev = getMondayOfJan1(year - 1);
+
+  let targetYearStartWeek;
+  if (date.getTime() >= mNext.getTime()) {
+    targetYearStartWeek = mNext;
+  } else if (date.getTime() >= mCurr.getTime()) {
+    targetYearStartWeek = mCurr;
+  } else {
+    targetYearStartWeek = mPrev;
+  }
+
+  const day = date.getUTCDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const monday = new Date(date.getTime() - diff * 86400000);
+
+  return Math.floor((monday.getTime() - targetYearStartWeek.getTime()) / (7 * 86400000)) + 1;
 };
 
 export const getTabFromLocation = () => {
