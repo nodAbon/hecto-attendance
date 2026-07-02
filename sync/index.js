@@ -211,10 +211,8 @@ async function syncAttendance(conn) {
 
 async function syncLeaves(conn) {
   const now = new Date();
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-  const toDate   = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 10);
   const fromStr   = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
-  const toStr     = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2, '0')}${String(toDate.getDate()).padStart(2, '0')}`;
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -234,8 +232,7 @@ async function syncLeaves(conn) {
     WHERE y.I_COMPANY = ?
       AND y.I_STATUS = '40'
       AND y.D_END_DATE >= ?
-      AND y.D_START_DATE <= ?
-  `, [MY_COMPANY_CODE, fromStr, toStr]);
+  `, [MY_COMPANY_CODE, fromStr]);
 
   if (rows.length === 0) return 0;
 

@@ -55,13 +55,20 @@ export async function buildLeaveIcsForDepartments({
     });
   }
 
-  const { data: leaves, error: leaveError } = await supabase
+  let query = supabase
     .from('sa_leaves')
     .select('emp_no, emp_name, start_date, end_date, leave_code, leave_name, leave_days, status')
     .eq('status', '40')
-    .lte('start_date', window.to)
-    .gte('end_date', window.from)
     .in('emp_no', targetEmpNos);
+
+  if (from) {
+    query = query.gte('end_date', from);
+  }
+  if (to) {
+    query = query.lte('start_date', to);
+  }
+
+  const { data: leaves, error: leaveError } = await query;
 
   if (leaveError) {
     throw new Error(`휴가 목록 조회 실패: ${leaveError.message}`);

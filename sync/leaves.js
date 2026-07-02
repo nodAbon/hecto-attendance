@@ -101,9 +101,7 @@ async function syncEmployees(conn) {
 async function syncLeaves(conn) {
   const now = new Date();
   const fromMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-  const toMonth   = new Date(now.getFullYear(), now.getMonth() + 4, 0);
   const fromStr   = `${fromMonth.getFullYear()}${String(fromMonth.getMonth()+1).padStart(2,'0')}01`;
-  const toStr     = `${toMonth.getFullYear()}${String(toMonth.getMonth()+1).padStart(2,'0')}${String(toMonth.getDate()).padStart(2,'0')}`;
 
   const rows = await query(conn, `
     SELECT
@@ -123,8 +121,7 @@ async function syncLeaves(conn) {
     WHERE y.I_COMPANY = ?
       AND y.I_STATUS = '40'
       AND y.D_END_DATE >= ?
-      AND y.D_START_DATE <= ?
-  `, [MY_COMPANY_CODE, fromStr, toStr]);
+  `, [MY_COMPANY_CODE, fromStr]);
 
   if (rows.length === 0) return 0;
 
