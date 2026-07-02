@@ -8,6 +8,7 @@
     "dev": "node --watch index.js",
     "list:hr": "node list-hr-employees.js",
     "list:leave": "node list-hr-leaves.js",
+    "list:leave:latest": "node latest-approved-leaves.js",
     "backfill:leaves": "node backfill-leaves.js",
     "backfill:attendance:q1": "node backfill-attendance-range.js"
   },
