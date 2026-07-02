@@ -50,6 +50,20 @@ const CREATED_AT_COLUMN_CANDIDATES = [
   'D_REQUEST_DATE',
 ];
 
+const CREATED_TIME_COLUMN_CANDIDATES = [
+  'T_INSERT_TIME',
+  'T_REG_TIME',
+  'T_CREATE_TIME',
+  'INSERT_TIME',
+  'REG_TIME',
+  'CREATE_TIME',
+  'CREATED_TIME',
+  'W_TIME',
+  'WRITE_TIME',
+  'APPLY_TIME',
+  'REQUEST_TIME',
+];
+
 const UPDATED_AT_COLUMN_CANDIDATES = [
   'D_UPDATE_DATE',
   'D_UPDATE_DT',
@@ -63,11 +77,73 @@ const UPDATED_AT_COLUMN_CANDIDATES = [
   'U_DATE',
 ];
 
+const UPDATED_TIME_COLUMN_CANDIDATES = [
+  'T_UPDATE_TIME',
+  'T_MOD_TIME',
+  'UPDATE_TIME',
+  'UPDATED_TIME',
+  'MODIFY_TIME',
+  'MOD_TIME',
+  'U_TIME',
+];
+
+const APPROVED_AT_COLUMN_CANDIDATES = [
+  'D_APPROVE_DATE',
+  'D_APPROVE_DT',
+  'D_APPROVED_DATE',
+  'D_APPROVED_DT',
+  'APPROVE_DATE',
+  'APPROVE_DT',
+  'APPROVED_DATE',
+  'APPROVED_DT',
+  'D_CONFIRM_DATE',
+  'D_CONFIRM_DT',
+  'CONFIRM_DATE',
+  'CONFIRM_DT',
+  'D_APPR_DATE',
+  'D_APPR_DT',
+  'APPR_DATE',
+  'APPR_DT',
+  'D_DECIDE_DATE',
+  'D_DECIDE_DT',
+  'DECIDE_DATE',
+  'DECIDE_DT',
+  'D_STATUS_DATE',
+  'D_STATUS_DT',
+  'STATUS_DATE',
+  'STATUS_DT',
+  'D_PROC_DATE',
+  'D_PROC_DT',
+  'PROC_DATE',
+  'PROC_DT',
+];
+
+const APPROVED_TIME_COLUMN_CANDIDATES = [
+  'T_APPROVE_TIME',
+  'T_APPROVED_TIME',
+  'APPROVE_TIME',
+  'APPROVED_TIME',
+  'T_CONFIRM_TIME',
+  'CONFIRM_TIME',
+  'T_APPR_TIME',
+  'APPR_TIME',
+  'T_DECIDE_TIME',
+  'DECIDE_TIME',
+  'T_STATUS_TIME',
+  'STATUS_TIME',
+  'T_PROC_TIME',
+  'PROC_TIME',
+];
+
 function parseArgs(argv) {
-  const args = { limit: 20, json: false };
+  const args = { limit: 20, json: false, showColumns: false };
   argv.slice(2).forEach((arg) => {
     if (arg === '--json') {
       args.json = true;
+      return;
+    }
+    if (arg === '--columns') {
+      args.showColumns = true;
       return;
     }
     if (arg.startsWith('--limit=')) {
@@ -134,8 +210,29 @@ function formatDateLike(value) {
   return text;
 }
 
+function formatTimeLike(value) {
+  const text = normalizeText(value);
+  if (!text) return '';
+  const digits = text.replace(/\D/g, '');
+  if (/^\d{6}$/.test(digits)) {
+    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4, 6)}`;
+  }
+  if (/^\d{4}$/.test(digits)) {
+    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+  }
+  return text;
+}
+
+function formatDateTimeLike(dateValue, timeValue) {
+  const dateText = formatDateLike(dateValue);
+  const timeText = formatTimeLike(timeValue);
+  if (!dateText) return timeText;
+  if (/\d{1,2}:\d{2}/.test(dateText)) return dateText;
+  return timeText ? `${dateText} ${timeText}` : dateText;
+}
+
 async function main() {
-  const { limit, json } = parseArgs(process.argv);
+  const { limit, json, showColumns } = parseArgs(process.argv);
 
   if (!MYSQL_CONFIG.host || !MYSQL_CONFIG.user || !MYSQL_CONFIG.database) {
     throw new Error('MYSQL_HOST, MYSQL_USER, MYSQL_DATABASE 환경변수를 확인하세요.');
@@ -146,9 +243,17 @@ async function main() {
     conn = await mysql.createConnection(MYSQL_CONFIG);
 
     const columns = await getTableColumns(conn, 'hr_yuncha_use');
+    if (showColumns) {
+      console.log(JSON.stringify(columns, null, 2));
+      return;
+    }
+    const approvedAtColumn = pickColumn(columns, APPROVED_AT_COLUMN_CANDIDATES);
+    const approvedTimeColumn = pickColumn(columns, APPROVED_TIME_COLUMN_CANDIDATES);
     const createdAtColumn = pickColumn(columns, CREATED_AT_COLUMN_CANDIDATES);
+    const createdTimeColumn = pickColumn(columns, CREATED_TIME_COLUMN_CANDIDATES);
     const updatedAtColumn = pickColumn(columns, UPDATED_AT_COLUMN_CANDIDATES);
-    const orderColumn = createdAtColumn || updatedAtColumn || 'D_START_DATE';
+    const updatedTimeColumn = pickColumn(columns, UPDATED_TIME_COLUMN_CANDIDATES);
+    const orderColumn = approvedAtColumn || createdAtColumn || updatedAtColumn || 'D_START_DATE';
 
     const rows = await selectOnly(conn, `
       SELECT
@@ -161,8 +266,12 @@ async function main() {
         COALESCE(c.N_NAME, tc.NAME, CAST(y.I_CODE AS CHAR)) AS leave_name,
         CAST(y.O_ANNLEV_CNT AS CHAR) AS leave_days,
         y.I_STATUS AS status,
+        ${buildOptionalSelect(approvedAtColumn, 'approved_at')},
+        ${buildOptionalSelect(approvedTimeColumn, 'approved_time')},
         ${buildOptionalSelect(createdAtColumn, 'registered_at')},
+        ${buildOptionalSelect(createdTimeColumn, 'registered_time')},
         ${buildOptionalSelect(updatedAtColumn, 'updated_at')}
+        ${updatedTimeColumn ? `, y.${quoteIdentifier(updatedTimeColumn)} AS updated_time` : ', NULL AS updated_time'}
       FROM hr_yuncha_use y
       INNER JOIN hr_employee e
         ON e.I_COMPANY = y.I_COMPANY
@@ -191,16 +300,21 @@ async function main() {
       startDate: formatDateLike(row.start_date),
       endDate: formatDateLike(row.end_date),
       status: normalizeText(row.status),
-      registeredAt: formatDateLike(row.registered_at),
-      updatedAt: formatDateLike(row.updated_at),
+      approvedAt: formatDateTimeLike(row.approved_at, row.approved_time),
+      registeredAt: formatDateTimeLike(row.registered_at, row.registered_time),
+      updatedAt: formatDateTimeLike(row.updated_at, row.updated_time),
     }));
 
     if (json) {
       console.log(JSON.stringify({
         companyCode: COMPANY_CODE,
         status: '40',
+        approvedAtColumn: approvedAtColumn || null,
+        approvedTimeColumn: approvedTimeColumn || null,
         createdAtColumn: createdAtColumn || null,
+        createdTimeColumn: createdTimeColumn || null,
         updatedAtColumn: updatedAtColumn || null,
+        updatedTimeColumn: updatedTimeColumn || null,
         orderColumn,
         rows: normalizedRows,
       }, null, 2));
@@ -210,12 +324,18 @@ async function main() {
     console.log('승인완료 연차 최신 등록 조회');
     console.log(`- 회사코드: ${COMPANY_CODE}`);
     console.log('- 승인상태: I_STATUS = 40');
+    console.log(`- 승인일 후보 컬럼: ${approvedAtColumn || '(찾지 못함)'}`);
+    console.log(`- 승인시간 후보 컬럼: ${approvedTimeColumn || '(찾지 못함)'}`);
     console.log(`- 등록일 후보 컬럼: ${createdAtColumn || '(찾지 못함)'}`);
+    console.log(`- 등록시간 후보 컬럼: ${createdTimeColumn || '(찾지 못함)'}`);
     console.log(`- 수정일 후보 컬럼: ${updatedAtColumn || '(찾지 못함)'}`);
+    console.log(`- 수정시간 후보 컬럼: ${updatedTimeColumn || '(찾지 못함)'}`);
     console.log(`- 정렬 기준: ${orderColumn}`);
     console.log(`- 조회 건수: ${normalizedRows.length}건`);
-    if (!createdAtColumn && !updatedAtColumn) {
-      console.log('[안내] 등록/수정일로 보이는 컬럼을 찾지 못해 휴가 시작일 기준으로 정렬했습니다.');
+    if (!approvedAtColumn && !createdAtColumn && !updatedAtColumn) {
+      console.log('[안내] 승인/등록/수정일로 보이는 컬럼을 찾지 못해 휴가 시작일 기준으로 정렬했습니다.');
+    } else if (!approvedAtColumn) {
+      console.log('[안내] 승인일로 보이는 컬럼을 찾지 못해 등록일 또는 수정일 기준으로 정렬했습니다.');
     }
     console.log('');
     console.table(normalizedRows);
