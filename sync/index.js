@@ -1,9 +1,8 @@
 /**
  * ================================================================
- * 헥토 근태 시스템 - 세콤 MySQL → Supabase 동기화 데몬
+ * 헥토 근태 시스템 - 통합 동기화 데몬 (세콤/캡스/연차/임직원)
  * ================================================================
- * 서버PC에서만 실행 (AWS VPN 연결 필요)
- * pm2 start index.js --name hecto-sync
+ * 실행: pm2 start index.js --name hecto-sync
  * ================================================================
  */
 
@@ -14,8 +13,10 @@ const { createClient } = require('@supabase/supabase-js');
 loadSyncEnv();
 
 // ── 설정 ──────────────────────────────────────────────────────────
-const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS) || 180_000; // 3분
+// 실행 주기: 30분 (1,800,000 ms)
+const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS) || 1_800_000;
 const MY_COMPANY_CODE  = process.env.MY_COMPANY_CODE || '1600';
+const CAPS_E_GROUP     = process.env.CAPS_E_GROUP || '08';
 
 const MYSQL_CONFIG = {
   host:           process.env.MYSQL_HOST,
@@ -32,9 +33,8 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-// 대상 부서 (스타팅빌딩 근무)
-// Gate code mapping
-const GATE_MAPPING = {
+// 세콤 게이트 매핑
+const SECOM_GATE_MAPPING = {
   '0001': '태광_11층정문',  '0002': '태광_11층비상문', '0003': '태광_10층정문',
   '0007': '태광_12층정문',  '0008': '태광_12층비상문', '0009': '태광_13층정문',
   '0010': '태광_13층비상문','0011': '태광_10층비상문', '0013': '태광_9층정문',
@@ -52,16 +52,20 @@ const GATE_MAPPING = {
   '1000': '큰길_10층',
 };
 
+// 캡스 게이트 매핑
+const CAPS_GATE_MAPPING = {
+  '4000': 'CAPS',
+  '4004': 'CAPS',
+};
+
+// 직원 목록 최종 동기화 날짜 관리 (1일 1회 실행 제어용)
+let lastEmployeeSyncDate = '';
+
 // ── 유틸 ──────────────────────────────────────────────────────────
 function parseATime(aTime) {
-  if (!aTime || aTime.length < 14) return null;
-  const y  = aTime.substring(0, 4);
-  const mo = aTime.substring(4, 6);
-  const d  = aTime.substring(6, 8);
-  const h  = aTime.substring(8, 10);
-  const mi = aTime.substring(10, 12);
-  const s  = aTime.substring(12, 14);
-  return `${y}-${mo}-${d}T${h}:${mi}:${s}+09:00`;
+  if (!aTime || String(aTime).length < 14) return null;
+  const s = String(aTime);
+  return `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}T${s.substring(8, 10)}:${s.substring(10, 12)}:${s.substring(12, 14)}+09:00`;
 }
 
 function flag1ToEventType(flag1) {
@@ -92,13 +96,37 @@ function extractEmployeeLoginId(row) {
     || (extractEmployeeEmail(row).split('@')[0] || '');
 }
 
+function normalizeEmpNo(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith(MY_COMPANY_CODE) && digits.length >= 12) {
+    return digits.slice(MY_COMPANY_CODE.length).slice(-8).replace(/^0+/, '') || digits.slice(-8);
+  }
+  return digits.slice(-8).replace(/^0+/, '') || digits.slice(-8);
+}
+
+function buildCapsGateName(row) {
+  const parts = [row.e_group, row.e_mode, row.e_type, row.e_result]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts.join(' / ') : '출입';
+}
+
+function stripAttendanceSource(rows = []) {
+  return rows.map(({ source, ...rest }) => rest);
+}
+
+function isMissingAttendanceSourceColumn(error) {
+  return String(error?.code || '') === 'PGRST204'
+    || String(error?.message || '').toLowerCase().includes('source');
+}
+
 function log(level, msg, detail = '') {
   const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
   const prefix = { INFO: '✅', WARN: '⚠️', ERROR: '❌' }[level] || 'ℹ️';
   console.log(`[${now}] ${prefix} ${msg}${detail ? ' | ' + detail : ''}`);
 }
 
-// MySQL은 읽기전용 — SELECT만 허용
 async function queryMysql(conn, sql, params = []) {
   const trimmed = sql.trim().toUpperCase();
   if (!trimmed.startsWith('SELECT') && !trimmed.startsWith('SHOW')) {
@@ -108,9 +136,11 @@ async function queryMysql(conn, sql, params = []) {
   return rows;
 }
 
-// ── 동기화 함수 ───────────────────────────────────────────────────
+// ── 동기화 함수들 ─────────────────────────────────────────────────
 
+// 1. 임직원 마스터 동기화 (1일 1회만 수행됨)
 async function syncEmployees(conn) {
+  log('INFO', '임직원 정보 동기화 시작');
   const rows = await queryMysql(conn, `
     SELECT
       e.*,
@@ -155,10 +185,11 @@ async function syncEmployees(conn) {
   return rows.length;
 }
 
-async function syncAttendance(conn) {
+// 2. 세콤 출입기록 동기화 (최근 1일치)
+async function syncSecomAttendance(conn) {
   const now = new Date();
-  // 3개월 전 1일부터 당월 말까지 동기화
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 10);
+  // 최근 1일치 (어제부터 오늘까지)
+  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}000000`;
 
   const rows = await queryMysql(conn, `
@@ -193,26 +224,113 @@ async function syncAttendance(conn) {
       a_time:     r.a_time,
       log_time:   parseATime(r.a_time),
       eq_code:    r.eq_code,
-      gate_name:  GATE_MAPPING[r.eq_code] || `게이트(${r.eq_code})`,
+      gate_name:  SECOM_GATE_MAPPING[r.eq_code] || `게이트(${r.eq_code})`,
       flag1:      r.flag1,
       event_type: flag1ToEventType(r.flag1),
+      source:     'secom',
       synced_at:  new Date().toISOString(),
     }));
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('sa_attendance')
       .upsert(batch, { onConflict: 'sabun,a_time' });
 
-    if (error) throw new Error(`출입로그 upsert 실패: ${error.message}`);
+    if (error && isMissingAttendanceSourceColumn(error)) {
+      ({ error } = await supabase
+        .from('sa_attendance')
+        .upsert(stripAttendanceSource(batch), { onConflict: 'sabun,a_time' }));
+    }
+
+    if (error) throw new Error(`세콤 출입로그 upsert 실패: ${error.message}`);
     total += batch.length;
   }
   return total;
 }
 
+// 3. 캡스 출입기록 동기화 (최근 1일치)
+async function syncCapsAttendance(conn) {
+  const now = new Date();
+  // 최근 1일치 (어제부터 오늘까지)
+  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}000000`;
+  const todayStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+
+  const rows = await queryMysql(conn, `
+    SELECT
+      e.I_EMPLOY_NO AS emp_no,
+      t.E_IDNO      AS idno,
+      t.E_CARD      AS card_no,
+      t.E_DATE      AS e_date,
+      t.E_TIME      AS e_time,
+      t.G_ID        AS gate_code,
+      t.E_GROUP     AS e_group,
+      t.E_MODE      AS e_mode,
+      t.E_TYPE      AS e_type,
+      t.E_RESULT    AS e_result
+    FROM tenter t
+    INNER JOIN hr_employee e ON
+      e.I_COMPANY = ?
+      AND t.E_IDNO IS NOT NULL
+      AND t.E_IDNO <> ''
+      AND e.I_COMPANY = LEFT(t.E_IDNO, 4)
+      AND e.I_EMPLOY_NO = RIGHT(t.E_IDNO, 8)
+    INNER JOIN hr_department d ON
+      d.I_COMPANY = ?
+      AND d.I_DEPT = e.I_DEPT
+    WHERE COALESCE(e.I_RETIRE_YN, '0') <> '1'
+      AND t.E_GROUP = ?
+      AND t.E_DATE >= ?
+      AND t.E_DATE <= ?
+    ORDER BY t.E_DATE DESC, t.E_TIME DESC
+  `, [MY_COMPANY_CODE, MY_COMPANY_CODE, CAPS_E_GROUP, fromStr.slice(0, 8), todayStr]);
+
+  if (rows.length === 0) return 0;
+
+  const BATCH = 500;
+  let total = 0;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const batch = rows.slice(i, i + BATCH).map(row => {
+      const empNo = normalizeEmpNo(row.emp_no || row.idno);
+      const sabun = String(row.idno || '').trim() || `${MY_COMPANY_CODE}${String(empNo).padStart(8, '0')}`;
+      const aTime = `${String(row.e_date || '').replace(/\D/g, '').slice(0, 8)}${String(row.e_time || '').replace(/\D/g, '').slice(0, 6).padStart(6, '0')}`;
+
+      return {
+        sabun,
+        emp_no:     empNo || null,
+        card_no:    row.card_no ? String(row.card_no) : null,
+        a_time:     aTime,
+        log_time:   parseATime(aTime),
+        eq_code:    row.gate_code ? String(row.gate_code) : null,
+        gate_name:  buildCapsGateName(row) || CAPS_GATE_MAPPING[String(row.gate_code || '')] || '출입',
+        flag1:      null,
+        event_type: '출입',
+        source:     'caps',
+        synced_at:  new Date().toISOString(),
+      };
+    });
+
+    let { error } = await supabase
+      .from('sa_attendance')
+      .upsert(batch, { onConflict: 'sabun,a_time' });
+
+    if (error && isMissingAttendanceSourceColumn(error)) {
+      ({ error } = await supabase
+        .from('sa_attendance')
+        .upsert(stripAttendanceSource(batch), { onConflict: 'sabun,a_time' }));
+    }
+
+    if (error) throw new Error(`캡스 출입로그 upsert 실패: ${error.message}`);
+    total += batch.length;
+  }
+  return total;
+}
+
+// 4. 연차/휴가 내역 동기화 (최근 1일치)
 async function syncLeaves(conn) {
   const now = new Date();
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 10);
-  const fromStr   = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
+  // 최근 1일치 (어제부터 오늘까지)
+  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -265,14 +383,27 @@ async function runSync() {
   try {
     conn = await mysql.createConnection(MYSQL_CONFIG);
 
-    // 단일 커넥션이므로 순차 실행
-    const empCount   = await syncEmployees(conn);
-    const attCount   = await syncAttendance(conn);
-    const leaveCount = await syncLeaves(conn);
+    // KST 기준 오늘 날짜 문자열 획득 (예: 2026-07-03)
+    const todayKst = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+
+    let empCount = 0;
+    // 날짜가 바뀌었을 때만 임직원 마스터 동기화 실행 (1일 1회)
+    if (todayKst !== lastEmployeeSyncDate) {
+      empCount = await syncEmployees(conn);
+      lastEmployeeSyncDate = todayKst;
+      log('INFO', `임직원 정보 동기화 완료: ${empCount}명`);
+    } else {
+      log('INFO', '임직원 정보 동기화 건너뜀 (오늘 이미 동기화됨)');
+    }
+
+    // 출입기록 및 연차 기록 동기화 (30분 주기 실행)
+    const secomCount  = await syncSecomAttendance(conn);
+    const capsCount   = await syncCapsAttendance(conn);
+    const leaveCount  = await syncLeaves(conn);
 
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     log('INFO', `동기화 완료 (${elapsed}s)`,
-      `직원 ${empCount}명 | 출입로그 ${attCount}건 | 연차 ${leaveCount}건`);
+      `세콤 ${secomCount}건 | 캡스 ${capsCount}건 | 연차 ${leaveCount}건`);
 
   } catch (err) {
     log('ERROR', '동기화 실패', err.message);
@@ -282,6 +413,6 @@ async function runSync() {
 }
 
 // ── 시작 ──────────────────────────────────────────────────────────
-log('INFO', `헥토 근태 동기화 데몬 시작 (${SYNC_INTERVAL_MS / 1000}초 주기)`);
+log('INFO', `통합 근태 동기화 데몬 시작 (${SYNC_INTERVAL_MS / 1000 / 60}분 주기)`);
 runSync();
 setInterval(runSync, SYNC_INTERVAL_MS);
