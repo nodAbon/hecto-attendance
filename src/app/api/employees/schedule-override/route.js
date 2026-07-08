@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth';
 import { deleteScheduleOverride, saveScheduleOverride } from '@/lib/supabaseDb';
 import { isAdminRole, isLeaderPosition } from '@/lib/roleUtils';
+import { clearAttendanceCache } from '@/lib/attendanceCache';
 
 const canManageOverrides = (session) => isAdminRole(session) || isLeaderPosition(session?.position);
 
@@ -32,6 +33,8 @@ export async function POST(request) {
       removed: Boolean(removed),
     });
 
+    clearAttendanceCache();
+
     return NextResponse.json({ success: true, message: '근무시간이 저장되었습니다.' });
   } catch (err) {
     console.error('[Schedule Override API]', err);
@@ -56,6 +59,8 @@ export async function DELETE(request) {
     }
 
     await deleteScheduleOverride({ empNo, workDate });
+
+    clearAttendanceCache();
 
     return NextResponse.json({ success: true, message: '근무시간 예외가 삭제되었습니다.' });
   } catch (err) {

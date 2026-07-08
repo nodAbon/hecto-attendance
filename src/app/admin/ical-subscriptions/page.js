@@ -206,9 +206,9 @@ export default function IcalSubscriptionPage() {
   const activeCount = subscriptions.filter((item) => item.isActive).length;
 
   const autoLabel = useMemo(() => {
-    if (selectedDepts.length === 0) return '비공개 iCal 구독';
-    if (selectedDepts.length === 1) return `${selectedDepts[0]} iCal 구독`;
-    return `${selectedDepts[0]} 외 ${selectedDepts.length - 1}개 부서 iCal 구독`;
+    if (selectedDepts.length === 0) return '캘린더 링크';
+    if (selectedDepts.length === 1) return `${selectedDepts[0]} 캘린더 링크`;
+    return `${selectedDepts[0]} 외 ${selectedDepts.length - 1}개 부서 캘린더 링크`;
   }, [selectedDepts]);
 
   useEffect(() => {
@@ -366,8 +366,8 @@ export default function IcalSubscriptionPage() {
 
   return (
     <EmployeeAdminShell
-      title="비공개 iCal 구독"
-      subtitle="부서를 선택해 비공개 캘린더 링크를 만들고, 목록에서 바로 활성화나 삭제를 관리합니다."
+      title="캘린더 링크 생성"
+      subtitle="부서를 선택해 캘린더 구독 링크를 만들고, 목록에서 링크를 복사하거나 활성화/삭제를 관리합니다."
       activeHref="/admin/ical-subscriptions"
     >
       <div style={{ display: 'grid', gap: 10 }}>
@@ -375,8 +375,8 @@ export default function IcalSubscriptionPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Shield style={{ width: 18, height: 18, color: 'var(--blue)' }} />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)' }}>구독 생성</div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>이름은 자동으로 붙고, 선택한 부서만 비공개 URL에 포함됩니다.</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)' }}>링크 생성</div>
+              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>이름은 자동으로 지정되며, 선택한 부서원들의 연차 일정만 구독 URL에 노출됩니다.</div>
             </div>
           </div>
 

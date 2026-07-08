@@ -108,21 +108,30 @@ export async function GET(request) {
       INNER JOIN hr_department d ON
         d.I_COMPANY = ? AND d.I_DEPT = e.I_DEPT
       WHERE e.I_COMPANY = ?
-        AND COALESCE(e.I_RETIRE_YN, '0') <> '1'
+        AND COALESCE(e.I_RETIRE_YN, '0') <> '1'
       ORDER BY d.N_DEPT, e.N_EMPLOY_NAME
     `, [MY_COMPANY_CODE, MY_COMPANY_CODE]);
 
     if (empRows.length > 0) {
-      const records = empRows.map(r => ({
-        emp_no:       r.emp_no,
-        name:         r.name,
-        dept:         r.dept,
-        email:        extractEmployeeEmail(r) || null,
-        login_id:     extractEmployeeLoginId(r) || null,
-        company_code: MY_COMPANY_CODE,
-        is_active:    true,
-        synced_at:    new Date().toISOString(),
-      }));
+      const { data: existingEmps } = await supabase
+        .from('sa_employees')
+        .select('emp_no, is_active, status');
+      const existingMap = new Map((existingEmps || []).map(e => [e.emp_no, e]));
+
+      const records = empRows.map(r => {
+        const existing = existingMap.get(r.emp_no);
+        return {
+          emp_no:       r.emp_no,
+          name:         r.name,
+          dept:         r.dept,
+          email:        extractEmployeeEmail(r) || null,
+          login_id:     extractEmployeeLoginId(r) || null,
+          company_code: MY_COMPANY_CODE,
+          is_active:    existing ? existing.is_active : true,
+          status:       existing ? (existing.status || 'active') : 'active',
+          synced_at:    new Date().toISOString(),
+        };
+      });
       await supabase.from('sa_employees').upsert(records, { onConflict: 'emp_no' });
     }
 
@@ -147,7 +156,7 @@ export async function GET(request) {
         AND e.I_EMPLOY_NO = RIGHT(t.Sabun, 8)
       INNER JOIN hr_department d ON
         d.I_COMPANY = ? AND d.I_DEPT = e.I_DEPT
-      WHERE COALESCE(e.I_RETIRE_YN, '0') <> '1'
+      WHERE COALESCE(e.I_RETIRE_YN, '0') <> '1'
         AND t.ATime >= '${fromStr}01000000'
       ORDER BY t.ATime DESC
     `, [MY_COMPANY_CODE, MY_COMPANY_CODE]);
@@ -177,10 +186,10 @@ export async function GET(request) {
     }
 
     // ──────── 휴가 승인 내역 동기화 (±6개월) ────────
-    const fromMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-    const toMonth   = new Date(now.getFullYear(), now.getMonth() + 4, 0);
-    const fromDateStr = `${fromMonth.getFullYear()}${String(fromMonth.getMonth() + 1).padStart(2, '0')}01`;
-    const toDateStr   = `${toMonth.getFullYear()}${String(toMonth.getMonth() + 1).padStart(2, '0')}${String(toMonth.getDate()).padStart(2, '0')}`;
+    const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    const toDate = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+    const fromDateStr = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
+    const toDateStr   = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2, '0')}${String(toDate.getDate()).padStart(2, '0')}`;
 
     const [leaveRows] = await conn.execute(`
       SELECT
@@ -189,7 +198,7 @@ export async function GET(request) {
         y.D_START_DATE         AS start_date,
         y.D_END_DATE           AS end_date,
         y.I_CODE               AS leave_code,
-        COALESCE(c.N_NAME, tc.NAME) AS leave_name,
+        CAST(y.I_CODE AS CHAR) AS leave_name,
         CAST(y.O_ANNLEV_CNT AS CHAR) AS leave_days,
         y.I_STATUS             AS status
       FROM hr_yuncha_use y
@@ -197,12 +206,10 @@ export async function GET(request) {
         e.I_COMPANY = y.I_COMPANY AND e.I_EMPLOY_NO = y.I_EMPLOY_NO
       INNER JOIN hr_department d ON
         d.I_COMPANY = e.I_COMPANY AND d.I_DEPT = e.I_DEPT
-      LEFT JOIN hr_diligence_code c ON c.I_CODE = y.I_CODE
-      LEFT JOIN tong_code tc ON tc.GUBUN_CODE = 'H0281' AND tc.CODE = y.I_CODE
       WHERE y.I_COMPANY = ?
         AND y.I_STATUS = '40'
         AND y.D_END_DATE >= ?
-        AND y.D_START_DATE <= ?
+        AND y.D_START_DATE <= ?
     `, [MY_COMPANY_CODE, fromDateStr, toDateStr]);
 
     if (leaveRows.length > 0) {

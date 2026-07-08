@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Seoul';
 import { NextResponse } from 'next/server';
 import { fetchAttendanceLogs, getSettings, fetchOvertimeSettings, fetchEmployeeSchedules, fetchEmployeeOvertimeRounds } from '@/lib/supabaseDb';
 import { getLeaveMeta } from '@/lib/leaveRules';
@@ -35,8 +36,7 @@ const getKstMonthKey = () => {
   return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}`;
 };
 
-// In-memory cache for past months
-const memoryCache = new Map();
+import { attendanceCache } from '@/lib/attendanceCache';
 
 export async function GET(request) {
   try {
@@ -50,7 +50,7 @@ export async function GET(request) {
       const currentMonth = getKstMonthKey();
       if (month < currentMonth) {
         const cacheKey = `${month}_${dashboardOnly}_${excludeLogs}`;
-        const cached = memoryCache.get(cacheKey);
+        const cached = attendanceCache.get(cacheKey);
         if (cached && (Date.now() - cached.timestamp < 30 * 60 * 1000)) { // 30 min cache
           return NextResponse.json(cached.data);
         }
@@ -289,7 +289,11 @@ export async function GET(request) {
         const isOfficialCheckin = timeOnly >= '07:00:00';
         let isLate = false;
         if (scheduleTime) {
-          isLate = isOfficialCheckin && timeOnly > `${scheduleTime}:59`;
+          let lateLimit = `${scheduleTime}:59`;
+          if (scheduleTime === '12:00') {
+            lateLimit = '13:00:59';
+          }
+          isLate = isOfficialCheckin && timeOnly > lateLimit;
           if (dayLeave) {
             if (dayLeave.leaveCode === '12' || dayLeave.leaveCode === '60' || parseFloat(dayLeave.leaveDays) === 1.0) {
               isLate = false;
@@ -414,6 +418,9 @@ export async function GET(request) {
         // 지각 여부 계산
         const checkInTimeOnly = firstLog.logTime.split(' ')[1]; // "HH:MM:SS"
         let checkInLimit = `${scheduleTime}:59`;
+        if (scheduleTime === '12:00') {
+          checkInLimit = '13:00:59';
+        }
         let isLate = false;
 
         if (scheduleTime) {
@@ -605,7 +612,7 @@ export async function GET(request) {
       const currentMonth = getKstMonthKey();
       if (month < currentMonth) {
         const cacheKey = `${month}_${dashboardOnly}_${excludeLogs}`;
-        memoryCache.set(cacheKey, { timestamp: Date.now(), data: { success: true, ...result } });
+        attendanceCache.set(cacheKey, { timestamp: Date.now(), data: { success: true, ...result } });
       }
     }
 

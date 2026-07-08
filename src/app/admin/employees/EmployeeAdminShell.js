@@ -25,9 +25,16 @@ export default function EmployeeAdminShell({ title, subtitle, children, activeHr
   });
   const [theme, setTheme] = usePersistentTheme('dark');
   const [mounted, setMounted] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLeader, setIsLeader] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      setIsAdmin(localStorage.getItem('user-is-admin') === 'true');
+      const pos = localStorage.getItem('user-position') || '';
+      setIsLeader(pos === '팀장' || pos === '실장' || pos === '대표이사');
+    }
     const tick = () => {
       setTime(formatClockTime(new Date()));
     };
@@ -69,7 +76,12 @@ export default function EmployeeAdminShell({ title, subtitle, children, activeHr
     setTheme(next);
   };
 
-  const sidebarItems = getMainSidebarItems({ isAdmin: true, isLeader: false }).map(item => {
+  const sidebarItems = getMainSidebarItems({
+    isAdmin,
+    isLeader,
+    dept: userProfile.team,
+    position: typeof window !== 'undefined' ? localStorage.getItem('user-position') || '' : ''
+  }).map(item => {
     const tabMatch = item.href.match(/\?tab=([A-Z_]+)/);
     const itemTab = tabMatch ? tabMatch[1] : null;
     return {
@@ -107,7 +119,10 @@ export default function EmployeeAdminShell({ title, subtitle, children, activeHr
     }
   ];
 
-  const profileBadges = [{ label: 'ADMIN', background: 'var(--red)', color: '#fff' }];
+  const profileBadges = [
+    ...(isAdmin ? [{ label: 'ADMIN', background: 'var(--red)', color: '#fff' }] : []),
+    ...(isLeader ? [{ label: 'LEADER', background: 'var(--amber)', color: '#111' }] : []),
+  ];
 
   return (
     <div className="ga-theme">

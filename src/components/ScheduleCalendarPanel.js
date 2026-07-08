@@ -4,11 +4,22 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import MonthSearchPicker from './MonthSearchPicker';
 import { formatLocalDateStr } from './DashboardCalendarWidget';
-import { clampToHalfHourSteps, formatHalfHourSteps, getYearWeekNumber, isExternalBusinessDept, isManagedAttendanceDept } from '../lib/dashboardUtils';
+import { clampToHalfHourSteps, formatHalfHourSteps, getYearWeekNumber, isExternalBusinessDept, isManagedAttendanceDept, inferScheduleEndTime } from '../lib/dashboardUtils';
 import { getHolidayName, getLeaveMeta } from '../lib/leaveRules';
-import { inferNightScheduleEndTime } from '../lib/nightScheduleRules';
-import { resolveSchedulePairForDate } from '../lib/scheduleResolver';
-import { toMinutes, normalizeTime, getAdjustmentMinutes, getScheduleDurationMinutes, formatWeekTotalLabel, formatMonthDayLabel, TIME_OPTIONS } from '../lib/scheduleUtils';
+import { resolveSchedulePairForDate, resolveAllowOvertimeForSchedule, isWeekendDate } from '../lib/scheduleResolver';
+import {
+  toMinutes,
+  normalizeTime,
+  getAdjustmentMinutes,
+  getAdjustmentDeductionHours,
+  getAdjustmentDeductionMinutes,
+  stripAdjustmentDeductionNote,
+  composeAdjustmentDeductionNote,
+  getScheduleDurationMinutes,
+  formatWeekTotalLabel,
+  formatMonthDayLabel,
+  TIME_OPTIONS,
+} from '../lib/scheduleUtils';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const CALENDAR_BADGE_BASE_STYLE = {
@@ -24,8 +35,52 @@ const makeCalendarBadgeStyle = (background, color, borderColor = background) => 
   color,
   borderColor,
 });
+const ADJUSTMENT_DEDUCTION_OPTIONS = Array.from({ length: 17 }, (_, index) => (index / 2).toFixed(1));
+const getScheduleWorkHours = (start = '', end = '') => {
+  const minutes = Math.max(0, getScheduleDurationMinutes(start, end) - 60);
+  return Math.round((minutes / 60) * 2) / 2;
+};
+const getSuggestedDeductionHours = ({ baseStart = '', baseEnd = '', overrideStart = '', overrideEnd = '' } = {}) => {
+  const baseHours = getScheduleWorkHours(baseStart, baseEnd);
+  const overrideHours = getScheduleWorkHours(overrideStart, overrideEnd);
+  return Math.max(0, Math.round((baseHours - overrideHours) * 2) / 2);
+};
+const formatAdjustmentDeltaLabel = (minutes = 0) => {
+  const roundedHours = Math.round((minutes / 60) * 2) / 2;
+  const absHours = Math.abs(roundedHours);
+  const value = Number.isInteger(absHours) ? String(absHours) : absHours.toFixed(1);
+  if (roundedHours > 0) return `조정 +${value}시간`;
+  if (roundedHours < 0) return `조정 -${value}시간`;
+  return '조정 0시간';
+};
 
 const pad2 = (value) => String(value).padStart(2, '0');
+
+const getLocalDate = (dateStr) => new Date(`${dateStr}T00:00:00+09:00`);
+
+const toDateOnly = (date) => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+};
+
+const getLeaveWorkedMinutes = (leave) => {
+  if (!leave) return 0;
+  const leaveDays = parseFloat(leave.leaveDays || leave.leave_days || '0');
+  const leaveCode = leave.leaveCode || leave.leave_code;
+  if (leaveCode === '12' || leaveCode === '60' || leaveDays >= 1.0) return 8 * 60;
+  if (
+    leaveCode === '16'
+    || leaveCode === '17'
+    || leaveCode === '61'
+    || leaveCode === '62'
+    || leaveDays === 0.5
+  ) return 4 * 60;
+  return 2 * 60;
+};
 
 const getMonthGridCells = (yearMonthStr) => {
   if (!yearMonthStr) return [];
@@ -157,6 +212,8 @@ function CompactOverrideRow({ item, active, onClick, onDelete }) {
         color: 'var(--green)',
         borderColor: 'rgba(34, 197, 94, 0.30)',
       };
+  const deductionHours = getAdjustmentDeductionHours(item.note);
+  const displayNote = stripAdjustmentDeductionNote(item.note);
 
   return (
     <div
@@ -203,10 +260,24 @@ function CompactOverrideRow({ item, active, onClick, onDelete }) {
               초과근무 비허용
             </span>
           ) : null}
+          {deductionHours > 0 ? (
+            <span
+              className="calendar-day__state-tag"
+              style={{
+                paddingInline: 8,
+                paddingBlock: 3,
+                background: 'rgba(201, 150, 75, 0.14)',
+                color: 'var(--amber)',
+                borderColor: 'rgba(201, 150, 75, 0.28)',
+              }}
+            >
+              조정차감 {deductionHours.toFixed(1)}
+            </span>
+          ) : null}
         </div>
-        {item.note && !item.removed ? (
+        {displayNote && !item.removed ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap', color: 'var(--text-2)', fontSize: 12 }}>
-            <span>{item.note}</span>
+            <span>{displayNote}</span>
           </div>
         ) : null}
       </div>
@@ -267,16 +338,194 @@ export default function ScheduleCalendarPanel({
   onChangeBaseScheduleEnd,
   onSaveBaseSchedule,
   modalSaving = false,
+  overtimeRounds = [],
+  corrections = [],
 }) {
   const todayStr = formatLocalDateStr();
   const cells = useMemo(() => getMonthGridCells(month), [month]);
-  const overrideMap = useMemo(() => buildOverrideMap(selectedEmployeeOverrides), [selectedEmployeeOverrides]);
+
+  const isManagedDept = Boolean(selectedEmployee && isManagedAttendanceDept(selectedEmployee.dept));
+
+  const empRound = useMemo(() => {
+    if (!selectedEmployee || !overtimeRounds.length) return null;
+    const empNo = String(selectedEmployee.empNo || selectedEmployee.emp_no || '').trim();
+    return overtimeRounds.find((r) => String(r.emp_no || '').trim() === empNo) || null;
+  }, [selectedEmployee, overtimeRounds]);
+
+  const roundMonths = useMemo(() => {
+    if (!empRound?.start_date || !empRound?.end_date) return [];
+    const start = getLocalDate(empRound.start_date);
+    const end = getLocalDate(empRound.end_date);
+    const months = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const endCursor = new Date(end.getFullYear(), end.getMonth(), 1);
+    while (cursor <= endCursor) {
+      months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return months;
+  }, [empRound]);
+
+  const [prevSelectedEmployee, setPrevSelectedEmployee] = useState(selectedEmployee);
+  const [rangeData, setRangeData] = useState({
+    logs: [],
+    leaves: [],
+    corrections: [],
+    overrides: [],
+    teamSchedulePatterns: [],
+    loaded: false,
+  });
+
+  if (selectedEmployee !== prevSelectedEmployee) {
+    setPrevSelectedEmployee(selectedEmployee);
+    setRangeData({ logs: [], leaves: [], corrections: [], overrides: [], teamSchedulePatterns: [], loaded: false });
+  }
+
+  useEffect(() => {
+    if (!selectedEmployee || !isManagedDept || !roundMonths.length) {
+      return;
+    }
+
+    let cancelled = false;
+    const empNo = String(selectedEmployee.empNo || selectedEmployee.emp_no || '').trim();
+
+    const fetchAllData = async () => {
+      try {
+        const promises = roundMonths.map(async (m) => {
+          const res = await fetch(`/api/attendance?month=${m}&empNo=${empNo}`);
+          const json = await res.json();
+          return json.success ? json : null;
+        });
+
+        const results = await Promise.all(promises);
+        const filtered = results.filter(Boolean);
+
+        if (cancelled) return;
+
+        const mergeUnique = (items = [], keyFn) => {
+          const map = new Map();
+          items.forEach((item) => {
+            const key = keyFn(item);
+            if (key) map.set(key, item);
+          });
+          return Array.from(map.values());
+        };
+
+        const mergedLogs = mergeUnique(
+          filtered.flatMap((d) => d.allLogs || []),
+          (log) => String(log?.id || `${log?.empNo || ''}_${log?.logTime || ''}_${log?.gateName || ''}_${log?.eventType || ''}`)
+        );
+
+        const mergedLeaves = mergeUnique(
+          filtered.flatMap((d) => d.leaves || []),
+          (l) => `${l?.empNo || ''}_${l?.startDate || ''}_${l?.endDate || ''}_${l?.leaveCode || ''}`
+        );
+
+        const mergedCorrections = mergeUnique(
+          filtered.flatMap((d) => d.corrections || []),
+          (c) => `${c?.emp_no || ''}_${c?.work_date || ''}`
+        );
+
+        const mergedOverrides = mergeUnique(
+          filtered.flatMap((d) => d.overrides || []),
+          (o) => `${o?.emp_no || ''}_${o?.work_date || ''}`
+        );
+
+        const mergedTeamSchedulePatterns = mergeUnique(
+          filtered.flatMap((d) => d.teamSchedulePatterns || []),
+          (p) => `${p?.dept_name || ''}_${p?.pattern_date || ''}`
+        );
+
+        setRangeData({
+          logs: mergedLogs,
+          leaves: mergedLeaves,
+          corrections: mergedCorrections,
+          overrides: mergedOverrides,
+          teamSchedulePatterns: mergedTeamSchedulePatterns,
+          loaded: true,
+        });
+      } catch (err) {
+        console.error('[ScheduleCalendarPanel] range fetch failed:', err);
+      }
+    };
+
+    fetchAllData();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEmployee, roundMonths, isManagedDept, selectedEmployeeOverrides]);
+
   const selectedDates = useMemo(
     () => Array.from(new Set((selectedBatchDates || []).map((date) => String(date || '').trim()).filter(Boolean))).sort(),
     [selectedBatchDates]
   );
+
+  const savedOverrideMap = useMemo(() => {
+    const dbOverrides = rangeData.loaded ? rangeData.overrides : selectedEmployeeOverrides;
+    return buildOverrideMap(dbOverrides || []);
+  }, [rangeData.loaded, rangeData.overrides, selectedEmployeeOverrides]);
+
+  const overrideMap = useMemo(() => {
+    const map = new Map(savedOverrideMap);
+
+    if (selectedEmployee && selectedDates.length > 0) {
+      selectedDates.forEach((dateStr) => {
+        const savedOverride = savedOverrideMap.get(dateStr) || null;
+        map.set(dateStr, {
+          workDate: dateStr,
+          scheduleStart: overrideStart,
+          scheduleEnd: overrideEnd,
+          allowOvertime: allowOvertime,
+          note: savedOverride?.note || overrideNote || '',
+          removed: false,
+          raw: savedOverride?.raw || null,
+        });
+      });
+    }
+
+    return map;
+  }, [selectedEmployee, savedOverrideMap, selectedDates, overrideStart, overrideEnd, allowOvertime, overrideNote]);
+
+  const teamPatternMap = useMemo(() => {
+    const map = new Map();
+    const dbPatterns = rangeData.loaded ? rangeData.teamSchedulePatterns : [];
+    (dbPatterns || []).forEach((row) => {
+      const deptName = String(row?.dept_name || row?.deptName || '').trim().replace(/\s+/g, '');
+      const patternDate = String(row?.pattern_date || row?.patternDate || row?.work_date || row?.workDate || '').trim();
+      if (!deptName || !patternDate) return;
+      map.set(`${deptName}_${patternDate}`, {
+        scheduleStart: row?.schedule_start || row?.scheduleStart || '',
+        scheduleEnd: row?.schedule_end || row?.scheduleEnd || '',
+      });
+    });
+    return map;
+  }, [rangeData.loaded, rangeData.teamSchedulePatterns]);
+
+  const correctionMap = useMemo(() => {
+    const correctionsList = rangeData.loaded ? rangeData.corrections : corrections;
+    const map = new Map();
+    (correctionsList || []).forEach((c) => {
+      map.set(`${c.emp_no}_${c.work_date}`, c.corrected_out_time || c.correctedOutTime);
+    });
+    return map;
+  }, [rangeData.loaded, rangeData.corrections, corrections]);
+
+  const dailyLogs = useMemo(() => {
+    const logs = rangeData.loaded ? rangeData.logs : selectedEmployeeLogs;
+    const empNo = selectedEmployee ? String(selectedEmployee.empNo || selectedEmployee.emp_no || '').trim() : '';
+    const map = {};
+    (logs || []).forEach((log) => {
+      if (!log.workDate) return;
+      if (empNo && String(log.empNo || log.emp_no || '').trim() !== empNo) return;
+      if (!map[log.workDate]) map[log.workDate] = [];
+      map[log.workDate].push(log);
+    });
+    return map;
+  }, [rangeData.loaded, rangeData.logs, selectedEmployeeLogs, selectedEmployee]);
+
   const activeDate = selectedDate || selectedDates[0] || '';
   const activeOverride = activeDate ? overrideMap.get(activeDate) || null : null;
+  const [adjustmentDeductionHours, setAdjustmentDeductionHours] = useState('0.0');
 
   const baseStart = String(
     selectedEmployeeBaseScheduleStart
@@ -284,7 +533,7 @@ export default function ScheduleCalendarPanel({
     || selectedEmployee?.scheduleTime
     || '08:00'
   ).slice(0, 5) || '08:00';
-  const derivedBaseEnd = inferNightScheduleEndTime({ dept: selectedEmployee?.dept || '', start: baseStart, end: '' });
+  const derivedBaseEnd = inferScheduleEndTime(baseStart, selectedEmployee?.dept || '');
   const baseEnd = String(
     selectedEmployeeBaseScheduleEnd
     || selectedEmployee?.baseScheduleEndTime
@@ -292,8 +541,108 @@ export default function ScheduleCalendarPanel({
     || derivedBaseEnd
     || '17:00'
   ).slice(0, 5) || derivedBaseEnd || '17:00';
-  const isManagedDept = Boolean(selectedEmployee && isManagedAttendanceDept(selectedEmployee.dept));
   const currentScheduleLabel = selectedEmployeeBaseScheduleLabel || `${baseStart} - ${baseEnd}`;
+
+  const [prevActiveDate, setPrevActiveDate] = useState('');
+  const [prevOverrideStart, setPrevOverrideStart] = useState(overrideStart);
+  const [prevOverrideEnd, setPrevOverrideEnd] = useState(overrideEnd);
+
+  useEffect(() => {
+    const savedDeduction = getAdjustmentDeductionHours(activeOverride?.note);
+    const suggestedDeduction = getSuggestedDeductionHours({
+      baseStart,
+      baseEnd,
+      overrideStart,
+      overrideEnd,
+    });
+    if (activeDate !== prevActiveDate) {
+      setPrevActiveDate(activeDate);
+      setPrevOverrideStart(overrideStart);
+      setPrevOverrideEnd(overrideEnd);
+      setAdjustmentDeductionHours((savedDeduction || suggestedDeduction).toFixed(1));
+    } else if (overrideStart !== prevOverrideStart || overrideEnd !== prevOverrideEnd) {
+      setPrevOverrideStart(overrideStart);
+      setPrevOverrideEnd(overrideEnd);
+      setAdjustmentDeductionHours(suggestedDeduction.toFixed(1));
+    }
+  }, [activeOverride?.note, activeDate, baseEnd, baseStart, overrideEnd, overrideStart, prevActiveDate, prevOverrideStart, prevOverrideEnd]);
+
+  const empRemainingAdjustments = useMemo(() => {
+    if (!selectedEmployee || !isManagedDept || !empRound?.start_date || !empRound?.end_date) {
+      return null;
+    }
+
+    const startDate = empRound.start_date;
+    const endDate = empRound.end_date;
+
+    const empNo = String(selectedEmployee.empNo || selectedEmployee.emp_no || '').trim();
+    const logs = rangeData.loaded ? rangeData.logs : selectedEmployeeLogs;
+    let totalAdjustmentMinutes = 0;
+    const start = getLocalDate(startDate);
+    const end = getLocalDate(endDate);
+
+    for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+      const dateStr = toDateOnly(day);
+      const override = savedOverrideMap.get(dateStr) || null;
+      const teamPattern = teamPatternMap.get(`${String(selectedEmployee.dept).replace(/\s+/g, '')}_${dateStr}`) || null;
+
+      const schedulePair = resolveSchedulePairForDate({
+        dept: selectedEmployee.dept,
+        dateStr,
+        baseScheduleStart: baseStart,
+        baseScheduleEnd: baseEnd,
+        override,
+        teamPattern,
+      });
+
+      if (!schedulePair) {
+        continue;
+      }
+
+      const allowOvertime = isManagedDept
+        ? resolveAllowOvertimeForSchedule({
+            resolvedSchedule: schedulePair?.start && schedulePair?.end ? schedulePair : null,
+            override,
+            fallbackAllowOvertime: isExternalBusinessDept(selectedEmployee.dept),
+        })
+        : false;
+
+      const dayLogs = (dailyLogs[dateStr] || []).slice().sort((a, b) => {
+        const orderA = Number.isFinite(Number(a.workOrder)) ? Number(a.workOrder) : 0;
+        const orderB = Number.isFinite(Number(b.workOrder)) ? Number(b.workOrder) : 0;
+        return orderA - orderB || String(a.logTime || '').localeCompare(String(b.logTime || ''));
+      });
+
+      let overtimeMinutes = 0;
+      if (allowOvertime) {
+        const firstLog = dayLogs[0];
+        const correctedOut = correctionMap.get(`${selectedEmployee.empNo}_${dateStr}`);
+        let outTime = null;
+
+        if (correctedOut) {
+          outTime = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
+        } else if (dayLogs.length >= 2 && firstLog) {
+          const lastLog = dayLogs[dayLogs.length - 1];
+          if (lastLog && lastLog.logTime !== firstLog.logTime) {
+            outTime = lastLog.logTime ? lastLog.logTime.split(' ')[1]?.substring(0, 5) : '';
+          }
+        }
+
+        if (outTime) {
+          const rawOvertime = getAdjustmentMinutes({
+            scheduleEnd: schedulePair.end,
+            actualOut: outTime,
+          });
+          overtimeMinutes = clampToHalfHourSteps(rawOvertime);
+        }
+      }
+
+      totalAdjustmentMinutes += overtimeMinutes - getAdjustmentDeductionMinutes(override?.note);
+    }
+
+    const totalAdjustments = Math.round((totalAdjustmentMinutes / 60) * 2) / 2;
+    return totalAdjustments;
+  }, [selectedEmployee, isManagedDept, empRound, savedOverrideMap, teamPatternMap, baseStart, baseEnd, dailyLogs, correctionMap]);
 
   const selectedManualCheckins = useMemo(() => {
     if (!selectedEmployee) return [];
@@ -315,7 +664,11 @@ export default function ScheduleCalendarPanel({
     return (selectedEmployeeLogs || [])
       .filter((row) => String(row.empNo || row.emp_no || '').trim() === empNo)
       .filter((row) => String(row.workDate || row.work_date || '').slice(0, 10) === targetDate)
-      .sort((a, b) => String(a.logTime || a.log_time || '').localeCompare(String(b.logTime || b.log_time || '')));
+      .sort((a, b) => {
+        const orderA = Number.isFinite(Number(a.workOrder)) ? Number(a.workOrder) : 0;
+        const orderB = Number.isFinite(Number(b.workOrder)) ? Number(b.workOrder) : 0;
+        return orderA - orderB || String(a.logTime || a.log_time || '').localeCompare(String(b.logTime || b.log_time || ''));
+      });
   }, [activeDate, selectedEmployee, selectedEmployeeLogs]);
   const selectedDayRawLogs = useMemo(() => {
     if (!selectedEmployee || !activeDate) return [];
@@ -325,7 +678,11 @@ export default function ScheduleCalendarPanel({
       .filter((row) => String(row.empNo || row.emp_no || '').trim() === empNo)
       .filter((row) => String(row.workDate || row.work_date || '').slice(0, 10) === targetDate)
       .filter((row) => !row.isManual)
-      .sort((a, b) => String(a.logTime || a.log_time || '').localeCompare(String(b.logTime || b.log_time || '')));
+      .sort((a, b) => {
+        const orderA = Number.isFinite(Number(a.workOrder)) ? Number(a.workOrder) : 0;
+        const orderB = Number.isFinite(Number(b.workOrder)) ? Number(b.workOrder) : 0;
+        return orderA - orderB || String(a.logTime || a.log_time || '').localeCompare(String(b.logTime || b.log_time || ''));
+      });
   }, [activeDate, selectedEmployee, selectedEmployeeLogs]);
   const activeCheckinAdjustment = useMemo(() => {
     return selectedDayLogs.find((log) => {
@@ -353,18 +710,26 @@ export default function ScheduleCalendarPanel({
   const [correctionSaving, setCorrectionSaving] = useState(false);
   const [selectedManualDeleteIds, setSelectedManualDeleteIds] = useState([]);
 
-  useEffect(() => {
+  const [prevEmpNoAndDate, setPrevEmpNoAndDate] = useState({ empNo: selectedEmployee?.empNo, activeDate });
+  if (selectedEmployee?.empNo !== prevEmpNoAndDate.empNo || activeDate !== prevEmpNoAndDate.activeDate) {
+    setPrevEmpNoAndDate({ empNo: selectedEmployee?.empNo, activeDate });
     setSelectedManualDeleteIds([]);
-  }, [selectedEmployee?.empNo, activeDate]);
+  }
 
-  useEffect(() => {
+  const [prevCorrectionKey, setPrevCorrectionKey] = useState({ activeDate, correctionType, selectedDayRawLogs });
+  if (
+    activeDate !== prevCorrectionKey.activeDate
+    || correctionType !== prevCorrectionKey.correctionType
+    || selectedDayRawLogs !== prevCorrectionKey.selectedDayRawLogs
+  ) {
+    setPrevCorrectionKey({ activeDate, correctionType, selectedDayRawLogs });
     const firstLog = selectedDayRawLogs[0] || null;
     const lastLog = selectedDayRawLogs[selectedDayRawLogs.length - 1] || null;
     const fallbackTime = correctionType === '출근'
       ? formatManualTime(firstLog?.logTime || firstLog?.log_time || '')
       : formatManualTime(lastLog?.correctedOutTime || lastLog?.logTime || lastLog?.log_time || '');
     setCorrectionTime(fallbackTime || '');
-  }, [activeDate, correctionType, selectedDayRawLogs]);
+  }
 
   const selectedSummary = !selectedDates.length
     ? '날짜를 선택하세요'
@@ -373,13 +738,14 @@ export default function ScheduleCalendarPanel({
       : `${selectedDates.length}개 날짜 선택`;
   const allSelectedHaveSchedule = selectedDates.length > 0 && selectedDates.every((dateStr) => {
     const override = overrideMap.get(dateStr) || null;
+    const teamPattern = teamPatternMap.get(`${String(selectedEmployee?.dept || '').replace(/\s+/g, '')}_${dateStr}`) || null;
     const resolvedSchedule = resolveSchedulePairForDate({
       dept: selectedEmployee?.dept || '',
       dateStr,
       baseScheduleStart: baseStart,
       baseScheduleEnd: baseEnd,
       override,
-      teamPattern: null,
+      teamPattern,
     });
     return Boolean(resolvedSchedule?.start && resolvedSchedule?.end);
   });
@@ -393,31 +759,67 @@ export default function ScheduleCalendarPanel({
       const rowCells = cells.slice(rowIndex, rowIndex + 7);
       const dateCells = rowCells.filter((cell) => !cell.empty);
       const displayCell = rowCells.find((cell) => !cell.empty && cell.inCurrentMonth) || dateCells[0] || null;
-      const totalMinutes = dateCells.reduce((sum, cell) => {
+      const weekTotals = dateCells.reduce((acc, cell) => {
         const override = overrideMap.get(cell.dateStr) || null;
+        const teamPattern = teamPatternMap.get(`${empDept.replace(/\s+/g, '')}_${cell.dateStr}`) || null;
         const resolvedSchedule = resolveSchedulePairForDate({
           dept: empDept,
           dateStr: cell.dateStr,
           baseScheduleStart: baseStart,
           baseScheduleEnd: baseEnd,
           override,
-          teamPattern: null,
+          teamPattern,
         });
-        if (!resolvedSchedule?.start || !resolvedSchedule?.end) return sum;
+        if (!resolvedSchedule?.start || !resolvedSchedule?.end) {
+          return acc;
+        }
 
-        const scheduleMinutes = Math.max(0, getScheduleDurationMinutes(resolvedSchedule.start, resolvedSchedule.end) - 60);
-        const dayStats = dailyAttendanceMap?.[empNo]?.[cell.dateStr] || null;
-        const canAdjust = isExternalBusinessDept(empDept) && (!override || override.allowOvertime !== false);
-        const adjustmentMinutes = canAdjust
-          ? getAdjustmentMinutes({
-            scheduleEnd: resolvedSchedule.end,
-            actualOut: String(dayStats?.out || '').trim(),
-          })
-          : 0;
-        const roundedAdjustmentMinutes = clampToHalfHourSteps(adjustmentMinutes);
+        const baseScheduleMinutes = Math.max(0, getScheduleDurationMinutes(baseStart, baseEnd) - 60);
 
-        return sum + scheduleMinutes + roundedAdjustmentMinutes;
-      }, 0);
+        // 야근/초과근무 발생 시간(overtimeMinutes)도 함께 합산하여 왼쪽 주간 근무시간에 반영한다.
+        const allowOvertime = isManagedDept
+          ? resolveAllowOvertimeForSchedule({
+              resolvedSchedule: resolvedSchedule?.start && resolvedSchedule?.end ? resolvedSchedule : null,
+              override,
+              fallbackAllowOvertime: isExternalBusinessDept(empDept),
+            })
+          : false;
+
+        let overtimeMinutes = 0;
+        if (allowOvertime) {
+          const dayLogs = (dailyLogs[cell.dateStr] || []).slice().sort((a, b) => {
+            return String(a.logTime || '').localeCompare(String(b.logTime || ''));
+          });
+          const firstLog = dayLogs[0];
+          const correctedOut = correctionMap.get(`${empNo}_${cell.dateStr}`);
+          let outTime = null;
+
+          if (correctedOut) {
+            outTime = new Date(correctedOut).toLocaleTimeString('ko-KR', { hour12: false }).substring(0, 5);
+          } else if (dayLogs.length >= 2 && firstLog) {
+            const lastLog = dayLogs[dayLogs.length - 1];
+            if (lastLog && lastLog.logTime !== firstLog.logTime) {
+              outTime = lastLog.logTime ? lastLog.logTime.split(' ')[1]?.substring(0, 5) : '';
+            }
+          }
+
+          if (outTime) {
+            const rawOvertime = getAdjustmentMinutes({
+              scheduleEnd: resolvedSchedule.end,
+              actualOut: outTime,
+            });
+            overtimeMinutes = clampToHalfHourSteps(rawOvertime);
+          }
+        }
+
+        const deductionMinutes = getAdjustmentDeductionMinutes(override?.note);
+        const adjustmentDeltaMinutes = overtimeMinutes - deductionMinutes;
+
+        return {
+          totalMinutes: acc.totalMinutes + baseScheduleMinutes + adjustmentDeltaMinutes,
+          adjustmentMinutes: acc.adjustmentMinutes + adjustmentDeltaMinutes,
+        };
+      }, { totalMinutes: 0, adjustmentMinutes: 0 });
 
       rows.push({
         key: `week-${rowIndex / 7}`,
@@ -425,13 +827,15 @@ export default function ScheduleCalendarPanel({
         range: dateCells.length > 0
           ? `${formatMonthDayLabel(dateCells[0].dateStr)}~${formatMonthDayLabel(dateCells[dateCells.length - 1].dateStr)}`
           : '',
-        totalLabel: formatWeekTotalLabel(totalMinutes),
+        totalLabel: formatWeekTotalLabel(weekTotals.totalMinutes),
+        adjustmentLabel: formatAdjustmentDeltaLabel(weekTotals.adjustmentMinutes),
+        adjustmentMinutes: weekTotals.adjustmentMinutes,
         cells: rowCells,
       });
     }
 
     return rows;
-  }, [baseEnd, baseStart, cells, dailyAttendanceMap, overrideMap, selectedEmployee?.dept, selectedEmployee?.empNo]);
+  }, [baseEnd, baseStart, cells, overrideMap, teamPatternMap, selectedEmployee?.dept, selectedEmployee?.empNo, isManagedDept, dailyLogs, correctionMap]);
 
   const handleCalendarPick = (cell) => {
     if (!selectedEmployee || cell.empty) return;
@@ -466,7 +870,7 @@ export default function ScheduleCalendarPanel({
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || `${correctionType} 보정에 실패했습니다.`);
       if (typeof onRefreshData === 'function') {
-        await onRefreshData({ empNo });
+        await onRefreshData({ empNo, month });
       }
       onChangeOverrideDate?.(activeDate, activeOverride || overrideMap.get(activeDate) || null);
       alert('근태 보정이 저장되었습니다.');
@@ -492,7 +896,7 @@ export default function ScheduleCalendarPanel({
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || `${correctionTypeToDelete} 보정 삭제에 실패했습니다.`);
       if (typeof onRefreshData === 'function') {
-        await onRefreshData({ empNo });
+        await onRefreshData({ empNo, month });
       }
       alert('보정이 삭제되었습니다.');
     } catch (err) {
@@ -515,7 +919,7 @@ export default function ScheduleCalendarPanel({
       if (!json?.success) throw new Error(json?.error || '결재 처리에 실패했습니다.');
       if (typeof onRefreshData === 'function') {
         const empNo = selectedEmployee ? String(selectedEmployee.empNo || '').trim() : null;
-        await onRefreshData({ empNo });
+        await onRefreshData({ empNo, month });
       }
       if (typeof onChangeOverrideDate === 'function' && activeDate) {
         onChangeOverrideDate(activeDate, activeOverride || null);
@@ -542,7 +946,7 @@ export default function ScheduleCalendarPanel({
       setSelectedManualDeleteIds([]);
       if (typeof onRefreshData === 'function') {
         const empNo = selectedEmployee ? String(selectedEmployee.empNo || '').trim() : null;
-        await onRefreshData({ empNo });
+        await onRefreshData({ empNo, month });
       }
       alert('선택한 수동 기록이 삭제되었습니다.');
     } catch (err) {
@@ -617,6 +1021,20 @@ export default function ScheduleCalendarPanel({
                 <div style={{ marginTop: 4, fontSize: 13, fontWeight: 800, color: 'var(--blue)' }}>
                   {week.totalLabel}
                 </div>
+                <div
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: week.adjustmentMinutes > 0
+                      ? 'var(--red)'
+                      : week.adjustmentMinutes < 0
+                        ? 'var(--amber)'
+                        : 'var(--text-3)',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {week.adjustmentLabel}
+                </div>
               </div>
 
               {week.cells.map((cell, idx) => {
@@ -625,6 +1043,7 @@ export default function ScheduleCalendarPanel({
                 const isToday = cell.dateStr === todayStr;
                 const isSelected = selectedDates.includes(cell.dateStr) || activeDate === cell.dateStr;
                 const override = overrideMap.get(cell.dateStr) || null;
+                const teamPattern = teamPatternMap.get(`${String(selectedEmployee?.dept || '').replace(/\s+/g, '')}_${cell.dateStr}`) || null;
                 const dayStats = dailyAttendanceMap?.[selectedEmployee?.empNo || '']?.[cell.dateStr] || null;
                 const manualRows = selectedEmployee ? getManualCheckinsForDate(manualCheckins, selectedEmployee.empNo, cell.dateStr) : [];
                 const leaveRows = selectedEmployee ? getEmployeeLeavesForDate(calendarLeaves, selectedEmployee.empNo, cell.dateStr) : [];
@@ -709,7 +1128,7 @@ export default function ScheduleCalendarPanel({
                         {isLate ? (
                           <span
                             className="calendar-day__state-tag"
-                            style={makeCalendarBadgeStyle('rgba(245, 158, 11, 0.16)', '#b45309', 'rgba(245, 158, 11, 0.34)')}
+                            style={makeCalendarBadgeStyle('rgba(201, 150, 75, 0.16)', 'var(--amber)', 'rgba(201, 150, 75, 0.34)')}
                           >
                             지각
                           </span>
@@ -717,9 +1136,17 @@ export default function ScheduleCalendarPanel({
                         {adjustmentBadge ? (
                           <span
                             className="calendar-day__state-tag"
-                            style={makeCalendarBadgeStyle('rgba(220, 38, 38, 0.12)', '#b91c1c', 'rgba(220, 38, 38, 0.28)')}
+                            style={makeCalendarBadgeStyle('rgba(208, 107, 107, 0.12)', 'var(--red)', 'rgba(208, 107, 107, 0.30)')}
                           >
                             {adjustmentBadge}
+                          </span>
+                        ) : null}
+                        {getAdjustmentDeductionHours(override?.note) > 0 ? (
+                          <span
+                            className="calendar-day__state-tag"
+                            style={makeCalendarBadgeStyle('rgba(201, 150, 75, 0.14)', 'var(--amber)', 'rgba(201, 150, 75, 0.30)')}
+                          >
+                            {`차감 ${getAdjustmentDeductionHours(override?.note).toFixed(1)}`}
                           </span>
                         ) : null}
                         {manualRows.length > 0 ? (
@@ -890,7 +1317,7 @@ export default function ScheduleCalendarPanel({
                     {isLate ? (
                       <span
                         className="calendar-day__state-tag"
-                        style={makeCalendarBadgeStyle('rgba(245, 158, 11, 0.16)', '#b45309', 'rgba(245, 158, 11, 0.34)')}
+                        style={makeCalendarBadgeStyle('rgba(201, 150, 75, 0.16)', 'var(--amber)', 'rgba(201, 150, 75, 0.34)')}
                       >
                             지각
                       </span>
@@ -898,9 +1325,17 @@ export default function ScheduleCalendarPanel({
                     {adjustmentBadge ? (
                       <span
                         className="calendar-day__state-tag"
-                        style={makeCalendarBadgeStyle('rgba(220, 38, 38, 0.12)', '#b91c1c', 'rgba(220, 38, 38, 0.28)')}
+                        style={makeCalendarBadgeStyle('rgba(208, 107, 107, 0.12)', 'var(--red)', 'rgba(208, 107, 107, 0.30)')}
                       >
                         {adjustmentBadge}
+                      </span>
+                    ) : null}
+                    {getAdjustmentDeductionHours(override?.note) > 0 ? (
+                      <span
+                        className="calendar-day__state-tag"
+                        style={makeCalendarBadgeStyle('rgba(201, 150, 75, 0.14)', 'var(--amber)', 'rgba(201, 150, 75, 0.30)')}
+                      >
+                        {`차감 ${getAdjustmentDeductionHours(override?.note).toFixed(1)}`}
                       </span>
                     ) : null}
                     {manualRows.length > 0 ? (
@@ -1038,7 +1473,50 @@ export default function ScheduleCalendarPanel({
           </div>
         </div>
 
-        <form onSubmit={onSubmitOverride} style={{ display: 'grid', gap: 12 }}>
+        {isManagedDept && empRound && (
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 18,
+              border: '1px solid var(--border)',
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>초과근무 잔여 조정</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 900,
+                  color: empRemainingAdjustments !== null && empRemainingAdjustments > 0 ? 'var(--amber)' : empRemainingAdjustments !== null && empRemainingAdjustments < 0 ? 'var(--blue)' : 'var(--text-1)',
+                }}
+              >
+                {empRemainingAdjustments !== null
+                  ? `${empRemainingAdjustments > 0 ? '+' : ''}${empRemainingAdjustments.toFixed(1)}`
+                  : '-'}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>개</span>
+              {!rangeData.loaded && (
+                <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-3)' }}>불러오는 중...</span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+              정산 기간: {empRound.start_date} ~ {empRound.end_date}
+            </div>
+          </div>
+        )}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const composed = composeAdjustmentDeductionNote(overrideNote || '', Number(adjustmentDeductionHours) || 0);
+            onSubmitOverride?.(e, composed);
+          }}
+          style={{ display: 'grid', gap: 12 }}
+        >
         <div
           style={{
             padding: 14,
@@ -1148,6 +1626,24 @@ export default function ScheduleCalendarPanel({
               disabled={!selectedEmployee || selectedDates.length === 0}
             />
             초과근무 허용
+          </label>
+
+          <label style={{ display: 'grid', gap: 6 }}>
+            <span className="form-label" style={{ margin: 0 }}>조정 차감</span>
+            <select
+              name="adjustmentDeduction"
+              className="ui-select"
+              value={adjustmentDeductionHours}
+              onChange={(e) => setAdjustmentDeductionHours(e.target.value)}
+              disabled={!selectedEmployee || selectedDates.length === 0}
+              style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 30, fontSize: 11 }}
+            >
+              {ADJUSTMENT_DEDUCTION_OPTIONS.map((value) => (
+                <option key={`deduction-${value}`} value={value}>
+                  {value === '0.0' ? '사용 안함' : `${value} 차감`}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
@@ -1328,7 +1824,7 @@ export default function ScheduleCalendarPanel({
               수동 내역
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <span className="calendar-day__state-tag" style={makeCalendarBadgeStyle('rgba(245, 158, 11, 0.14)', '#b45309', 'rgba(245, 158, 11, 0.28)')}>
+              <span className="calendar-day__state-tag" style={makeCalendarBadgeStyle('rgba(201, 150, 75, 0.14)', 'var(--amber)', 'rgba(201, 150, 75, 0.28)')}>
                 대기 {pendingManualCheckins.length}건
               </span>
               <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{selectedManualCheckins.length}건</div>
@@ -1511,4 +2007,3 @@ export default function ScheduleCalendarPanel({
     </div>
   );
 }
-

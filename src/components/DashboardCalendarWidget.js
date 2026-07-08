@@ -6,13 +6,12 @@ import {
   sortCalendarLeaves,
   getLeaveMeta,
   getLeaveDisplayName,
-  LEAVE_TYPE_META,
 } from '../lib/leaveRules';
 import MonthSearchPicker from './MonthSearchPicker';
 import { getMonthRangeList } from '../lib/dashboardUtils';
 import useHolidayCalendar from '../lib/useHolidayCalendar';
 
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const LEGEND_PRIORITY = {
   연차: 0,
   공가: 1,
@@ -26,9 +25,7 @@ const LEGEND_PRIORITY = {
   '2시간휴가J [17-19]': 9,
 };
 
-const getLeaveVariantClass = (meta) => {
-  return String(meta?.variantClassName || '').trim();
-};
+const getLeaveVariantClass = (meta) => String(meta?.variantClassName || '').trim();
 
 const buildCalendarLegends = (calendarLeaves = []) => {
   const seen = new Map();
@@ -39,7 +36,7 @@ const buildCalendarLegends = (calendarLeaves = []) => {
     seen.set(label, {
       label,
       color: meta.color || '#64748B',
-      priority: LEGEND_PRIORITY[meta.leaveType] ?? 99,
+      priority: LEGEND_PRIORITY[meta.rawLabel || meta.label || meta.leaveType] ?? 99,
     });
   });
   return Array.from(seen.values()).sort((a, b) => a.priority - b.priority || a.label.localeCompare(b.label, 'ko'));
@@ -112,11 +109,11 @@ export default function DashboardCalendarWidget({
       <div className="calendar-detail">
         <div className="calendar-detail__title">
           <span className="calendar-detail__date">{selectedCalendarDate}</span>
-          {holidayName && <span className="calendar-detail__holiday">怨듯쑕??{holidayName}</span>}
+          {holidayName && <span className="calendar-detail__holiday">공휴일: {holidayName}</span>}
         </div>
 
         {dayLeaves.length === 0 ? (
-          <div className="calendar-detail__empty">?닿?媛 ?놁뒿?덈떎</div>
+          <div className="calendar-detail__empty">해당 날짜에는 등록된 휴가가 없습니다.</div>
         ) : (
           <div className="calendar-detail__grid">
             {Object.values(
@@ -185,7 +182,7 @@ export default function DashboardCalendarWidget({
             {CALENDAR_LEGENDS.map((item, idx) => (
               <div
                 key={`${item.label}-${idx}`}
-                className={`calendar-widget__legend-item ${item.label === '?곗감' ? 'is-annual' : ''}`}
+                className={`calendar-widget__legend-item ${item.label === '연차' ? 'is-annual' : ''}`}
               >
                 <span className="calendar-widget__legend-swatch" style={{ background: item.color }} />
                 <span>{item.label}</span>
@@ -283,7 +280,7 @@ export default function DashboardCalendarWidget({
                         key={`${String(leave.empNo || leave.empName || '')}-${String(leave.startDate || '')}-${String(leave.leaveName || '')}-${li}`}
                         className="calendar-day__leave-pill"
                         style={{ background: meta.bg, borderColor: meta.border, color: meta.color }}
-                        title={`${String(getLeaveDisplayName(leave, employeeNameLookup) || '')} 쨌 ${String(meta.label || '')}`}
+                        title={`${String(getLeaveDisplayName(leave, employeeNameLookup) || '')} · ${String(meta.label || '')}`}
                       >
                         {getLeaveDisplayName(leave, employeeNameLookup)}
                       </span>
@@ -303,4 +300,3 @@ export default function DashboardCalendarWidget({
     </div>
   );
 }
-

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth';
 import { fetchEmployeeSchedules, saveEmployeeSchedules } from '@/lib/supabaseDb';
 import { isAdminRole, isLeaderPosition } from '@/lib/roleUtils';
+import { clearAttendanceCache } from '@/lib/attendanceCache';
 
 const isManager = (session) => !!session && (isAdminRole(session) || isLeaderPosition(session.position));
 
@@ -64,6 +65,7 @@ export async function POST(request) {
     }
 
     await saveEmployeeSchedules(payload, session.userId);
+    clearAttendanceCache();
     const rows = await fetchEmployeeSchedules();
 
     return NextResponse.json({

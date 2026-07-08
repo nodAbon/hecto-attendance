@@ -28,13 +28,13 @@ export async function GET(request) {
     if (!session) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
-    if (!session.isAdmin) {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    if (!session.isAdmin && !session.isLeader) {
+      return NextResponse.json({ error: '관리자 또는 팀장 권한이 필요합니다.' }, { status: 403 });
     }
 
     const supabase = getAdminClient();
     const [empRes, profileRes] = await Promise.all([
-      supabase.from('sa_employees').select('emp_no, name, dept, email, login_id').order('name', { ascending: true }),
+      supabase.from('sa_employees').select('emp_no, name, dept, email, login_id, status, is_active').order('name', { ascending: true }),
       supabase.from('sa_profiles').select('id, emp_no, rank, position, is_admin, must_change_password'),
     ]);
 
@@ -76,6 +76,8 @@ export async function GET(request) {
         mustChangePassword: !!profile?.must_change_password,
         hasAccount: !!profile,
         profileId: profile?.id || null,
+        status: emp.status || 'active',
+        isActive: emp.is_active !== false,
       };
     });
 
@@ -104,6 +106,7 @@ export async function PATCH(request) {
       rank = '',
       position = '',
       isAdmin = false,
+      status,
     } = await request.json();
 
     if (!empNo) {
@@ -141,6 +144,10 @@ export async function PATCH(request) {
     const updateEmployeePayload = {};
     if (name !== '') updateEmployeePayload.name = name;
     if (dept !== '') updateEmployeePayload.dept = dept;
+    if (status !== undefined) {
+      updateEmployeePayload.status = status;
+      updateEmployeePayload.is_active = (status === 'active');
+    }
 
     if (Object.keys(updateEmployeePayload).length > 0) {
       const { error: empErr } = await supabase

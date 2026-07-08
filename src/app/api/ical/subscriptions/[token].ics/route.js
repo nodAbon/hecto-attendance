@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { buildLeaveIcsForDepartments } from '@/lib/icalFeed';
 import { getIcalSubscriptionRecordByToken } from '@/lib/icalSubscriptions';
+import { buildIcalHeaders } from '@/lib/icalHttp';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export async function GET(_request, context) {
   try {
@@ -22,11 +25,9 @@ export async function GET(_request, context) {
     });
 
     return new NextResponse(ics, {
-      headers: {
-        'Content-Type': 'text/calendar; charset=utf-8',
+      headers: buildIcalHeaders({
         'Content-Disposition': 'inline; filename="private-leaves.ics"',
-        'Cache-Control': 'no-store, max-age=0',
-      },
+      }),
     });
   } catch (error) {
     console.error('[ICS Subscriptions GET ICS]', error);

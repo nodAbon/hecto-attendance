@@ -14,8 +14,13 @@ export const normalizeTime = (value, fallback = '') => {
 
 export const getAdjustmentMinutes = ({ scheduleEnd = '', actualOut = '' } = {}) => {
   const endMinutes = toMinutes(scheduleEnd);
-  const outMinutes = toMinutes(actualOut);
+  let outMinutes = toMinutes(actualOut);
   if (!Number.isFinite(endMinutes) || !Number.isFinite(outMinutes)) return 0;
+
+  if (endMinutes >= 12 * 60 && outMinutes < 6 * 60) {
+    outMinutes += 24 * 60;
+  }
+
   if (outMinutes <= endMinutes) return 0;
   return outMinutes - endMinutes;
 };
@@ -27,6 +32,29 @@ export const getScheduleDurationMinutes = (start = '', end = '') => {
   let duration = endMinutes - startMinutes;
   if (duration < 0) duration += 24 * 60;
   return Math.max(0, duration);
+};
+
+const ADJUSTMENT_DEDUCTION_PATTERN = /\s*\[adjustment_deduction:([0-9]+(?:\.[0-9]+)?)\]\s*/i;
+
+export const getAdjustmentDeductionHours = (note = '') => {
+  const match = String(note || '').match(ADJUSTMENT_DEDUCTION_PATTERN);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.round(value * 2) / 2;
+};
+
+export const getAdjustmentDeductionMinutes = (note = '') => getAdjustmentDeductionHours(note) * 60;
+
+export const stripAdjustmentDeductionNote = (note = '') => (
+  String(note || '').replace(ADJUSTMENT_DEDUCTION_PATTERN, '').trim()
+);
+
+export const composeAdjustmentDeductionNote = (note = '', deductionHours = 0) => {
+  const cleanNote = stripAdjustmentDeductionNote(note);
+  const value = Math.round((Number(deductionHours) || 0) * 2) / 2;
+  if (value <= 0) return cleanNote;
+  return `${cleanNote} [adjustment_deduction:${value.toFixed(1)}]`.trim();
 };
 
 export const formatWeekTotalLabel = (minutes = 0) => {

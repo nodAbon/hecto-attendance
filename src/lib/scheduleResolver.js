@@ -1,6 +1,5 @@
-import { inferScheduleEndTime } from './dashboardUtils';
+import { inferScheduleEndTime, normalizeEmpNoKey, isExternalBusinessDept } from './dashboardUtils';
 import { isNightTeamDept } from './nightScheduleRules';
-import { normalizeEmpNoKey } from './dashboardUtils';
 import { getHolidayName } from './leaveRules';
 
 export const normalizeScheduleTime = (value = '', fallback = '') => {
@@ -68,7 +67,7 @@ export const buildScheduleOverrideMap = (rows = []) => {
     if (!empNo || !workDate) return;
     const note = String(row?.note || '').trim();
     const derivedMonthly = isMonthlyScheduleNote(note);
-    const allowOvertime = Boolean(row?.allow_overtime ?? row?.allowOvertime);
+    const allowOvertime = row?.allow_overtime !== false && row?.allowOvertime !== false;
     map.set(`${empNo}_${workDate}`, {
       scheduleStart: normalizeScheduleTime(row?.schedule_start || row?.scheduleStart || '', ''),
       scheduleEnd: normalizeScheduleTime(row?.schedule_end || row?.scheduleEnd || '', ''),
@@ -112,7 +111,9 @@ export const resolveSchedulePairForDate = ({
   if (override?.removed) {
     return null;
   }
-  if (override?.scheduleStart && !override?.derivedMonthly) {
+
+  // 1. 오버라이드가 있으면 최우선 적용 (일괄 반영 여부와 무관하게 실제 설정된 일정 기준)
+  if (override?.scheduleStart) {
     const start = normalizeScheduleTime(override.scheduleStart, '08:00');
     const inferredEnd = inferScheduleEndTime(start, dept) || '';
     const end = normalizeScheduleTime(override.scheduleEnd || inferredEnd, inferredEnd);
@@ -125,28 +126,12 @@ export const resolveSchedulePairForDate = ({
     };
   }
 
-  if (getHolidayName(dateStr)) {
-    return null;
-  }
-
+  // 주말인 경우 기본 근무일정이 없음
   if (isWeekendDate(dateStr)) {
     return null;
   }
 
-  const start = normalizeScheduleTime(baseScheduleStart, '');
-  if (start) {
-    const end = normalizeScheduleTime(baseScheduleEnd || inferScheduleEndTime(start, dept) || '', '');
-    if (!end) return null;
-
-    return {
-      start,
-      end,
-      source: 'base',
-      isWeekend: false,
-      explicit: false,
-    };
-  }
-
+  // 2. 팀 패턴이 있으면 기본 스케줄보다 우선 적용
   if (teamPattern?.scheduleStart) {
     const patternStart = normalizeScheduleTime(teamPattern.scheduleStart, '08:00');
     const inferredEnd = inferScheduleEndTime(patternStart, dept) || '';
@@ -157,6 +142,36 @@ export const resolveSchedulePairForDate = ({
       source: 'team-pattern',
       isWeekend: false,
       explicit: true,
+    };
+  }
+
+  // 3. 마지막으로 기본(베이스) 스케줄 적용
+  const isExternalTeam = isExternalBusinessDept(dept);
+  const rawBaseStart = normalizeScheduleTime(baseScheduleStart, '');
+  const rawBaseEnd = normalizeScheduleTime(baseScheduleEnd || '', '');
+  const shouldUseExternalDefault = isExternalTeam
+    && (
+      !rawBaseStart
+      || (rawBaseStart === '08:00' && (!rawBaseEnd || rawBaseEnd === '17:00'))
+    );
+  const start = shouldUseExternalDefault
+    ? '10:00'
+    : normalizeScheduleTime(baseScheduleStart, isExternalTeam ? '10:00' : '');
+  if (start) {
+    const inferredEnd = inferScheduleEndTime(start, dept) || '';
+    const defaultEnd = shouldUseExternalDefault ? '19:00' : inferredEnd;
+    const end = normalizeScheduleTime(
+      shouldUseExternalDefault ? defaultEnd : baseScheduleEnd || defaultEnd || '',
+      defaultEnd
+    );
+    if (!end) return null;
+
+    return {
+      start,
+      end,
+      source: 'base',
+      isWeekend: false,
+      explicit: false,
     };
   }
 
@@ -171,7 +186,7 @@ export const resolveAllowOvertimeForSchedule = ({
   if (!resolvedSchedule) return null;
   if (override?.removed) return null;
   if (override && !override?.derivedMonthly) {
-    return Boolean(override.allowOvertime ?? override.allow_overtime);
+    return Boolean(override.allowOvertime ?? override.allow_overtime ?? fallbackAllowOvertime);
   }
   return Boolean(fallbackAllowOvertime);
 };

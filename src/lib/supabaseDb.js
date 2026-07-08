@@ -6,6 +6,7 @@
 import { getAdminClient } from './supabaseClient';
 import { getKstMonthKey, getKstDateTimeKey, getKstDateKey, shiftKstDateKey } from './kstDate';
 import { normalizeEmpNoKey } from './dashboardUtils';
+import { getLeaveDisplayLabel } from './leaveRules';
 
 
 const isMissingColumnError = (error) => {
@@ -103,6 +104,12 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
   const monthCompact = `${year}${month}`; // YYYYMM
   const pad2 = (num) => String(num).padStart(2, '0');
 
+  const empNoArr = (() => {
+    if (!options.empNo) return null;
+    if (Array.isArray(options.empNo)) return options.empNo;
+    return String(options.empNo).split(',').map(s => s.trim()).filter(Boolean);
+  })();
+
   // To cover the visible cells of the calendar (exactly 42 days = 6 weeks):
   // Calendar always starts on the Sunday of the first week of the month.
   const monthStartDate = new Date(Number(year), Number(month) - 1, 1);
@@ -141,7 +148,7 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
       .select('id, attendance_id, emp_no, work_date, adjusted_role, note, adjusted_by, created_at, updated_at')
       .gte('work_date', adjustFrom)
       .lte('work_date', adjustTo);
-    if (options.empNo) query = query.eq('emp_no', options.empNo);
+    if (empNoArr) query = query.in('emp_no', empNoArr);
 
     const { data: rawAdjustments, error: adjustErr } = await query;
 
@@ -158,12 +165,54 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
   const fetchOverrides = async () => {
     const rangeFrom = options.dashboardOnly ? shiftKstDateKey(getKstDateKey(), -1) : firstDay;
     const rangeTo = options.dashboardOnly ? getKstDateKey() : lastDay;
+
+    if (empNoArr) {
+      const chunkSize = 10;
+      const chunks = [];
+      for (let i = 0; i < empNoArr.length; i += chunkSize) {
+        chunks.push(empNoArr.slice(i, i + chunkSize));
+      }
+
+      try {
+        const results = await Promise.all(
+          chunks.map(async (chunk) => {
+            let query = supabase
+              .from('sa_schedule_overrides')
+              .select('emp_no, work_date, schedule_start, schedule_end, allow_overtime, note')
+              .gte('work_date', rangeFrom)
+              .lte('work_date', rangeTo)
+              .in('emp_no', chunk);
+
+            const { data, error } = await query;
+            if (error) {
+              const message = String(error.message || '').toLowerCase();
+              if (message.includes('allow_overtime') || error.code === '42703') {
+                let fallbackQuery = supabase
+                  .from('sa_schedule_overrides')
+                  .select('emp_no, work_date, schedule_start, schedule_end, note')
+                  .gte('work_date', rangeFrom)
+                  .lte('work_date', rangeTo)
+                  .in('emp_no', chunk);
+                const { data: fallbackData, error: fallbackErr } = await fallbackQuery;
+                if (fallbackErr) throw fallbackErr;
+                return (fallbackData || []).map((row) => ({ ...row, allow_overtime: false }));
+              }
+              throw error;
+            }
+            return (data || []).map((row) => ({ ...row, allow_overtime: row.allow_overtime !== false }));
+          })
+        );
+        return results.flat();
+      } catch (err) {
+        throw new Error(`스케줄 예외 조회 실패: ${err.message}`);
+      }
+    }
+
     let query = supabase
       .from('sa_schedule_overrides')
       .select('emp_no, work_date, schedule_start, schedule_end, allow_overtime, note')
       .gte('work_date', rangeFrom)
       .lte('work_date', rangeTo);
-    if (options.empNo) query = query.eq('emp_no', options.empNo);
 
     const { data: overridesRaw, error: overErr } = await query;
 
@@ -175,7 +224,6 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
           .select('emp_no, work_date, schedule_start, schedule_end, note')
           .gte('work_date', rangeFrom)
           .lte('work_date', rangeTo);
-        if (options.empNo) fallbackQuery = fallbackQuery.eq('emp_no', options.empNo);
 
         const { data: fallbackOverrides, error: fallbackErr } = await fallbackQuery;
         if (fallbackErr) throw new Error(`스케줄 예외 대체 조회 실패: ${fallbackErr.message}`);
@@ -183,7 +231,7 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
       }
       throw new Error(`스케줄 예외 조회 실패: ${overErr.message}`);
     }
-    return (overridesRaw || []).map((row) => ({ ...row, allow_overtime: Boolean(row.allow_overtime) }));
+    return (overridesRaw || []).map((row) => ({ ...row, allow_overtime: row.allow_overtime !== false }));
   };
 
   const fetchTeamPatterns = async () => {
@@ -209,7 +257,7 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
     const keys = ['employees', 'employeeNames', 'leaves'];
     
     let employeesQuery = supabase.from('sa_employees').select('emp_no, name, dept').eq('is_active', true).order('dept').order('name');
-    if (options.empNo) employeesQuery = employeesQuery.eq('emp_no', options.empNo);
+    if (empNoArr) employeesQuery = employeesQuery.in('emp_no', empNoArr);
 
     const compactFirstDay = firstDay.replace(/-/g, '');
     const compactLastDay = lastDay.replace(/-/g, '');
@@ -217,7 +265,39 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
       .lte('start_date', compactLastDay)
       .gte('end_date', compactFirstDay)
       .eq('status', '40');
-    if (options.empNo) leavesQuery = leavesQuery.eq('emp_no', options.empNo);
+    if (empNoArr) leavesQuery = leavesQuery.in('emp_no', empNoArr);
+
+    const fetchLogs = async () => {
+      if (empNoArr) {
+        const chunkSize = 5;
+        const chunks = [];
+        for (let i = 0; i < empNoArr.length; i += chunkSize) {
+          chunks.push(empNoArr.slice(i, i + chunkSize));
+        }
+
+        try {
+          const results = await Promise.all(
+            chunks.map(async (chunk) => {
+              const { data, error } = await supabase
+                .from('sa_attendance')
+                .select('id, sabun, emp_no, card_no, a_time, log_time, eq_code, gate_name, flag1, event_type, source')
+                .in('emp_no', chunk)
+                .gte('log_time', logTimeFrom)
+                .lte('log_time', logTimeTo)
+                .order('log_time', { ascending: true });
+
+              if (error) throw error;
+              return data || [];
+            })
+          );
+          return { data: results.flat(), error: null };
+        } catch (err) {
+          return { data: [], error: err };
+        }
+      }
+
+      return supabase.rpc('get_attendance_logs_json', { log_time_from: logTimeFrom, log_time_to: logTimeTo });
+    };
 
     const fetchPromises = [
       employeesQuery,
@@ -231,13 +311,13 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
       const rangeTo = options.dashboardOnly ? getKstDateKey() : lastDay;
 
       let correctionsQuery = supabase.from('sa_attendance_corrections').select('emp_no, work_date, corrected_out_time, reason').gte('work_date', rangeFrom).lte('work_date', rangeTo);
-      if (options.empNo) correctionsQuery = correctionsQuery.eq('emp_no', options.empNo);
+      if (empNoArr) correctionsQuery = correctionsQuery.in('emp_no', empNoArr);
 
       let manualCheckinsQuery = supabase.from('sa_manual_checkins').select('id, emp_no, check_type, check_time, work_date, note, admin_decision, created_at, decided_at').gte('work_date', rangeFrom).lte('work_date', rangeTo);
-      if (options.empNo) manualCheckinsQuery = manualCheckinsQuery.eq('emp_no', options.empNo);
+      if (empNoArr) manualCheckinsQuery = manualCheckinsQuery.in('emp_no', empNoArr);
 
       fetchPromises.push(
-        supabase.rpc('get_attendance_logs_json', { log_time_from: logTimeFrom, log_time_to: logTimeTo }),
+        fetchLogs(),
         fetchAdjustments(),
         correctionsQuery,
         fetchOverrides(),
@@ -266,9 +346,6 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
     const teamSchedulePatterns = dataMap.teamPatterns || [];
     const rawManual = dataMap.manualCheckins || [];
 
-    if (options.empNo) {
-      rawLogs = rawLogs.filter(log => log.emp_no === options.empNo || log.Sabun === options.empNo);
-    }
 
 
     // ?? 7. ?곗씠???щ㎎??諛?蹂묓빀 ??????????????????????????????????
@@ -426,7 +503,7 @@ export async function fetchAttendanceLogs(yearMonth, options = {}) {
       startDate: l.start_date,
       endDate:   l.end_date,
       leaveCode: l.leave_code,
-      leaveName: l.leave_name,
+      leaveName: getLeaveDisplayLabel(l),
       leaveDays: l.leave_days?.toString() || '0',
       status:    l.status,
     }));
@@ -700,16 +777,16 @@ export async function saveScheduleOverride({ empNo, workDate, scheduleStart, sch
   return upsertWithFallback(supabase, 'sa_schedule_overrides', payload);
 }
 
-export async function saveScheduleOverridesBatch({ empNo, workDates = [], scheduleStart, scheduleEnd, allowOvertime = true, note, userId }) {
+export async function saveScheduleOverridesBatch({ empNo, workDates = [], scheduleStart, scheduleEnd, allowOvertime = true, note, userId, removed = false }) {
   const supabase = getAdminClient();
   const payload = (workDates || [])
     .map((workDate) => ({
       emp_no: empNo,
       work_date: workDate,
-      schedule_start: scheduleStart,
-      schedule_end: scheduleEnd,
-      allow_overtime: Boolean(allowOvertime),
-      note: note || '',
+      schedule_start: removed ? '00:00' : scheduleStart,
+      schedule_end: removed ? '00:00' : scheduleEnd,
+      allow_overtime: removed ? false : Boolean(allowOvertime),
+      note: removed ? '__SCHEDULE_REMOVED__' : (note || ''),
       created_by: userId || null,
     }))
     .filter((row) => row.emp_no && row.work_date && row.schedule_start);

@@ -45,9 +45,28 @@ export async function POST(request) {
       return NextResponse.json({ error: '필수 값이 누락되었습니다.' }, { status: 400 });
     }
 
-    const isoString = correctionTime.includes('+09:00')
-      ? correctionTime
-      : `${workDate}T${correctionTime.substring(0, 5)}:00+09:00`;
+    let timePart = '';
+    if (correctionTime.includes('T')) {
+      timePart = correctionTime.split('T')[1].substring(0, 5);
+    } else {
+      timePart = correctionTime.substring(0, 5);
+    }
+
+    let targetDate = workDate;
+    if (correctionType === '퇴근') {
+      const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
+      const totalMinutes = hours * 60 + minutes;
+      if (totalMinutes < 6 * 60) {
+        const date = new Date(`${workDate}T12:00:00+09:00`);
+        date.setDate(date.getDate() + 1);
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        targetDate = `${y}-${m}-${d}`;
+      }
+    }
+
+    const isoString = `${targetDate}T${timePart}:00+09:00`;
 
     if (correctionType === '출근') {
       await saveManualCheckin({

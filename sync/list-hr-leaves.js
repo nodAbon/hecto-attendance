@@ -96,7 +96,7 @@ async function main() {
           y.D_START_DATE AS start_date,
           y.D_END_DATE AS end_date,
           y.I_CODE AS leave_code,
-          COALESCE(c.N_NAME, tc.NAME) AS leave_name,
+          CAST(y.I_CODE AS CHAR) AS leave_name,
           CAST(y.O_ANNLEV_CNT AS CHAR) AS leave_days,
           y.I_STATUS AS status
         FROM hr_yuncha_use y
@@ -106,11 +106,6 @@ async function main() {
         LEFT JOIN hr_department d
           ON d.I_COMPANY = e.I_COMPANY
          AND d.I_DEPT = e.I_DEPT
-        LEFT JOIN hr_diligence_code c
-          ON c.I_CODE = y.I_CODE
-        LEFT JOIN tong_code tc
-          ON tc.GUBUN_CODE = 'H0281'
-         AND tc.CODE = y.I_CODE
         WHERE y.I_COMPANY = ?
         ORDER BY y.D_START_DATE DESC, e.N_EMPLOY_NAME ASC, y.I_EMPLOY_NO ASC
         LIMIT ${Number(limit)}

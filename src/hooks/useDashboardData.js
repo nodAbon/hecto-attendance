@@ -57,6 +57,9 @@ const mergeMonthlyResponses = (responses = []) => {
     manualCheckins: [
       ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.manualCheckins) ? entry.json.manualCheckins : [])),
     ],
+    overtimeRounds: [
+      ...(succeeded.flatMap((entry) => Array.isArray(entry.json?.overtimeRounds) ? entry.json.overtimeRounds : [])),
+    ],
   };
 
   merged.allLogs = mergeUnique(arrays.allLogs, (row) => [
@@ -102,6 +105,7 @@ const mergeMonthlyResponses = (responses = []) => {
     row?.checkTime || row?.check_time || '',
     row?.checkType || row?.check_type || '',
   ].join('|'));
+  merged.overtimeRounds = mergeUnique(arrays.overtimeRounds, (row) => row?.emp_no || '');
 
   merged.employees = pickFirst('employees') || [];
   merged.isDemo = succeeded.some((entry) => entry.json?.isDemo);
@@ -290,12 +294,14 @@ export function useDashboardData({
         const otherCorrections = (prevData.corrections || []).filter(row => row.emp_no !== empNo);
         const otherOverrides = (prevData.overrides || []).filter(row => row.emp_no !== empNo);
         const otherManualCheckins = (prevData.manualCheckins || []).filter(row => row.empNo !== empNo && row.emp_no !== empNo);
+        const otherOvertimeRounds = (prevData.overtimeRounds || []).filter(row => row.emp_no !== empNo);
 
         const newLogs = json.allLogs || [];
         const newLeaves = json.leaves || [];
         const newCorrections = json.corrections || [];
         const newOverrides = json.overrides || [];
         const newManualCheckins = json.manualCheckins || [];
+        const newOvertimeRounds = json.overtimeRounds || [];
 
         const mergedLogs = mergeUnique([...otherLogs, ...newLogs], (row) => [
           row?.id,
@@ -338,6 +344,8 @@ export function useDashboardData({
           row?.checkType || row?.check_type || '',
         ].join('|'));
 
+        const mergedOvertimeRounds = mergeUnique([...otherOvertimeRounds, ...newOvertimeRounds], (row) => row?.emp_no || '');
+
         return {
           ...prevData,
           allLogs: mergedLogs,
@@ -345,6 +353,7 @@ export function useDashboardData({
           corrections: mergedCorrections,
           overrides: mergedOverrides,
           manualCheckins: mergedManualCheckins,
+          overtimeRounds: mergedOvertimeRounds,
         };
       };
 
@@ -358,17 +367,19 @@ export function useDashboardData({
       const empCacheKey = `${monthVal}_${empNo}`;
       monthDataCacheRef.current.set(empCacheKey, { success: true, json, monthKey: monthVal });
 
-      // 3. Update monthlyData state
-      setMonthlyData((prev) => {
-        if (!prev) return null;
-        const isSingleEmpTab = activeTab === 'TRACKER' || activeTab === 'MY_PORTAL';
-        if (isSingleEmpTab) {
-          return mergeMonthlyResponses([{ success: true, json, monthKey: monthVal }]);
-        }
-        return updateDataset(prev);
-      });
+      // 3. Update monthlyData state (only if it matches the current active month)
+      if (monthVal === selectedMonth) {
+        setMonthlyData((prev) => {
+          if (!prev) return null;
+          const isSingleEmpTab = activeTab === 'TRACKER' || activeTab === 'MY_PORTAL';
+          if (isSingleEmpTab) {
+            return mergeMonthlyResponses([{ success: true, json, monthKey: monthVal }]);
+          }
+          return updateDataset(prev);
+        });
+      }
 
-      // 4. Update calendar leaves
+      // 4. Update calendar leaves cache (always update cache using target month key)
       const calendarKey = String(monthVal || '').trim();
       const cachedCalendarLeaves = calendarLeavesCacheRef.current.get(calendarKey);
       if (cachedCalendarLeaves) {
@@ -384,18 +395,21 @@ export function useDashboardData({
         calendarLeavesCacheRef.current.set(calendarKey, mergedCalendarLeaves);
       }
 
-      setCalendarLeaves((prev) => {
-        if (!prev) return [];
-        const otherLeaves = prev.filter(row => row.empNo !== empNo && row.emp_no !== empNo);
-        const newLeaves = json.leaves || [];
-        return mergeUnique([...otherLeaves, ...newLeaves], (row) => [
-          row?.id,
-          row?.empNo || row?.emp_no || '',
-          row?.startDate || row?.start_date || '',
-          row?.endDate || row?.end_date || '',
-          row?.leaveName || row?.leave_name || '',
-        ].join('|'));
-      });
+      // Update calendar leaves state (only if it matches the current active month)
+      if (monthVal === selectedMonth) {
+        setCalendarLeaves((prev) => {
+          if (!prev) return [];
+          const otherLeaves = prev.filter(row => row.empNo !== empNo && row.emp_no !== empNo);
+          const newLeaves = json.leaves || [];
+          return mergeUnique([...otherLeaves, ...newLeaves], (row) => [
+            row?.id,
+            row?.empNo || row?.emp_no || '',
+            row?.startDate || row?.start_date || '',
+            row?.endDate || row?.end_date || '',
+            row?.leaveName || row?.leave_name || '',
+          ].join('|'));
+        });
+      }
 
       // 5. Silently update today's data
       await fetchTodayData(true);

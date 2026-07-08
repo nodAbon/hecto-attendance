@@ -1,0 +1,276 @@
+﻿
+================= Running for 議곗듅洹?(Dept: ?ъ뾽愿由?3?) =================
+ALL ROUND OBJECTS: [
+  {
+    emp_no: '20250087',
+    round_name: '1李?,
+    start_date: '2026-05-21',
+    end_date: '2026-09-21',
+    created_at: '2026-06-12T01:02:33.540529+00:00',
+    updated_at: '2026-06-12T01:02:33.540529+00:00'
+  }
+]
+Round Name: 1李?| Period: 2026-05-21 ~ 2026-09-21
+[DEBUG] Dynamic Period: 2026-05-21 ~ 2026-09-21
+- Modal Result (Calculated): +10.0
+- Tab Result (Calculated): +10.0
+- Debug Sums: Total OT = 29.5h | Total Ded = 19.5h | Net = 10.0h
+
+================= Running for ?ㅽ쁽??(Dept: ?ъ뾽愿由?1?) =================
+ALL ROUND OBJECTS: [
+  {
+    emp_no: '20240045',
+    round_name: '1李?,
+    start_date: '2026-02-10',
+    end_date: '2026-07-26',
+    created_at: '2026-06-12T01:02:36.51759+00:00',
+    updated_at: '2026-06-24T04:48:55.69+00:00'
+  }
+]
+Round Name: 1李?| Period: 2026-02-10 ~ 2026-07-26
+[DEBUG] Dynamic Period: 2026-02-10 ~ 2026-07-26
+  [DAY] 2026-02-10 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:330m | Ded:0m | DailyDiff:+5.5h | AccModal:5.5h
+  [DAY] 2026-02-11 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-12 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-13 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-14 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-15 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-16 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-17 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-18 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-19 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-20 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-21 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-22 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-23 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-24 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-25 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-26 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-02-27 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:300m | DailyDiff:-5.0h | AccModal:0.5h
+  [DAY] 2026-02-28 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-01 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-02 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-03 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-04 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-05 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-06 | Sched:10:00-17:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:120m | DailyDiff:-2.0h | AccModal:-1.5h
+  [DAY] 2026-03-07 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-08 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-09 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-10 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-11 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-12 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-13 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-14 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-15 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-1.5h
+  [DAY] 2026-03-16 | Sched:10:00-18:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:30m | DailyDiff:-0.5h | AccModal:-2.0h
+  [DAY] 2026-03-17 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:120m | Ded:0m | DailyDiff:+2.0h | AccModal:0.0h
+  [DAY] 2026-03-18 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.0h
+  [DAY] 2026-03-19 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:30m | Ded:0m | DailyDiff:+0.5h | AccModal:0.5h
+  [DAY] 2026-03-20 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-21 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-22 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-23 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.5h
+  [DAY] 2026-03-24 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:90m | Ded:0m | DailyDiff:+1.5h | AccModal:2.0h
+  [DAY] 2026-03-25 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:2.0h
+  [DAY] 2026-03-26 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:2.0h
+  [DAY] 2026-03-27 | Sched:10:00-19:00 | LogsCount:1 | AllowOT:true | OT:0m | Ded:120m | DailyDiff:-2.0h | AccModal:0.0h
+  [DAY] 2026-03-28 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.0h
+  [DAY] 2026-03-29 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.0h
+  [DAY] 2026-03-30 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.0h
+  [DAY] 2026-03-31 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:210m | Ded:0m | DailyDiff:+3.5h | AccModal:3.5h
+  [DAY] 2026-04-01 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:270m | Ded:0m | DailyDiff:+4.5h | AccModal:8.0h
+  [DAY] 2026-04-02 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:8.0h
+  [DAY] 2026-04-03 | Sched:10:00-17:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:90m | DailyDiff:-1.5h | AccModal:6.5h
+  [DAY] 2026-04-04 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:6.5h
+  [DAY] 2026-04-05 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:6.5h
+  [DAY] 2026-04-06 | Sched:12:00-19:00 | LogsCount:2 | AllowOT:true | OT:360m | Ded:120m | DailyDiff:+4.0h | AccModal:10.5h
+  [DAY] 2026-04-07 | Sched:12:00-19:30 | LogsCount:2 | AllowOT:true | OT:240m | Ded:120m | DailyDiff:+2.0h | AccModal:12.5h
+  [DAY] 2026-04-08 | Sched:10:00-17:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:120m | DailyDiff:-2.0h | AccModal:10.5h
+  [DAY] 2026-04-09 | Sched:10:00-17:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:120m | DailyDiff:-2.0h | AccModal:8.5h
+  [DAY] 2026-04-10 | Sched:10:00-18:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:60m | DailyDiff:-1.0h | AccModal:7.5h
+  [DAY] 2026-04-11 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.5h
+  [DAY] 2026-04-12 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.5h
+  [DAY] 2026-04-13 | Sched:10:00-15:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:210m | DailyDiff:-3.5h | AccModal:4.0h
+  [DAY] 2026-04-14 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:4.0h
+  [DAY] 2026-04-15 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:150m | Ded:0m | DailyDiff:+2.5h | AccModal:6.5h
+  [DAY] 2026-04-16 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:6.5h
+  [DAY] 2026-04-17 | Sched:10:00-14:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:270m | DailyDiff:-4.5h | AccModal:2.0h
+  [DAY] 2026-04-18 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:2.0h
+  [DAY] 2026-04-19 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:2.0h
+  [DAY] 2026-04-20 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:180m | Ded:0m | DailyDiff:+3.0h | AccModal:5.0h
+  [DAY] 2026-04-21 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:300m | Ded:0m | DailyDiff:+5.0h | AccModal:10.0h
+  [DAY] 2026-04-22 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:10.0h
+  [DAY] 2026-04-23 | Sched:10:00-19:00 | LogsCount:1 | AllowOT:true | OT:0m | Ded:60m | DailyDiff:-1.0h | AccModal:9.0h
+  [DAY] 2026-04-24 | Sched:10:00-17:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:90m | DailyDiff:-1.5h | AccModal:7.5h
+  [DAY] 2026-04-25 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.5h
+  [DAY] 2026-04-26 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.5h
+  [DAY] 2026-04-27 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.5h
+  [DAY] 2026-04-28 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.5h
+  [DAY] 2026-04-29 | Sched:09:00-19:00 | LogsCount:2 | AllowOT:true | OT:30m | Ded:60m | DailyDiff:-0.5h | AccModal:7.0h
+  [DAY] 2026-04-30 | Sched:10:00-17:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:90m | DailyDiff:-1.5h | AccModal:5.5h
+  [DAY] 2026-05-01 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-05-02 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-05-03 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-05-04 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-05-05 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-05-06 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:5.5h
+  [DAY] 2026-05-07 | Sched:10:00-15:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:240m | DailyDiff:-4.0h | AccModal:1.5h
+  [DAY] 2026-05-08 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:1.5h
+  [DAY] 2026-05-09 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:1.5h
+  [DAY] 2026-05-10 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:1.5h
+  [DAY] 2026-05-11 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:1.5h
+  [DAY] 2026-05-12 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:180m | Ded:0m | DailyDiff:+3.0h | AccModal:4.5h
+  [DAY] 2026-05-13 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:4.5h
+  [DAY] 2026-05-14 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:4.5h
+  [DAY] 2026-05-15 | Sched:10:30-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:30m | DailyDiff:-0.5h | AccModal:4.0h
+  [DAY] 2026-05-16 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:4.0h
+  [DAY] 2026-05-17 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:4.0h
+  [DAY] 2026-05-18 | Sched:10:00-14:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:270m | DailyDiff:-4.5h | AccModal:-0.5h
+  [DAY] 2026-05-19 | Sched:10:00-17:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:120m | DailyDiff:-2.0h | AccModal:-2.5h
+  [DAY] 2026-05-20 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-2.5h
+  [DAY] 2026-05-21 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-2.5h
+  [DAY] 2026-05-22 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-2.5h
+  [DAY] 2026-05-23 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-2.5h
+  [DAY] 2026-05-24 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-2.5h
+  [DAY] 2026-05-25 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-2.5h
+  [DAY] 2026-05-26 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-2.5h
+    -> [DETAIL 2026-05-26] Logs: [
+  {
+    id: 63,
+    logTime: '2026-05-26 09:49:19',
+    event_type: '異쒖엯',
+    workOrder: 589
+  },
+  {
+    id: 31980,
+    logTime: '2026-05-26 16:23:49',
+    event_type: '異쒖엯',
+    workOrder: 983
+  }
+]
+    -> [DETAIL 2026-05-26] correctedOut: undefined
+  [DAY] 2026-05-27 | Sched:10:00-17:30 | LogsCount:2 | AllowOT:true | OT:0m | Ded:90m | DailyDiff:-1.5h | AccModal:-4.0h
+    -> [DETAIL 2026-05-27] Logs: [
+  {
+    id: 2811549,
+    logTime: '2026-05-27 09:43:22',
+    event_type: '異쒖엯',
+    workOrder: 583
+  },
+  {
+    id: 3878227,
+    logTime: '2026-05-27 17:34:35',
+    event_type: '異쒖엯',
+    workOrder: 1054
+  }
+]
+    -> [DETAIL 2026-05-27] correctedOut: undefined
+  [DAY] 2026-05-28 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-4.0h
+  [DAY] 2026-05-29 | Sched:10:00-19:00 | LogsCount:1 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-4.0h
+  [DAY] 2026-05-30 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-4.0h
+  [DAY] 2026-05-31 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-4.0h
+  [DAY] 2026-06-01 | Sched:10:00-18:30 | LogsCount:2 | AllowOT:true | OT:60m | Ded:30m | DailyDiff:+0.5h | AccModal:-3.5h
+  [DAY] 2026-06-02 | Sched:10:00-18:30 | LogsCount:2 | AllowOT:true | OT:180m | Ded:0m | DailyDiff:+3.0h | AccModal:-0.5h
+    -> [DETAIL 2026-06-02] Logs: [
+  {
+    id: 25332065,
+    logTime: '2026-06-02 09:47:19',
+    event_type: '異쒖엯',
+    workOrder: 587
+  },
+  {
+    id: 25439353,
+    logTime: '2026-06-02 21:37:22',
+    event_type: '異쒖엯',
+    workOrder: 1297
+  }
+]
+    -> [DETAIL 2026-06-02] correctedOut: undefined
+  [DAY] 2026-06-03 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-0.5h
+  [DAY] 2026-06-04 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:-0.5h
+  [DAY] 2026-06-05 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:30m | Ded:0m | DailyDiff:+0.5h | AccModal:0.0h
+  [DAY] 2026-06-06 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.0h
+  [DAY] 2026-06-07 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:0.0h
+  [DAY] 2026-06-08 | Sched:10:00-17:00 | LogsCount:2 | AllowOT:true | OT:300m | Ded:0m | DailyDiff:+5.0h | AccModal:5.0h
+  [DAY] 2026-06-09 | Sched:10:00-17:00 | LogsCount:2 | AllowOT:true | OT:180m | Ded:0m | DailyDiff:+3.0h | AccModal:8.0h
+    -> [DETAIL 2026-06-09] Logs: [
+  {
+    id: 25455390,
+    logTime: '2026-06-09 09:47:10',
+    event_type: '異쒖엯',
+    workOrder: 587
+  },
+  {
+    id: 25455261,
+    logTime: '2026-06-09 20:02:13',
+    event_type: '異쒖엯',
+    workOrder: 1202
+  }
+]
+    -> [DETAIL 2026-06-09] correctedOut: undefined
+  [DAY] 2026-06-10 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:8.0h
+  [DAY] 2026-06-11 | Sched:11:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:60m | DailyDiff:-1.0h | AccModal:7.0h
+  [DAY] 2026-06-12 | Sched:10:00-19:00 | LogsCount:1 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.0h
+  [DAY] 2026-06-13 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.0h
+  [DAY] 2026-06-14 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:7.0h
+  [DAY] 2026-06-15 | Sched:10:00-13:30 | LogsCount:2 | AllowOT:true | OT:960m | Ded:330m | DailyDiff:+10.5h | AccModal:17.5h
+    -> [DETAIL 2026-06-15] Logs: [
+  {
+    id: 25507523,
+    logTime: '2026-06-15 08:02:40',
+    event_type: '異쒖엯',
+    workOrder: 482
+  },
+  {
+    id: 25588109,
+    logTime: '2026-06-16 05:51:22',
+    event_type: '異쒖엯',
+    workOrder: 1791
+  }
+]
+    -> [DETAIL 2026-06-15] correctedOut: undefined
+  [DAY] 2026-06-16 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:150m | Ded:0m | DailyDiff:+2.5h | AccModal:20.0h
+  [DAY] 2026-06-17 | Sched:10:00-19:00 | LogsCount:1 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:20.0h
+  [DAY] 2026-06-18 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:20.0h
+  [DAY] 2026-06-19 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:20.0h
+  [DAY] 2026-06-20 | Sched:undefined-undefined | LogsCount:2 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:20.0h
+  [DAY] 2026-06-21 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:20.0h
+  [DAY] 2026-06-22 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:210m | Ded:0m | DailyDiff:+3.5h | AccModal:23.5h
+  [DAY] 2026-06-23 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:240m | Ded:0m | DailyDiff:+4.0h | AccModal:27.5h
+  [DAY] 2026-06-24 | Sched:10:00-19:00 | LogsCount:2 | AllowOT:true | OT:300m | Ded:0m | DailyDiff:+5.0h | AccModal:32.5h
+  [DAY] 2026-06-25 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-06-26 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-06-27 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-06-28 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-06-29 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-06-30 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-01 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-02 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-03 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-04 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-05 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-06 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-07 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-08 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-09 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-10 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-11 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-12 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-13 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-14 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-15 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-16 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-17 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-18 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-19 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-20 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-21 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-22 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-23 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-24 | Sched:10:00-19:00 | LogsCount:0 | AllowOT:true | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-25 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+  [DAY] 2026-07-26 | Sched:undefined-undefined | LogsCount:0 | AllowOT:false | OT:0m | Ded:0m | DailyDiff:0.0h | AccModal:32.5h
+- Modal Result (Calculated): +32.5
+- Tab Result (Calculated): +32.5
+- Debug Sums: Total OT = 85.0h | Total Ded = 52.5h | Net = 32.5h

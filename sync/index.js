@@ -188,7 +188,7 @@ async function syncEmployees(conn) {
 // 2. 세콤 출입기록 동기화 (최근 1일치)
 async function syncSecomAttendance(conn) {
   const now = new Date();
-  // 최근 1일치 (어제부터 오늘까지)
+  // Approved leaves: 7 days ago through 3 months ahead.
   const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}000000`;
 
@@ -329,8 +329,10 @@ async function syncCapsAttendance(conn) {
 async function syncLeaves(conn) {
   const now = new Date();
   // 최근 1일치 (어제부터 오늘까지)
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+  const toDate = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
   const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
+  const toStr    = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2, '0')}${String(toDate.getDate()).padStart(2, '0')}`;
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -339,18 +341,17 @@ async function syncLeaves(conn) {
       y.D_START_DATE                 AS start_date,
       y.D_END_DATE                   AS end_date,
       y.I_CODE                       AS leave_code,
-      COALESCE(c.N_NAME, tc.NAME)    AS leave_name,
+      CAST(y.I_CODE AS CHAR)         AS leave_name,
       CAST(y.O_ANNLEV_CNT AS CHAR)   AS leave_days,
       y.I_STATUS                     AS status
     FROM hr_yuncha_use y
     INNER JOIN hr_employee e ON e.I_COMPANY = y.I_COMPANY AND e.I_EMPLOY_NO = y.I_EMPLOY_NO
     INNER JOIN hr_department d ON d.I_COMPANY = e.I_COMPANY AND d.I_DEPT = e.I_DEPT
-    LEFT JOIN hr_diligence_code c ON c.I_CODE = y.I_CODE
-    LEFT JOIN tong_code tc ON tc.GUBUN_CODE = 'H0281' AND tc.CODE = y.I_CODE
     WHERE y.I_COMPANY = ?
       AND y.I_STATUS = '40'
       AND y.D_END_DATE >= ?
-  `, [MY_COMPANY_CODE, fromStr]);
+      AND y.D_START_DATE <= ?
+  `, [MY_COMPANY_CODE, fromStr, toStr]);
 
   if (rows.length === 0) return 0;
 

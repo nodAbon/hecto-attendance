@@ -214,7 +214,7 @@ function DashboardTab({
               className="ui-select"
               value={deptFilterValue}
               onChange={(e) => setViewDeptFilter(e.target.value)}
-              aria-label="遺???좏깮"
+              aria-label="부서 선택"
             >
               {deptOptions.map((dept) => (
                 <option key={dept} value={dept}>
@@ -232,8 +232,8 @@ function DashboardTab({
             type="button"
             className="icon-btn"
             onClick={toggleTheme}
-            title={theme === 'dark' ? '?쇱씠??紐⑤뱶' : '?ㅽ겕 紐⑤뱶'}
-            aria-label={theme === 'dark' ? '?쇱씠??紐⑤뱶濡??꾪솚' : '?ㅽ겕 紐⑤뱶濡??꾪솚'}
+            title={theme === 'dark' ? '라이트 모드' : '다크 모드'}
+            aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
           >
             {theme === 'dark' ? <Sun style={{ width: 15, height: 15 }} /> : <Moon style={{ width: 15, height: 15 }} />}
           </button>

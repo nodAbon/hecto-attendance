@@ -92,13 +92,11 @@ async function syncLeavesForEmployee(conn, empNo) {
       y.D_START_DATE               AS start_date,
       y.D_END_DATE                 AS end_date,
       y.I_CODE                     AS leave_code,
-      COALESCE(c.N_NAME, tc.NAME, CAST(y.I_CODE AS CHAR)) AS leave_name,
+      CAST(y.I_CODE AS CHAR)       AS leave_name,
       CAST(y.O_ANNLEV_CNT AS CHAR) AS leave_days,
       y.I_STATUS                   AS status
     FROM hr_yuncha_use y
     INNER JOIN hr_employee e ON e.I_COMPANY = y.I_COMPANY AND e.I_EMPLOY_NO = y.I_EMPLOY_NO
-    LEFT JOIN hr_diligence_code c ON c.I_CODE = y.I_CODE
-    LEFT JOIN tong_code tc ON tc.GUBUN_CODE = 'H0281' AND tc.CODE = y.I_CODE
     WHERE y.I_COMPANY = ?
       AND y.I_EMPLOY_NO = ?
       AND y.I_STATUS = '40'

@@ -1,6 +1,7 @@
 import { isNightTeamDept } from './nightScheduleRules';
 import { isOvertimeTeamDept } from './overtimeRules';
 import { normalizeDeptLoose } from './dashboardUtils';
+import { getLeaveDisplayLabel } from './leaveRules';
 
 export const TWO_HOUR_LEAVE_CODES = new Set(['19', '20', '21', '22', '23', '24', '25', '26', '27', '28']);
 
@@ -39,7 +40,7 @@ export const getTwoHourLeaveLimit = (baseSchedule) => {
 };
 
 export const getTwoHourLeaveEndTime = (leave) => {
-  const rawName = String(leave?.leaveName || leave?.leave_name || '');
+  const rawName = getLeaveDisplayLabel(leave);
   const match = rawName.match(/\[(\d{2})(?::?(\d{2}))?[~-](\d{2})(?::?(\d{2}))?\]/);
   if (!match) return null;
   const endHour = match[3];
@@ -48,21 +49,21 @@ export const getTwoHourLeaveEndTime = (leave) => {
 };
 
 export const getTwoHourLeaveDisplayLabel = (leave) => {
-  const rawName = String(leave?.leaveName || leave?.leave_name || '');
+  const rawName = getLeaveDisplayLabel(leave);
   const match = rawName.match(/\[(\d{2})(?::?(\d{2}))?[~-](\d{2})(?::?(\d{2}))?\]/);
-  if (!match) return leave?.leaveName || leave?.leave_name || '휴가';
+  if (!match) return rawName || '휴가';
   const startHour = parseInt(match[1], 10);
   return startHour < 12 ? '오전반반차' : '오후반반차';
 };
 
 export const isAfternoonHalfLeave = (leave) => {
   const leaveCode = String(leave?.leaveCode || leave?.leave_code || '');
-  const leaveName = String(leave?.leaveName || leave?.leave_name || '');
+  const leaveName = getLeaveDisplayLabel(leave);
   return leaveCode === '17' || leaveCode === '62' || /오후/.test(leaveName);
 };
 
 export const getLateCheckinLimit = (leave, scheduleTime) => {
-  const rawName = String(leave?.leaveName || leave?.leave_name || '');
+  const rawName = getLeaveDisplayLabel(leave);
   const leaveCode = String(leave?.leaveCode || leave?.leave_code || '');
   const rangeMatch = rawName.match(/\[(\d{2})(?::?(\d{2}))?[~-](\d{2})(?::?(\d{2}))?\]/);
   const rangeStartHour = rangeMatch ? parseInt(rangeMatch[1], 10) : null;

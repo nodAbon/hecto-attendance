@@ -4,14 +4,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { shiftMonthKey } from '../lib/kstDate';
 
-
 export default function MonthSearchPicker({
   value,
   onChange,
   monthOptions = [],
   onPrev,
   onNext,
-  label = '선택 월',
+  label = '월 선택',
   placeholder = 'YYYY-MM 검색',
   className = '',
 }) {

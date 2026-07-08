@@ -7,6 +7,7 @@ import Image from 'next/image';
 import AppSidebar from '../AppSidebar';
 import MobileBottomNav from '../MobileBottomNav';
 import { getMainSidebarItems, sidebarActionIcons } from '../../lib/sidebarConfig';
+import { canViewOvertimeMenu } from '../../lib/overtimeRules';
 import dynamic from 'next/dynamic';
 
 const DashboardTab = dynamic(() => import('../tabs/DashboardTab'), { ssr: false });
@@ -121,7 +122,7 @@ export default function DashboardShell({
 
   const handleRefreshData = useCallback(async (opts) => {
     if (opts?.empNo && refreshEmployeeData) {
-      await refreshEmployeeData(opts.empNo);
+      await refreshEmployeeData(opts.empNo, opts?.month);
     } else if (refreshAllData) {
       await refreshAllData();
     }
@@ -217,6 +218,7 @@ export default function DashboardShell({
     rank: myRank,
     team: myDept,
     dept: myDept,
+    position: myPosition,
   };
 
   return (
@@ -385,7 +387,7 @@ export default function DashboardShell({
           />
         )}
 
-        {activeTab === 'OVERTIME' && (
+        {activeTab === 'OVERTIME' && canViewOvertimeMenu({ isAdmin, isLeader, position: myPosition, dept: myDept }) && (
           <OvertimeTab
             isAdmin={isAdmin}
             visibleMonthlyEmployees={visibleMonthlyEmployees}

@@ -18,6 +18,7 @@ export default function EmployeeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [resetPassword, setResetPassword] = useState('');
@@ -43,6 +44,7 @@ export default function EmployeeDetailPage() {
             position: initialEmployee.position || '',
             isAdmin: !!initialEmployee.isAdmin,
             profileId: initialEmployee.profileId || '',
+            status: initialEmployee.status || 'active',
           });
         }
       } catch (err) {
@@ -77,6 +79,7 @@ export default function EmployeeDetailPage() {
           rank: draft.rank,
           position: draft.position,
           isAdmin: !!draft.isAdmin,
+          status: draft.status || 'active',
         }),
       });
       const json = await res.json();
@@ -113,6 +116,43 @@ export default function EmployeeDetailPage() {
       setError(err.message);
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    if (!resetPassword || resetPassword.length < 8) {
+      setError('임시 비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+    try {
+      setCreating(true);
+      setMessage('');
+      setError('');
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          empNo,
+          name: draft.name || employee?.name || '',
+          tempPassword: resetPassword,
+          isAdmin: !!draft.isAdmin,
+          userId: employee?.loginId || empNo,
+          rank: draft.rank || '',
+          position: draft.position || '',
+          team: draft.dept || employee?.dept || ''
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '계정 생성 실패');
+      setMessage(json.message || '계정이 생성되었습니다.');
+      setResetPassword('');
+      const refreshed = await fetch('/api/admin/employees', { credentials: 'include' }).then((r) => r.json());
+      setEmployees(refreshed.employees || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -167,6 +207,13 @@ export default function EmployeeDetailPage() {
                   {positionOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
               </Field>
+              <Field label="재직여부">
+                <select className="form-input" style={selectStyle} value={draft.status ?? 'active'} onChange={(e) => updateDraft({ status: e.target.value })}>
+                  <option value="active">재직</option>
+                  <option value="leave">휴직</option>
+                  <option value="resigned">퇴사</option>
+                </select>
+              </Field>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
@@ -197,28 +244,53 @@ export default function EmployeeDetailPage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: 18 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>비밀번호 초기화</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input
-                  type="password"
-                  value={resetPassword}
-                  onChange={(e) => setResetPassword(e.target.value)}
-                  placeholder="새 임시 비밀번호"
-                  className="form-input"
-                  style={inputStyle}
-                />
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="login-btn"
-                  style={{ marginTop: 0, padding: '10px 16px', background: 'rgba(239, 68, 68, 0.18)', color: 'var(--red)' }}
-                  disabled={resetting}
-                >
-                  <KeyRound size={16} /> {resetting ? '초기화 중...' : '비밀번호 초기화'}
-                </button>
+            {!employee.hasAccount ? (
+              <div className="card" style={{ padding: 18 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>계정 생성</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="password"
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                    placeholder="임시 비밀번호 (8자 이상)"
+                    className="form-input"
+                    style={inputStyle}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateAccount}
+                    className="login-btn"
+                    style={{ marginTop: 0, padding: '10px 16px', background: 'var(--green)', color: '#fff' }}
+                    disabled={creating}
+                  >
+                    <KeyRound size={16} /> {creating ? '생성 중...' : '계정 생성'}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="card" style={{ padding: 18 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>비밀번호 초기화</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="password"
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                    placeholder="새 임시 비밀번호"
+                    className="form-input"
+                    style={inputStyle}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="login-btn"
+                    style={{ marginTop: 0, padding: '10px 16px', background: 'rgba(239, 68, 68, 0.18)', color: 'var(--red)' }}
+                    disabled={resetting}
+                  >
+                    <KeyRound size={16} /> {resetting ? '초기화 중...' : '비밀번호 초기화'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

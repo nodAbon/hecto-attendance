@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { canViewOvertimeMenu } from '../lib/overtimeRules';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -21,12 +22,13 @@ const MOBILE_PRIMARY_TABS = [
   { key: 'DASHBOARD', label: '대시보드', icon: LayoutDashboard, href: '/?tab=DASHBOARD' },
   { key: 'MONTHLY', label: '근태보고', icon: CalendarDays, href: '/?tab=MONTHLY', leaderOnly: true },
   { key: 'TRACKER', label: '트래커', icon: Calendar, href: '/?tab=TRACKER' },
-  { key: 'EMPLOYEES', label: '일정관리', icon: Users, href: '/?tab=EMPLOYEES', leaderOnly: true },
+  // { key: 'EMPLOYEES', label: '일정관리', icon: Users, href: '/?tab=EMPLOYEES', leaderOnly: true },
   { key: 'MORE', label: '더보기', icon: MoreHorizontal, href: null },
 ];
 
 const MOBILE_MORE_ITEMS = [
   { key: 'LEAVES', label: '연차 현황', icon: CalendarDays, href: '/?tab=LEAVES', category: '일반' },
+  { key: 'ICAL_SUBSCRIPTIONS', label: '캘린더 링크 생성', icon: CalendarDays, href: '/admin/ical-subscriptions', category: '부서', leaderOnly: true },
   { key: 'OVERTIME', label: '초과근무 관리', icon: Clock, href: '/?tab=OVERTIME', category: '부서', leaderOnly: true },
   { key: 'MANUAL_APPROVAL', label: '수동 요청 내역', icon: CheckCircle, href: '/?tab=MANUAL_APPROVAL', category: '부서', leaderOnly: true },
   { key: 'USER_REGISTER', label: '신규 계정 등록', icon: Plus, href: '/?tab=USER_REGISTER', category: '관리자', adminOnly: true },
@@ -51,7 +53,7 @@ export default function MobileBottomNav({
   });
 
   // If leader items are filtered out, we have fewer tabs. Fill in LEAVES for non-leaders
-  const primaryTabs = visiblePrimary.length < 5
+  const primaryTabs = visiblePrimary.length < 4
     ? [
         { key: 'DASHBOARD', label: '대시보드', icon: LayoutDashboard, href: '/?tab=DASHBOARD' },
         { key: 'TRACKER', label: '트래커', icon: Calendar, href: '/?tab=TRACKER' },
@@ -63,6 +65,9 @@ export default function MobileBottomNav({
   const visibleMore = MOBILE_MORE_ITEMS.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
     if (item.leaderOnly && !isAdmin && !isLeader) return false;
+    if (item.key === 'OVERTIME' && !canViewOvertimeMenu({ isAdmin, isLeader, dept: profile?.dept, position: profile?.position })) {
+      return false;
+    }
     // Don't show items already in primary tabs
     if (primaryTabs.some((pt) => pt.key === item.key)) return false;
     return true;

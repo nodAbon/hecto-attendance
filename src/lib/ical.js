@@ -66,6 +66,8 @@ export const buildICS = ({ calendarName, calendarDescription, events = [] }) => 
     'X-WR-CALNAME:' + escapeICSText(calendarName || '연차 현황'),
     'X-WR-CALDESC:' + escapeICSText(calendarDescription || ''),
     'X-WR-TIMEZONE:Asia/Seoul',
+    'X-PUBLISHED-TTL:PT5M',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT5M',
   ];
 
   events.forEach((event) => {

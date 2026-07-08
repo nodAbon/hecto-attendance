@@ -71,6 +71,7 @@ export async function verifySession(request) {
     name: employee?.name || '',
     loginId: userData.user.email?.split('@')[0] || '',
     isAdmin: resolvedIsAdmin,
+    isLeader: resolvedProfile.position === '팀장' || resolvedProfile.position === '실장' || resolvedProfile.position === '대표이사',
     position: resolvedProfile.position || '',
     team: employee?.dept || '',
     rank: resolvedProfile.rank || '',

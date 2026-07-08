@@ -3,14 +3,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { isAdminRole, isExecutivePosition, isLeaderPosition } from '@/lib/roleUtils';
-import { isManagedAttendanceDept, clampToHalfHourSteps } from '@/lib/dashboardUtils';
+import { isManagedAttendanceDept, clampToHalfHourSteps, getYearWeekStartKey, normalizeEmpNoKey } from '@/lib/dashboardUtils';
 import {
   buildScheduleOverrideMap,
   buildTeamSchedulePatternMap,
   resolveAllowOvertimeForSchedule,
   resolveSchedulePairForDate,
 } from '@/lib/scheduleResolver';
-import { getAdjustmentMinutes, getScheduleDurationMinutes } from '@/lib/scheduleUtils';
+import { getAdjustmentMinutes, getAdjustmentDeductionMinutes, getScheduleDurationMinutes } from '@/lib/scheduleUtils';
 
 const TARGET_DEPTS = ['사업개발팀', '사업관리1팀', '사업관리2팀', '사업관리3팀'];
 const WEEK_HOURS_MINUTES = 40 * 60;
@@ -39,8 +39,12 @@ const getTimePart = (value) => {
 const getLocalDate = (dateStr) => new Date(`${dateStr}T00:00:00+09:00`);
 
 const toDateOnly = (date) => {
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60 * 1000).toISOString().split('T')[0];
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
 };
 
 const getLeaveWorkedMinutes = (leave) => {
@@ -66,7 +70,35 @@ export default function OvertimeTab({
   refreshData,
   selectedMonth,
 }) {
-  const [roundsData, setRoundsData] = useState({});
+  const [prevMonthlyData, setPrevMonthlyData] = useState(monthlyData);
+  const [roundsData, setRoundsData] = useState(() => {
+    const map = {};
+    if (monthlyData?.overtimeRounds) {
+      monthlyData.overtimeRounds.forEach((row) => {
+        map[normalizeEmpNoKey(row.emp_no)] = {
+          roundName: row.round_name || '1차',
+          startDate: row.start_date || '',
+          endDate: row.end_date || '',
+        };
+      });
+    }
+    return map;
+  });
+
+  if (monthlyData !== prevMonthlyData) {
+    setPrevMonthlyData(monthlyData);
+    const map = {};
+    if (monthlyData?.overtimeRounds) {
+      monthlyData.overtimeRounds.forEach((row) => {
+        map[normalizeEmpNoKey(row.emp_no)] = {
+          roundName: row.round_name || '1차',
+          startDate: row.start_date || '',
+          endDate: row.end_date || '',
+        };
+      });
+    }
+    setRoundsData(map);
+  }
   const [savingEmp, setSavingEmp] = useState(null);
   const [saveSuccessEmp, setSaveSuccessEmp] = useState(null);
   const [saveErrorEmp, setSaveErrorEmp] = useState(null);
@@ -74,6 +106,9 @@ export default function OvertimeTab({
     logs: [],
     leaves: [],
     corrections: [],
+    overrides: [],
+    teamSchedulePatterns: [],
+    loaded: false,
   });
   const [rangeLoading, setRangeLoading] = useState(false);
 
@@ -82,18 +117,7 @@ export default function OvertimeTab({
   const isAuthorized = isAdmin || isLeader || isExecutive || isAdminRole({ position: myPosition, isAdmin });
   const isTeamLeaderOnly = isLeader && !isExecutive && !isAdmin;
 
-  useEffect(() => {
-    if (!monthlyData?.overtimeRounds) return;
-    const map = {};
-    monthlyData.overtimeRounds.forEach((row) => {
-      map[row.emp_no] = {
-        roundName: row.round_name || '1차',
-        startDate: row.start_date || '',
-        endDate: row.end_date || '',
-      };
-    });
-    setRoundsData(map);
-  }, [monthlyData]);
+
 
   const filteredEmployees = useMemo(() => {
     const normalizedTargets = TARGET_DEPTS.map(normalizeDept);
@@ -107,7 +131,13 @@ export default function OvertimeTab({
   }, [visibleMonthlyEmployees, isTeamLeaderOnly, myDept]);
 
   const periodMonths = useMemo(() => {
-    const dates = Object.values(roundsData)
+    const effectiveRounds = (filteredEmployees || []).map((emp) => (
+      roundsData[normalizeEmpNoKey(emp.empNo || emp.emp_no || '')] || {
+        startDate: '2026-04-01',
+        endDate: '2026-06-26',
+      }
+    ));
+    const dates = effectiveRounds
       .flatMap((row) => [row?.startDate, row?.endDate])
       .filter(Boolean)
       .sort();
@@ -126,7 +156,7 @@ export default function OvertimeTab({
     }
 
     return months;
-  }, [roundsData]);
+  }, [roundsData, filteredEmployees]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,19 +174,30 @@ export default function OvertimeTab({
 
     const loadRangeData = async () => {
       if (!periodMonths.length) {
-        setRangeData({ logs: [], leaves: [], corrections: [] });
+        setRangeData({ logs: [], leaves: [], corrections: [], overrides: [], teamSchedulePatterns: [], loaded: false });
         return;
       }
 
       setRangeLoading(true);
       try {
+        const empNoParam = (filteredEmployees || []).map((e) => String(e.empNo || e.emp_no || '').trim()).filter(Boolean).join(',');
         const monthsToFetch = periodMonths.filter((month) => month !== selectedMonth);
-        const responses = [];
-        for (const month of monthsToFetch) {
-          const res = await fetch(`/api/attendance?month=${month}`);
-          const json = await res.json();
-          responses.push(json?.success ? json : null);
-        }
+        const responses = await Promise.all(
+          monthsToFetch.map(async (month) => {
+            try {
+              const url = empNoParam
+                ? `/api/attendance?month=${month}&empNo=${empNoParam}`
+                : `/api/attendance?month=${month}`;
+              const res = await fetch(url);
+              if (!res.ok) return null;
+              const json = await res.json();
+              return json?.success ? json : null;
+            } catch (err) {
+              console.error(`[OvertimeTab] Failed to fetch for month ${month}:`, err);
+              return null;
+            }
+          })
+        );
 
         if (cancelled) return;
 
@@ -175,16 +216,34 @@ export default function OvertimeTab({
           datasets.flatMap((data) => data?.corrections || []),
           (corr) => `${corr?.emp_no || ''}_${corr?.work_date || ''}`
         );
+        const mergedOverrides = mergeUnique(
+          datasets.flatMap((data) => data?.overrides || []),
+          (override) => `${override?.emp_no || ''}_${override?.work_date || ''}`
+        );
+        const mergedTeamPatterns = mergeUnique(
+          datasets.flatMap((data) => data?.teamSchedulePatterns || []),
+          (pattern) => `${pattern?.dept_name || ''}_${pattern?.pattern_date || ''}`
+        );
 
         setRangeData({
           logs: mergedLogs,
           leaves: mergedLeaves,
           corrections: mergedCorrections,
+          overrides: mergedOverrides,
+          teamSchedulePatterns: mergedTeamPatterns,
+          loaded: true,
         });
       } catch (err) {
         console.error('[OvertimeTab] range data load failed:', err);
         if (!cancelled) {
-          setRangeData({ logs: monthlyData?.allLogs || [], leaves: monthlyData?.leaves || [], corrections: monthlyData?.corrections || [] });
+          setRangeData({
+            logs: monthlyData?.allLogs || [],
+            leaves: monthlyData?.leaves || [],
+            corrections: monthlyData?.corrections || [],
+            overrides: monthlyData?.overrides || [],
+            teamSchedulePatterns: monthlyData?.teamSchedulePatterns || [],
+            loaded: true,
+          });
         }
       } finally {
         if (!cancelled) setRangeLoading(false);
@@ -195,7 +254,7 @@ export default function OvertimeTab({
     return () => {
       cancelled = true;
     };
-  }, [monthlyData, periodMonths]);
+  }, [monthlyData, periodMonths, selectedMonth, filteredEmployees]);
 
   const handleSave = async (empNo, roundName, startDate, endDate, employeeDept) => {
     if (!empNo || !roundName || !startDate || !endDate) return;
@@ -227,25 +286,24 @@ export default function OvertimeTab({
   };
 
   const getOvertimeStats = (emp, startDate, endDate) => {
-    const empNo = emp.empNo;
+    const empNo = normalizeEmpNoKey(emp.empNo || emp.emp_no || '');
     const dept = String(emp.dept || '').trim();
 
     if (!startDate || !endDate || !monthlyData) {
       return {
         averageWeeklyMinutes: 0,
-        residualMinutes: 0,
+        totalAdjustments: 0,
       };
     }
 
-    const logs = rangeData.logs || monthlyData.allLogs || [];
-    const leaves = rangeData.leaves || monthlyData.leaves || [];
-    const corrections = rangeData.corrections || monthlyData.corrections || [];
-    const overrides = monthlyData.overrides || [];
-    const teamPatterns = monthlyData.teamSchedulePatterns || [];
+    const logs = rangeData.loaded ? rangeData.logs : (monthlyData.allLogs || []);
+    const corrections = rangeData.loaded ? rangeData.corrections : (monthlyData.corrections || []);
+    const overrides = rangeData.loaded ? rangeData.overrides : (monthlyData.overrides || []);
+    const teamPatterns = rangeData.loaded ? rangeData.teamSchedulePatterns : (monthlyData.teamSchedulePatterns || []);
 
     const correctionMap = new Map();
     corrections.forEach((c) => {
-      correctionMap.set(`${c.emp_no}_${c.work_date}`, c.corrected_out_time);
+      correctionMap.set(`${normalizeEmpNoKey(c.emp_no)}_${c.work_date}`, c.corrected_out_time);
     });
 
     const scheduleOverrideMap = buildScheduleOverrideMap(overrides);
@@ -253,22 +311,21 @@ export default function OvertimeTab({
 
     const dailyLogs = {};
     logs
-      .filter((log) => log.empNo === empNo && log.workDate >= startDate && log.workDate <= endDate)
+      .filter((log) => normalizeEmpNoKey(log.empNo || log.emp_no || '') === empNo && log.workDate >= startDate && log.workDate <= endDate)
       .forEach((log) => {
         if (!dailyLogs[log.workDate]) dailyLogs[log.workDate] = [];
         dailyLogs[log.workDate].push(log);
       });
 
-    const dayTotals = new Map();
+    let totalAdjustmentMinutes = 0;
+    let totalWorkMinutes = 0;
+    let scheduledDaysCount = 0;
+
     const start = getLocalDate(startDate);
     const end = getLocalDate(endDate);
 
     for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
       const dateStr = toDateOnly(day);
-      const dateCompact = dateStr.replace(/-/g, '');
-      const leave = leaves.find((row) => row.empNo === empNo && dateCompact >= row.startDate && dateCompact <= row.endDate);
-      const leaveWorkedMinutes = getLeaveWorkedMinutes(leave);
-
       const override = scheduleOverrideMap.get(`${empNo}_${dateStr}`);
       const teamPattern = teamPatternMap.get(`${String(dept).replace(/\s+/g, '')}_${dateStr}`) || null;
       
@@ -281,11 +338,17 @@ export default function OvertimeTab({
         teamPattern,
       });
 
+      if (!schedulePair) {
+        continue;
+      }
+
+      scheduledDaysCount++;
+
       const allowOvertime = isManagedAttendanceDept(dept)
         ? resolveAllowOvertimeForSchedule({
             resolvedSchedule: schedulePair?.start && schedulePair?.end ? schedulePair : null,
             override,
-            fallbackAllowOvertime: schedulePair?.start === '10:00' && schedulePair?.end === '19:00',
+            fallbackAllowOvertime: isManagedAttendanceDept(dept),
           })
         : false;
 
@@ -295,17 +358,10 @@ export default function OvertimeTab({
         return orderA - orderB || String(a.logTime || '').localeCompare(String(b.logTime || ''));
       });
 
-      const scheduleMinutes = schedulePair
-        ? Math.max(0, getScheduleDurationMinutes(schedulePair.start, schedulePair.end) - 60)
-        : 0;
-
-      let dayTotalMinutes = 0;
-      if (schedulePair) {
-        dayTotalMinutes = scheduleMinutes;
-
+      let overtimeMinutes = 0;
+      if (allowOvertime) {
         const firstLog = dayLogs[0];
         const correctedOut = correctionMap.get(`${empNo}_${dateStr}`);
-        const inTime = firstLog ? getTimePart(firstLog.logTime) : '';
         let outTime = null;
 
         if (correctedOut) {
@@ -317,54 +373,60 @@ export default function OvertimeTab({
           }
         }
 
-        if (inTime && outTime && allowOvertime) {
-          const overtimeMinutes = getAdjustmentMinutes({
+        if (outTime) {
+          const rawOvertime = getAdjustmentMinutes({
             scheduleEnd: schedulePair.end,
             actualOut: outTime,
           });
-          dayTotalMinutes += clampToHalfHourSteps(overtimeMinutes);
+          overtimeMinutes = clampToHalfHourSteps(rawOvertime);
         }
-
-        dayTotalMinutes = Math.min(24 * 60, dayTotalMinutes + leaveWorkedMinutes);
-      } else {
-         dayTotalMinutes = Math.min(24 * 60, dayTotalMinutes + leaveWorkedMinutes);
       }
 
-      dayTotals.set(dateStr, dayTotalMinutes);
+      const deductionMinutes = getAdjustmentDeductionMinutes(override?.note);
+      const adjustmentDeltaMinutes = overtimeMinutes - deductionMinutes;
+      totalAdjustmentMinutes += adjustmentDeltaMinutes;
+
+      const baseSchedulePair = resolveSchedulePairForDate({
+        dept,
+        dateStr,
+        baseScheduleStart: emp?.baseScheduleTime || emp?.scheduleTime || '08:00',
+        baseScheduleEnd: emp?.baseScheduleEndTime || emp?.scheduleEndTime || '',
+        override: null,
+        teamPattern,
+      });
+      const baseScheduleMinutes = Math.max(
+        0,
+        getScheduleDurationMinutes(
+          baseSchedulePair?.start || schedulePair.start,
+          baseSchedulePair?.end || schedulePair.end,
+        ) - 60,
+      );
+      totalWorkMinutes += (baseScheduleMinutes + adjustmentDeltaMinutes);
     }
 
-    const weeklyTotals = [];
-    for (let periodStart = new Date(start); periodStart <= end; periodStart.setDate(periodStart.getDate() + 7)) {
-      const periodEnd = new Date(periodStart);
-      periodEnd.setDate(periodEnd.getDate() + 6);
-
-      let weekMinutes = 0;
-      for (let day = new Date(periodStart); day <= periodEnd && day <= end; day.setDate(day.getDate() + 1)) {
-        const dateStr = toDateOnly(day);
-        weekMinutes += Number(dayTotals.get(dateStr) || 0);
-      }
-      weeklyTotals.push(weekMinutes);
-    }
-
-    const totalWorkMinutes = weeklyTotals.reduce((sum, minutes) => sum + minutes, 0);
-    const averageWeeklyMinutes = weeklyTotals.length > 0
-      ? Math.round(totalWorkMinutes / weeklyTotals.length)
+    const averageWeeklyMinutes = scheduledDaysCount > 0
+      ? Math.round((totalWorkMinutes / scheduledDaysCount) * 5)
       : 0;
-    const residualMinutes = averageWeeklyMinutes - WEEK_HOURS_MINUTES;
+
+    const totalAdjustments = Math.round((totalAdjustmentMinutes / 60) * 2) / 2;
 
     return {
       averageWeeklyMinutes,
-      residualMinutes,
+      totalAdjustments,
     };
   };
 
-  const formatResidual = (minutes) => {
-    if (!minutes) {
-      return { text: '0시간 00분', tone: 'var(--text-2)' };
+  const formatResidual = (adjustments) => {
+    if (adjustments === undefined || adjustments === null || isNaN(adjustments)) {
+      return { text: '0.0', tone: 'var(--text-2)' };
+    }
+    const val = Number(adjustments);
+    if (val === 0) {
+      return { text: '0.0', tone: 'var(--text-2)' };
     }
     return {
-      text: `${minutes > 0 ? '초과' : '부족'} ${formatDuration(minutes)}`,
-      tone: minutes > 0 ? 'var(--amber)' : 'var(--blue)',
+      text: `${val > 0 ? '+' : ''}${val.toFixed(1)}`,
+      tone: val > 0 ? 'var(--amber)' : 'var(--blue)',
     };
   };
 
@@ -427,17 +489,33 @@ export default function OvertimeTab({
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => {
-                  const empRound = roundsData[emp.empNo] || {
+                  const empKey = normalizeEmpNoKey(emp.empNo || emp.emp_no || '');
+                  const empRound = roundsData[empKey] || {
                     roundName: '1차',
                     startDate: '2026-04-01',
                     endDate: '2026-06-26',
                   };
                   const stats = getOvertimeStats(emp, empRound.startDate, empRound.endDate);
-                  const residual = formatResidual(stats.residualMinutes);
+                  const residual = formatResidual(stats.totalAdjustments);
                   const averageText = formatDuration(stats.averageWeeklyMinutes);
 
+                  const getEndingSoonLabel = () => {
+                    if (!empRound.endDate) return null;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const end = new Date(empRound.endDate);
+                    end.setHours(0, 0, 0, 0);
+                    const diffTime = end.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays >= 0 && diffDays <= 14) {
+                      return diffDays === 0 ? 'D-Day' : `D-${diffDays}`;
+                    }
+                    return null;
+                  };
+                  const overtimeDDay = getEndingSoonLabel();
+
                   return (
-                    <tr key={emp.empNo}>
+                    <tr key={emp.empNo} style={overtimeDDay ? { background: 'rgba(245, 158, 11, 0.03)' } : undefined}>
                       <td style={{ padding: '0 8px 0 0', verticalAlign: 'middle' }}>
                         <select
                           value={empRound.roundName}
@@ -445,7 +523,7 @@ export default function OvertimeTab({
                             const newRound = e.target.value;
                             setRoundsData((prev) => ({
                               ...prev,
-                              [emp.empNo]: { ...empRound, roundName: newRound },
+                              [empKey]: { ...empRound, roundName: newRound },
                             }));
                             handleSave(emp.empNo, newRound, empRound.startDate, empRound.endDate, emp.dept);
                           }}
@@ -473,10 +551,30 @@ export default function OvertimeTab({
                         </select>
                       </td>
 
-                      <td style={{ padding: '0 12px 0 0', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '0 12px 0 0', verticalAlign: 'middle', borderLeft: overtimeDDay ? '4px solid var(--amber)' : undefined, paddingLeft: overtimeDDay ? '8px' : '0px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start', padding: '12px 0' }}>
-                          <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-1)' }}>{emp.name}</span>
+                          <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {emp.name}
+                            {overtimeDDay && (
+                              <span style={{
+                                fontSize: '9px',
+                                fontWeight: 800,
+                                background: 'var(--amber)',
+                                color: '#fff',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                display: 'inline-block',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                boxShadow: '0 2px 4px rgba(245,158,11,0.2)'
+                              }}>
+                                마감 {overtimeDDay}
+                              </span>
+                            )}
+                          </span>
                           <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{emp.dept}</span>
+                          <span style={{ fontSize: '10px', color: overtimeDDay ? 'var(--amber)' : '#ef4444', fontWeight: overtimeDDay ? 700 : 600 }}>
+                            {empRound.startDate} ~ {empRound.endDate} (calc: {stats.totalAdjustments.toFixed(1)})
+                          </span>
                         </div>
                       </td>
 
@@ -506,11 +604,11 @@ export default function OvertimeTab({
                               value={empRound.startDate}
                               onChange={(e) => {
                                 const newStart = e.target.value;
-                                setRoundsData((prev) => ({
-                                  ...prev,
-                                  [emp.empNo]: { ...empRound, startDate: newStart },
-                                }));
-                                handleSave(emp.empNo, empRound.roundName, newStart, empRound.endDate, emp.dept);
+                                  setRoundsData((prev) => ({
+                                    ...prev,
+                                    [empKey]: { ...empRound, startDate: newStart },
+                                  }));
+                                  handleSave(emp.empNo, empRound.roundName, newStart, empRound.endDate, emp.dept);
                               }}
                               style={{
                                 background: 'transparent',
@@ -530,18 +628,19 @@ export default function OvertimeTab({
                             padding: '10px 14px',
                             gap: '10px',
                             borderRadius: '12px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-overlay-sm)',
+                            border: overtimeDDay ? '1px solid var(--amber)' : '1px solid var(--border)',
+                            background: overtimeDDay ? 'rgba(245, 158, 11, 0.05)' : 'var(--bg-overlay-sm)',
                           }}>
                             <span style={{
                               fontSize: '11.5px',
                               fontWeight: 700,
-                              color: 'var(--text-2)',
-                              background: 'var(--bg-overlay-md)',
+                              color: overtimeDDay ? '#fff' : 'var(--text-2)',
+                              background: overtimeDDay ? 'var(--amber)' : 'var(--bg-overlay-md)',
                               padding: '3px 9px',
                               borderRadius: '999px',
                               minWidth: '52px',
                               textAlign: 'center',
+                              boxShadow: overtimeDDay ? '0 2px 4px rgba(245,158,11,0.2)' : undefined,
                             }}>종료</span>
                             <input
                               type="date"
@@ -550,15 +649,16 @@ export default function OvertimeTab({
                                 const newEnd = e.target.value;
                                 setRoundsData((prev) => ({
                                   ...prev,
-                                  [emp.empNo]: { ...empRound, endDate: newEnd },
+                                  [empKey]: { ...empRound, endDate: newEnd },
                                 }));
                                 handleSave(emp.empNo, empRound.roundName, empRound.startDate, newEnd, emp.dept);
                               }}
                               style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: 'var(--text-1)',
+                                color: overtimeDDay ? 'var(--amber)' : 'var(--text-1)',
                                 fontSize: '13px',
+                                fontWeight: overtimeDDay ? 700 : 'normal',
                                 outline: 'none',
                                 cursor: 'pointer',
                                 width: '140px',

@@ -48,8 +48,8 @@ export async function GET(request) {
     if (!session) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
-    if (!session.isAdmin) {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    if (!session.isAdmin && !session.isLeader) {
+      return NextResponse.json({ error: '관리자 또는 팀장 권한이 필요합니다.' }, { status: 403 });
     }
 
     const baseUrl = getPublicBaseUrl(request);
@@ -90,8 +90,8 @@ export async function POST(request) {
     if (!session) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
-    if (!session.isAdmin) {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    if (!session.isAdmin && !session.isLeader) {
+      return NextResponse.json({ error: '관리자 또는 팀장 권한이 필요합니다.' }, { status: 403 });
     }
 
     const body = await request.json().catch(() => ({}));

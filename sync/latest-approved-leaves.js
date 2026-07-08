@@ -263,7 +263,7 @@ async function main() {
         y.D_START_DATE AS start_date,
         y.D_END_DATE AS end_date,
         y.I_CODE AS leave_code,
-        COALESCE(c.N_NAME, tc.NAME, CAST(y.I_CODE AS CHAR)) AS leave_name,
+        CAST(y.I_CODE AS CHAR) AS leave_name,
         CAST(y.O_ANNLEV_CNT AS CHAR) AS leave_days,
         y.I_STATUS AS status,
         ${buildOptionalSelect(approvedAtColumn, 'approved_at')},
@@ -279,11 +279,6 @@ async function main() {
       LEFT JOIN hr_department d
         ON d.I_COMPANY = e.I_COMPANY
        AND d.I_DEPT = e.I_DEPT
-      LEFT JOIN hr_diligence_code c
-        ON c.I_CODE = y.I_CODE
-      LEFT JOIN tong_code tc
-        ON tc.GUBUN_CODE = 'H0281'
-       AND tc.CODE = y.I_CODE
       WHERE y.I_COMPANY = ?
         AND y.I_STATUS = '40'
       ORDER BY y.${quoteIdentifier(orderColumn)} DESC, y.D_START_DATE DESC, y.D_END_DATE DESC, y.I_EMPLOY_NO ASC

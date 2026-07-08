@@ -5,6 +5,7 @@ import {
   buildICS,
   normalizeDeptName,
 } from './ical';
+import { getLeaveDisplayLabel } from './leaveRules';
 
 const normalizeSet = (values = []) => new Set(values.map((value) => normalizeDeptName(value)));
 
@@ -82,7 +83,7 @@ export async function buildLeaveIcsForDepartments({
       const emp = employeeMap.get(String(leave.emp_no || '').trim());
       const empName = leave.emp_name || emp?.name || String(leave.emp_no || '');
       const dept = emp?.dept || '';
-      const leaveName = String(leave.leave_name || '').trim() || '연차';
+      const leaveName = getLeaveDisplayLabel(leave) || '연차';
       const startDate = String(leave.start_date).substring(0, 10);
       const endDate = String(leave.end_date).substring(0, 10);
 

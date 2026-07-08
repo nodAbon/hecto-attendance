@@ -20,6 +20,7 @@ function EmployeeAdminTab({
   const [employeeAdminSaving, setEmployeeAdminSaving] = useState({});
   const [employeeAdminResetting, setEmployeeAdminResetting] = useState({});
   const [employeeAdminBackfilling, setEmployeeAdminBackfilling] = useState({});
+  const [employeeAdminCreating, setEmployeeAdminCreating] = useState({});
 
   const regFieldStyle = {
     background: 'var(--bg-input)',
@@ -63,6 +64,7 @@ function EmployeeAdminTab({
             rank: emp.rank || '',
             position: emp.position || '',
             isAdmin: !!emp.isAdmin,
+            status: emp.status || 'active',
             resetPassword: ''
           };
         });
@@ -109,7 +111,8 @@ function EmployeeAdminTab({
           dept: draft.dept?.trim() || '',
           rank: draft.rank || '',
           position: draft.position || '',
-          isAdmin: !!draft.isAdmin
+          isAdmin: !!draft.isAdmin,
+          status: draft.status || 'active'
         })
       });
       const json = await res.json();
@@ -183,6 +186,54 @@ function EmployeeAdminTab({
     }
   };
 
+  const handleCreateAccount = async (empNo) => {
+    const emp = employeeAdminData.find((e) => e.empNo === empNo);
+    if (!emp) return;
+    const draft = employeeAdminDrafts[empNo] || {};
+    const tempPassword = draft.resetPassword?.trim() || '';
+
+    if (!tempPassword) {
+      alert('임시 비밀번호를 입력해주세요.');
+      return;
+    }
+    if (tempPassword.length < 8) {
+      alert('임시 비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+
+    setEmployeeAdminCreating((prev) => ({ ...prev, [empNo]: true }));
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empNo,
+          name: draft.name?.trim() || emp.name || '',
+          tempPassword,
+          isAdmin: !!draft.isAdmin,
+          userId: emp.loginId || empNo,
+          rank: draft.rank || '',
+          position: draft.position || '',
+          team: draft.dept?.trim() || emp.dept || ''
+        })
+      });
+      const json = await res.json();
+      if (!json.success) {
+        alert(json.error || '계정 생성에 실패했습니다.');
+        return;
+      }
+      updateEmployeeAdminDraft(empNo, { resetPassword: '' });
+      await fetchEmployeeAdminData();
+      alert(json.message || '계정이 생성되었습니다.');
+      if (refreshData) await refreshData({ empNo });
+    } catch (e) {
+      console.error(e);
+      alert('계정 생성 중 오류가 발생했습니다.');
+    } finally {
+      setEmployeeAdminCreating((prev) => ({ ...prev, [empNo]: false }));
+    }
+  };
+
   const q = employeeAdminSearch.trim().toLowerCase();
   const filtered = employeeAdminData.filter((emp) =>
     String(emp.name || '') + ' ' + String(emp.empNo || '') + ' ' + String(emp.dept || '') + ' ' + String(emp.rank || '') + ' ' + String(emp.position || '')
@@ -230,21 +281,22 @@ function EmployeeAdminTab({
                 <th style={{ minWidth: '180px' }}>팀</th>
                 <th style={{ minWidth: '150px' }}>직급</th>
                 <th style={{ minWidth: '150px' }}>직책</th>
+                <th style={{ minWidth: '130px' }}>재직여부</th>
                 <th style={{ minWidth: '110px' }}>관리자</th>
                 <th style={{ minWidth: '220px' }}>초기 비밀번호</th>
                 <th className="text-right" style={{ minWidth: '220px' }}>작업</th>
               </tr>
             </thead>
             <tbody>
-              {employeeAdminLoading ? (
+               {employeeAdminLoading ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '28px', color: 'var(--text-2)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '28px', color: 'var(--text-2)' }}>
                     직원 정보를 불러오는 중...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '28px', color: 'var(--text-2)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '28px', color: 'var(--text-2)' }}>
                     검색 결과가 없습니다.
                   </td>
                 </tr>
@@ -291,7 +343,6 @@ function EmployeeAdminTab({
                           onChange={(e) => updateEmployeeAdminDraft(emp.empNo, { rank: e.target.value })}
                           className="form-input"
                           style={{ ...regSelectStyle, width: '100%', padding: '8px 10px' }}
-                          disabled={!emp.hasAccount}
                         >
                           <option value="">선택</option>
                           {rankOptions.map((rank) => (
@@ -306,12 +357,24 @@ function EmployeeAdminTab({
                           onChange={(e) => updateEmployeeAdminDraft(emp.empNo, { position: e.target.value })}
                           className="form-input"
                           style={{ ...regSelectStyle, width: '100%', padding: '8px 10px' }}
-                          disabled={!emp.hasAccount}
                         >
                           <option value="">선택</option>
                           {positionOptions.map((position) => (
                             <option key={position} value={position}>{position}</option>
                           ))}
+                        </select>
+                      </td>
+
+                       <td>
+                        <select
+                          value={draft.status ?? emp.status ?? 'active'}
+                          onChange={(e) => updateEmployeeAdminDraft(emp.empNo, { status: e.target.value })}
+                          className="form-input"
+                          style={{ ...regSelectStyle, width: '100%', padding: '8px 10px' }}
+                        >
+                          <option value="active">재직</option>
+                          <option value="leave">휴직</option>
+                          <option value="resigned">퇴사</option>
                         </select>
                       </td>
 
@@ -322,7 +385,6 @@ function EmployeeAdminTab({
                             checked={!!(draft.isAdmin ?? emp.isAdmin)}
                             onChange={(e) => updateEmployeeAdminDraft(emp.empNo, { isAdmin: e.target.checked })}
                             style={{ width: '16px', height: '16px' }}
-                            disabled={!emp.hasAccount}
                           />
                           Admin
                         </label>
@@ -333,49 +395,69 @@ function EmployeeAdminTab({
                           type="password"
                           value={draft.resetPassword || ''}
                           onChange={(e) => updateEmployeeAdminDraft(emp.empNo, { resetPassword: e.target.value })}
-                          placeholder="새 비밀번호"
+                          placeholder={emp.hasAccount ? '새 비밀번호' : '임시 비밀번호'}
                           className="form-input"
                           style={{ ...regFieldStyle, width: '100%', padding: '8px 10px' }}
-                          disabled={!emp.hasAccount}
                         />
                       </td>
 
-                      <td className="text-right" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleEmployeeInfoSave(emp.empNo)}
-                          disabled={!!saving}
-                          style={{
-                            padding: '6px 12px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: 'var(--blue)',
-                            color: '#fff',
-                            fontWeight: 700,
-                            fontSize: '13px',
-                            cursor: saving ? 'default' : 'pointer'
-                          }}
-                        >
-                          {saving ? '저장 중' : '정보 저장'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleEmployeePasswordReset(emp.empNo)}
-                          disabled={!!resetting || !emp.hasAccount}
-                          style={{
-                            padding: '6px 12px',
-                            border: '1px solid var(--border)',
-                            borderRadius: '6px',
-                            background: 'rgba(245, 158, 11, 0.12)',
-                            color: 'var(--amber)',
-                            fontWeight: 700,
-                            fontSize: '13px',
-                            cursor: resetting || !emp.hasAccount ? 'default' : 'pointer',
-                            opacity: emp.hasAccount ? 1 : 0.45
-                          }}
-                        >
-                          {resetting ? '초기화 중' : '암호 초기화'}
-                        </button>
+                      <td className="text-right" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {emp.hasAccount ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleEmployeeInfoSave(emp.empNo)}
+                              disabled={!!saving}
+                              style={{
+                                padding: '6px 12px',
+                                border: 'none',
+                                borderRadius: '6px',
+                                background: 'var(--blue)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                cursor: saving ? 'default' : 'pointer'
+                              }}
+                            >
+                              {saving ? '저장 중' : '정보 저장'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEmployeePasswordReset(emp.empNo)}
+                              disabled={!!resetting}
+                              style={{
+                                padding: '6px 12px',
+                                border: '1px solid var(--border)',
+                                borderRadius: '6px',
+                                background: 'rgba(245, 158, 11, 0.12)',
+                                color: 'var(--amber)',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                cursor: resetting ? 'default' : 'pointer',
+                              }}
+                            >
+                              {resetting ? '초기화 중' : '암호 초기화'}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleCreateAccount(emp.empNo)}
+                            disabled={!!employeeAdminCreating[emp.empNo]}
+                            style={{
+                              padding: '6px 12px',
+                              border: 'none',
+                              borderRadius: '6px',
+                              background: 'var(--green)',
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: '13px',
+                              cursor: employeeAdminCreating[emp.empNo] ? 'default' : 'pointer'
+                            }}
+                          >
+                            {employeeAdminCreating[emp.empNo] ? '생성 중' : '계정 생성'}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleEmployeeLeaveBackfill(emp.empNo)}

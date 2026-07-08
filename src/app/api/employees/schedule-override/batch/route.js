@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth';
 import { saveScheduleOverridesBatch } from '@/lib/supabaseDb';
 import { isAdminRole, isLeaderPosition } from '@/lib/roleUtils';
+import { clearAttendanceCache } from '@/lib/attendanceCache';
 
 const canManageOverrides = (session) => isAdminRole(session) || isLeaderPosition(session?.position);
 
@@ -18,29 +19,38 @@ export async function POST(request) {
 
     const body = await request.json();
     const empNo = String(body?.empNo || '').trim();
-    const workDates = Array.isArray(body?.workDates) ? body.workDates.map((date) => String(date || '').trim()).filter(Boolean) : [];
+    const workDates = Array.isArray(body?.workDates)
+      ? body.workDates.map((date) => String(date || '').trim()).filter(Boolean)
+      : [];
     const scheduleStart = String(body?.scheduleStart || '').trim();
     const scheduleEnd = String(body?.scheduleEnd || '').trim();
     const allowOvertime = body?.allowOvertime !== false;
     const note = String(body?.note || '').trim();
+    const removed = Boolean(body?.removed);
 
-    if (!empNo || workDates.length === 0 || !scheduleStart) {
-      return NextResponse.json({ error: '직원, 날짜, 출근 기준 시각은 필수입니다.' }, { status: 400 });
+    if (!empNo || workDates.length === 0 || (!scheduleStart && !removed)) {
+      return NextResponse.json({ error: '직원, 날짜, 시작시간이 필요합니다.' }, { status: 400 });
     }
 
     await saveScheduleOverridesBatch({
       empNo,
       workDates,
-      scheduleStart,
+      scheduleStart: scheduleStart || '00:00',
       scheduleEnd: scheduleEnd || null,
       allowOvertime,
       note,
       userId: session.userId,
+      removed,
     });
 
-    return NextResponse.json({ success: true, message: '일일 스케줄이 일괄 등록되었습니다.' });
+    clearAttendanceCache();
+
+    return NextResponse.json({
+      success: true,
+      message: removed ? '근무일정 없음으로 처리되었습니다.' : '근무일정이 저장되었습니다.',
+    });
   } catch (err) {
     console.error('[Schedule Override Batch API]', err);
-    return NextResponse.json({ error: err.message || '일괄 등록 중 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json({ error: err.message || '근무일정 저장 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }

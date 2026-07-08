@@ -15,7 +15,7 @@ import {
   resolveAllowOvertimeForSchedule,
   resolveSchedulePairForDate,
 } from '../../lib/scheduleResolver';
-import { getAdjustmentMinutes, getScheduleDurationMinutes } from '../../lib/scheduleUtils';
+import { getAdjustmentMinutes, getAdjustmentDeductionMinutes, getScheduleDurationMinutes } from '../../lib/scheduleUtils';
 
 const getAttendanceTimePart = (value) => {
   const text = String(value || '').trim();
@@ -122,8 +122,12 @@ const formatDuration = (minutes = 0) => {
 const getLocalDate = (dateStr) => new Date(`${dateStr}T00:00:00+09:00`);
 
 const toDateOnly = (date) => {
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60 * 1000).toISOString().split('T')[0];
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
 };
 
 const getLeaveWorkedMinutes = (leave) => {
@@ -139,6 +143,8 @@ const getLeaveWorkedMinutes = (leave) => {
   ) return 4 * 60;
   return 2 * 60;
 };
+
+const WEEK_HOURS_MINUTES = 40 * 60;
 
 const overtimeMonthCache = new Map();
 const overtimeMonthInFlight = new Map();
@@ -553,7 +559,8 @@ function TrackerTab({
       schedule: trackerGridData.daySchedules?.[selectedModalDate] || null,
       override: trackerGridData.overrideMap?.[selectedModalDate] || null,
     };
-  }, [selectedModalDate, trackerGridData]);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [selectedModalDate, trackerGridData?.dailyStats, trackerGridData?.daySchedules, trackerGridData?.overrideMap]);
 
   const selectedModalLogs = useMemo(() => {
     if (!trackerGridData || !selectedModalDate || !activeEmpNo) return [];
@@ -586,7 +593,7 @@ function TrackerTab({
       currentStart === String(scheduleModalStart || '').trim()
       && currentEnd === String(scheduleModalEnd || '').trim()
     );
-  }, [scheduleModalEnd, scheduleModalStart, selectedModalSummary?.schedule?.end, selectedModalSummary?.schedule?.scheduleStart, selectedModalSummary?.schedule?.scheduleEnd, selectedModalSummary?.schedule?.start]);
+  }, [scheduleModalEnd, scheduleModalStart, selectedModalSummary]);
 
   const hasTodayAttendance = Boolean(
     todaySummary?.stat?.in
@@ -602,32 +609,44 @@ function TrackerTab({
     return '';
   }, [todaySummary, correctionTarget]);
 
-  useEffect(() => {
+  const [prevTodayAttendanceKey, setPrevTodayAttendanceKey] = useState({ hasTodayAttendance, reflectedRequestTime, activeEmpNo });
+  if (
+    hasTodayAttendance !== prevTodayAttendanceKey.hasTodayAttendance
+    || reflectedRequestTime !== prevTodayAttendanceKey.reflectedRequestTime
+    || activeEmpNo !== prevTodayAttendanceKey.activeEmpNo
+  ) {
+    setPrevTodayAttendanceKey({ hasTodayAttendance, reflectedRequestTime, activeEmpNo });
     if (!hasTodayAttendance) {
       setRequestTime('');
       setCorrectionTarget('퇴근');
-      return;
+    } else {
+      setRequestTime(reflectedRequestTime || '');
     }
-    setRequestTime(reflectedRequestTime || '');
-  }, [hasTodayAttendance, reflectedRequestTime, activeEmpNo]);
+  }
 
-  useEffect(() => {
-    if (!selectedModalDate || !selectedModalSummary) return;
-    const stat = selectedModalSummary.stat || null;
-    const schedule = selectedModalSummary.schedule || null;
-    const hasOut = Boolean(stat?.correctedOutTime || stat?.out);
-    const defaultType = hasOut ? '퇴근' : '출근';
-    setCorrectionModalType(defaultType);
-    setCorrectionModalTime(defaultType === '출근'
-      ? String(stat?.in || '').slice(0, 5)
-      : String(stat?.correctedOutTime || stat?.out || '').slice(0, 5));
-    setCorrectionModalNote('');
-    setScheduleModalStart(String(schedule?.start || trackerGridData?.targetEmp?.baseScheduleTime || trackerGridData?.targetEmp?.scheduleTime || '08:00').slice(0, 5));
-    setScheduleModalEnd(String(schedule?.end || trackerGridData?.targetEmp?.baseScheduleEndTime || trackerGridData?.targetEmp?.scheduleEndTime || '17:00').slice(0, 5));
-    setScheduleModalAllowOvertime(selectedModalSummary.override?.allow_overtime !== false);
-    setScheduleModalNote('');
-    setModalMessage(null);
-  }, [selectedModalDate, selectedModalSummary, trackerGridData?.targetEmp?.baseScheduleTime, trackerGridData?.targetEmp?.baseScheduleEndTime, trackerGridData?.targetEmp?.scheduleTime, trackerGridData?.targetEmp?.scheduleEndTime]);
+  const [prevModalOpenKey, setPrevModalOpenKey] = useState({ selectedModalDate, selectedModalSummary });
+  if (
+    selectedModalDate !== prevModalOpenKey.selectedModalDate
+    || selectedModalSummary !== prevModalOpenKey.selectedModalSummary
+  ) {
+    setPrevModalOpenKey({ selectedModalDate, selectedModalSummary });
+    if (selectedModalDate && selectedModalSummary) {
+      const stat = selectedModalSummary.stat || null;
+      const schedule = selectedModalSummary.schedule || null;
+      const hasOut = Boolean(stat?.correctedOutTime || stat?.out);
+      const defaultType = hasOut ? '퇴근' : '출근';
+      setCorrectionModalType(defaultType);
+      setCorrectionModalTime(defaultType === '출근'
+        ? String(stat?.in || '').slice(0, 5)
+        : String(stat?.correctedOutTime || stat?.out || '').slice(0, 5));
+      setCorrectionModalNote('');
+      setScheduleModalStart(String(schedule?.start || trackerGridData?.targetEmp?.baseScheduleTime || trackerGridData?.targetEmp?.scheduleTime || '08:00').slice(0, 5));
+      setScheduleModalEnd(String(schedule?.end || trackerGridData?.targetEmp?.baseScheduleEndTime || trackerGridData?.targetEmp?.scheduleEndTime || '17:00').slice(0, 5));
+      setScheduleModalAllowOvertime(selectedModalSummary.override?.allow_overtime !== false);
+      setScheduleModalNote('');
+      setModalMessage(null);
+    }
+  }
 
   const managedDept = useMemo(
     () => isManagedAttendanceDept(myDept || trackerGridData?.targetEmp?.dept || ''),
@@ -657,12 +676,26 @@ function TrackerTab({
       startDate: String(overtimeRound.start_date || '').trim(),
       endDate: String(overtimeRound.end_date || '').trim(),
     };
-  }, [managedDept, monthlyData?.overtimeRounds, trackerGridData?.targetEmp]);
+  }, [managedDept, monthlyData?.overtimeRounds, trackerGridData]);
 
-    const overtimePeriodMonths = useMemo(() => {
-      if (!overtimeRoundSummary?.startDate || !overtimeRoundSummary?.endDate) return [];
-      return buildPeriodMonthList(overtimeRoundSummary.startDate, overtimeRoundSummary.endDate);
-  }, [overtimeRoundSummary?.endDate, overtimeRoundSummary?.startDate]);
+  const overtimeEndingSoonLabel = useMemo(() => {
+    if (!managedDept || !overtimeRoundSummary?.endDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(overtimeRoundSummary.endDate);
+    end.setHours(0, 0, 0, 0);
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays >= 0 && diffDays <= 14) {
+      return diffDays === 0 ? 'D-Day' : `D-${diffDays}`;
+    }
+    return null;
+  }, [managedDept, overtimeRoundSummary]);
+
+  const overtimePeriodMonths = useMemo(() => {
+    if (!overtimeRoundSummary?.startDate || !overtimeRoundSummary?.endDate) return [];
+    return buildPeriodMonthList(overtimeRoundSummary.startDate, overtimeRoundSummary.endDate);
+  }, [overtimeRoundSummary]);
 
   useEffect(() => {
     let cancelled = false;
@@ -739,18 +772,17 @@ function TrackerTab({
         clearTimeout(schedule);
       }
     };
-  }, [managedDept, monthlyData, overtimePeriodMonths]);
+  }, [managedDept, monthlyData, overtimePeriodMonths, selectedMonth, activeEmpNo]);
 
   const overtimeStats = useMemo(() => {
     if (!managedDept || !trackerGridData?.targetEmp || !overtimeRoundSummary?.startDate || !overtimeRoundSummary?.endDate) {
-      return { averageWeeklyMinutes: 0, residualMinutes: 0 };
+      return { averageWeeklyMinutes: 0, totalAdjustments: 0 };
     }
 
     const emp = trackerGridData.targetEmp;
     const empNo = normalizeEmpNoKey(emp.empNo || emp.emp_no || '');
     const dept = String(emp.dept || '').trim();
     const logs = overtimeRangeData.logs || monthlyData?.allLogs || [];
-    const leaves = overtimeRangeData.leaves || monthlyData?.leaves || [];
     const corrections = overtimeRangeData.corrections || monthlyData?.corrections || [];
     const correctionMap = new Map();
 
@@ -766,17 +798,18 @@ function TrackerTab({
         dailyLogs[log.workDate].push(log);
       });
 
-    const dayTotals = new Map();
+    let totalAdjustmentMinutes = 0;
+    let totalWorkMinutes = 0;
+    let scheduledDaysCount = 0;
+
     const start = getLocalDate(overtimeRoundSummary.startDate);
     const end = getLocalDate(overtimeRoundSummary.endDate);
 
     for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
       const dateStr = toDateOnly(day);
-      const dateCompact = dateStr.replace(/-/g, '');
-      const leave = leaves.find((row) => normalizeEmpNoKey(row.empNo || row.emp_no) === empNo && dateCompact >= row.startDate && dateCompact <= row.endDate);
-      const leaveWorkedMinutes = getLeaveWorkedMinutes(leave);
       const override = scheduleOverrideMap.get(`${empNo}_${dateStr}`);
-      const teamPattern = teamPatternMap.get(`${String(dept || '').trim().replace(/\s+/g, '')}_${dateStr}`) || null;
+      const teamPattern = teamPatternMap.get(`${String(dept).replace(/\s+/g, '')}_${dateStr}`) || null;
+      
       const schedulePair = resolveSchedulePairForDate({
         dept,
         dateStr,
@@ -785,12 +818,19 @@ function TrackerTab({
         override,
         teamPattern,
       });
+
+      if (!schedulePair) {
+        continue;
+      }
+
+      scheduledDaysCount++;
+
       const allowOvertime = isManagedAttendanceDept(dept)
         ? resolveAllowOvertimeForSchedule({
-          resolvedSchedule: schedulePair?.start && schedulePair?.end ? schedulePair : null,
-          override,
-          fallbackAllowOvertime: schedulePair?.start === '10:00' && schedulePair?.end === '19:00',
-        })
+            resolvedSchedule: schedulePair?.start && schedulePair?.end ? schedulePair : null,
+            override,
+            fallbackAllowOvertime: isManagedAttendanceDept(dept),
+          })
         : false;
 
       const dayLogs = (dailyLogs[dateStr] || []).slice().sort((a, b) => {
@@ -799,17 +839,10 @@ function TrackerTab({
         return orderA - orderB || String(a.logTime || '').localeCompare(String(b.logTime || ''));
       });
 
-      const scheduleMinutes = schedulePair
-        ? Math.max(0, getScheduleDurationMinutes(schedulePair.start, schedulePair.end) - 60)
-        : 0;
-
-      let dayTotalMinutes = 0;
-      if (schedulePair) {
-        dayTotalMinutes = scheduleMinutes;
-
+      let overtimeMinutes = 0;
+      if (allowOvertime) {
         const firstLog = dayLogs[0];
         const correctedOut = correctionMap.get(`${empNo}_${dateStr}`);
-        const inTime = firstLog ? getAttendanceTimePart(firstLog.logTime) : '';
         let outTime = null;
 
         if (correctedOut) {
@@ -821,47 +854,50 @@ function TrackerTab({
           }
         }
 
-        if (inTime && outTime && allowOvertime) {
-          const overtimeMinutes = getAdjustmentMinutes({
+        if (outTime) {
+          const rawOvertime = getAdjustmentMinutes({
             scheduleEnd: schedulePair.end,
             actualOut: outTime,
           });
-          dayTotalMinutes += clampToHalfHourSteps(overtimeMinutes);
+          overtimeMinutes = clampToHalfHourSteps(rawOvertime);
         }
-
-        dayTotalMinutes = Math.min(24 * 60, dayTotalMinutes + leaveWorkedMinutes);
       }
 
-      dayTotals.set(dateStr, dayTotalMinutes);
+      const deductionMinutes = getAdjustmentDeductionMinutes(override?.note);
+      const adjustmentDeltaMinutes = overtimeMinutes - deductionMinutes;
+      totalAdjustmentMinutes += adjustmentDeltaMinutes;
+
+      const baseSchedulePair = resolveSchedulePairForDate({
+        dept,
+        dateStr,
+        baseScheduleStart: emp?.baseScheduleTime || emp?.scheduleTime || '08:00',
+        baseScheduleEnd: emp?.baseScheduleEndTime || emp?.scheduleEndTime || '',
+        override: null,
+        teamPattern,
+      });
+      const baseScheduleMinutes = Math.max(
+        0,
+        getScheduleDurationMinutes(
+          baseSchedulePair?.start || schedulePair.start,
+          baseSchedulePair?.end || schedulePair.end,
+        ) - 60,
+      );
+      totalWorkMinutes += (baseScheduleMinutes + adjustmentDeltaMinutes);
     }
 
-    const weeklyTotalsMap = new Map();
-    for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
-      const dateStr = toDateOnly(day);
-      const weekKey = getYearWeekStartKey(dateStr);
-      weeklyTotalsMap.set(weekKey, Number(weeklyTotalsMap.get(weekKey) || 0) + Number(dayTotals.get(dateStr) || 0));
-    }
-
-    const weeklyTotals = Array.from(weeklyTotalsMap.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([, minutes]) => Number(minutes || 0));
-    const totalWorkMinutes = weeklyTotals.reduce((sum, minutes) => sum + minutes, 0);
-    const averageWeeklyMinutes = weeklyTotals.length > 0
-      ? totalWorkMinutes / weeklyTotals.length
+    const averageWeeklyMinutes = scheduledDaysCount > 0
+      ? Math.round((totalWorkMinutes / scheduledDaysCount) * 5)
       : 0;
-    const residualBaseMinutes = totalWorkMinutes - (40 * 60 * weeklyTotals.length);
-    const residualMinutes = residualBaseMinutes === 0
-      ? 0
-      : Math.sign(residualBaseMinutes) * clampToHalfHourSteps(Math.abs(residualBaseMinutes));
 
-    return { averageWeeklyMinutes, residualMinutes };
-  }, [managedDept, monthlyData?.allLogs, monthlyData?.corrections, monthlyData?.leaves, overtimeRangeData, overtimeRoundSummary?.endDate, overtimeRoundSummary?.startDate, scheduleOverrideMap, teamPatternMap, trackerGridData?.targetEmp]);
+    const totalAdjustments = Math.round((totalAdjustmentMinutes / 60) * 2) / 2;
+
+    return { averageWeeklyMinutes, totalAdjustments };
+  }, [managedDept, monthlyData?.allLogs, monthlyData?.corrections, overtimeRangeData, overtimeRoundSummary, scheduleOverrideMap, teamPatternMap, trackerGridData]);
 
   const overtimeResidualLabel = useMemo(() => {
-    const residualMinutes = Number(overtimeStats.residualMinutes || 0);
-    if (!residualMinutes) return '0시간 00분';
-    return `${residualMinutes > 0 ? '초과' : '부족'} ${formatDuration(residualMinutes)}`;
-  }, [overtimeStats.residualMinutes]);
+    const totalAdjustments = Number(overtimeStats.totalAdjustments || 0);
+    return `${totalAdjustments > 0 ? '+' : ''}${totalAdjustments.toFixed(1)}`;
+  }, [overtimeStats.totalAdjustments]);
 
   return (
     <div className="tracker-surface">
@@ -1041,11 +1077,33 @@ function TrackerTab({
           </div>
         </div>
 
-        <div className="card tracker-panel tracker-personal-card tracker-personal-card--schedule">
+        <div 
+          className="card tracker-panel tracker-personal-card tracker-personal-card--schedule"
+          style={overtimeEndingSoonLabel ? {
+            borderColor: 'var(--amber)',
+            boxShadow: '0 0 16px rgba(245, 158, 11, 0.16)',
+            background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.06), rgba(245, 158, 11, 0.01))'
+          } : undefined}
+        >
           <div className="tracker-personal-card__head">
             <div>
-              <div className="tracker-personal-card__eyebrow">
-                {managedDept ? '초과근무 관리' : '내 근무일정'}
+              <div className="tracker-personal-card__eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>{managedDept ? '초과근무 관리' : '내 근무일정'}</span>
+                {overtimeEndingSoonLabel && (
+                  <span style={{
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    background: 'var(--amber)',
+                    color: '#fff',
+                    padding: '1.5px 5px',
+                    borderRadius: '4px',
+                    display: 'inline-block',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    boxShadow: '0 2px 4px rgba(245,158,11,0.2)'
+                  }}>
+                    마감 {overtimeEndingSoonLabel}
+                  </span>
+                )}
               </div>
               <h3 className="tracker-personal-card__title">
                 {managedDept
@@ -1076,12 +1134,12 @@ function TrackerTab({
               <span className="tracker-schedule-card__label">
                 {managedDept ? '초과근무 종료일' : '퇴근 기준'}
               </span>
-              <strong className="tracker-schedule-card__value">
+              <strong className="tracker-schedule-card__value" style={overtimeEndingSoonLabel ? { color: 'var(--amber)', fontWeight: 800 } : undefined}>
                 {managedDept ? (overtimeRoundSummary?.endDate || '-') : (todaySummary?.schedule?.end || '-')}
               </strong>
             </div>
             <div className="tracker-schedule-card__row">
-              <span className="tracker-schedule-card__label">잔여조정시간</span>
+              <span className="tracker-schedule-card__label">잔여 조정</span>
               <strong className="tracker-schedule-card__value tracker-schedule-card__value--soft">
                 {managedDept ? overtimeResidualLabel : '-'}
               </strong>

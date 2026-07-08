@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 import ScheduleCalendarPanel from '../ScheduleCalendarPanel';
 import MonthSearchPicker from '../MonthSearchPicker';
@@ -106,6 +106,18 @@ function MonthlyTab({
     };
     fetchModalData();
     return () => { cancelled = true; };
+  }, [modalEmployeeEmpNo, modalMonth, selectedMonth]);
+
+  const refreshModalData = useCallback(async () => {
+    if (!modalEmployeeEmpNo || !modalMonth) return;
+    if (modalMonth === selectedMonth) return;
+    try {
+      const res = await fetch(`/api/attendance?month=${modalMonth}&empNo=${modalEmployeeEmpNo}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.success) setModalData(json);
+    } catch (err) {
+      console.error('[MonthlyTab] refreshModalData error:', err);
+    }
   }, [modalEmployeeEmpNo, modalMonth, selectedMonth]);
 
   const scrollToTodayColumn = () => {
@@ -390,8 +402,7 @@ function MonthlyTab({
           scheduleEndTime: nextEnd,
         },
       }));
-      alert('월 기본 근무일정이 저장되었습니다.');
-      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo, month: modalMonth || selectedMonth });
     } catch (err) {
       alert(err.message || '월 기본 근무일정 저장 중 오류가 발생했습니다.');
     } finally {
@@ -504,7 +515,7 @@ function MonthlyTab({
     setModalOverrideNote(String(override?.note || '').trim());
   };
 
-  const handleMonthlySubmitOverride = async (e) => {
+  const handleMonthlySubmitOverride = async (e, composedNote) => {
     e.preventDefault();
     const targetDates = modalSelectedDates.length > 0 ? modalSelectedDates : (modalSelectedDate ? [modalSelectedDate] : []);
     if (!selectedModalEmployee || targetDates.length === 0) return;
@@ -516,6 +527,8 @@ function MonthlyTab({
       const normalizedEnd = String(modalOverrideEnd || '').substring(0, 5);
       const saveDates = targetDates.filter(Boolean);
 
+      const finalNote = composedNote !== undefined ? composedNote : modalOverrideNote;
+
       const res = await fetch('/api/employees/schedule-override/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -526,13 +539,16 @@ function MonthlyTab({
           scheduleStart: normalizedStart || baseStart,
           scheduleEnd: normalizedEnd || baseEnd,
           allowOvertime: modalAllowOvertime,
-          note: modalOverrideNote,
+          note: finalNote,
         }),
       });
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || '근무일정 저장에 실패했습니다.');
-      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
-      alert('근무일정이 저장되었습니다.');
+      if (composedNote !== undefined) {
+        setModalOverrideNote(composedNote);
+      }
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo, month: modalMonth || selectedMonth });
+      await refreshModalData();
     } catch (err) {
       alert(err.message || '근무일정 저장 중 오류가 발생했습니다.');
     } finally {
@@ -552,7 +568,8 @@ function MonthlyTab({
       });
       const json = await res.json();
       if (!json?.success) throw new Error(json?.error || '근무일정 삭제에 실패했습니다.');
-      if (refreshData) await refreshData({ empNo });
+      if (refreshData) await refreshData({ empNo, month: modalMonth || selectedMonth });
+      await refreshModalData();
       if (String(workDate || '') === modalSelectedDate) {
         setModalSelectedDate('');
         setModalSelectedDates([]);
@@ -591,7 +608,8 @@ function MonthlyTab({
       }));
       const failed = results.find((json) => !json.success);
       if (failed) throw new Error(failed.error || '근무일정 없음 처리에 실패했습니다.');
-      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo, month: modalMonth || selectedMonth });
+      await refreshModalData();
     } catch (err) {
       alert(err.message || '근무일정 없음 처리 중 오류가 발생했습니다.');
     } finally {
@@ -622,7 +640,8 @@ function MonthlyTab({
       }));
       const failed = results.find((json) => !json.success);
       if (failed) throw new Error(failed.error || '복원에 실패했습니다.');
-      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo });
+      if (refreshData) await refreshData({ empNo: selectedModalEmployee.empNo, month: modalMonth || selectedMonth });
+      await refreshModalData();
     } catch (err) {
       alert(err.message || '복원 중 오류가 발생했습니다.');
     } finally {
@@ -740,8 +759,29 @@ function MonthlyTab({
               </tr>
             </thead>
             <tbody>
-              {allEmps.map(emp => (
-                <tr key={emp.empNo}>
+              {allEmps.map(emp => {
+                const empKey = normalizeEmpNoKey(emp.empNo);
+                const deptKey = normalizeDeptName(emp.dept);
+                const isExternalDept = isExternalBusinessDept(emp.dept);
+                const overtimeRound = (monthlyData?.overtimeRounds || []).find((row) => normalizeEmpNoKey(row.emp_no || '') === empKey);
+                
+                const getEndingSoonLabel = () => {
+                  if (!overtimeRound?.end_date) return null;
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const end = new Date(overtimeRound.end_date);
+                  end.setHours(0, 0, 0, 0);
+                  const diffTime = end.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  if (diffDays >= 0 && diffDays <= 14) {
+                    return diffDays === 0 ? 'D-Day' : `D-${diffDays}`;
+                  }
+                  return null;
+                };
+                const overtimeDDay = getEndingSoonLabel();
+
+                return (
+                  <tr key={emp.empNo} style={overtimeDDay ? { background: 'rgba(245, 158, 11, 0.04)' } : undefined}>
                   {(() => {
                     const empKey = normalizeEmpNoKey(emp.empNo);
                     const deptKey = normalizeDeptName(emp.dept);
@@ -792,12 +832,13 @@ function MonthlyTab({
                         style={{
                           position: 'sticky',
                           left: 0,
-                          background: 'var(--bg-card)',
+                          background: overtimeDDay ? 'linear-gradient(90deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.04)), var(--bg-card)' : 'var(--bg-card)',
                           zIndex: 12,
                           fontWeight: 700,
                           borderRight: '1px solid var(--border)',
+                          borderLeft: overtimeDDay ? '4px solid var(--amber)' : undefined,
                           boxShadow: '6px 0 14px -14px rgba(15, 23, 42, 0.28)',
-                          paddingLeft: '8px',
+                          paddingLeft: overtimeDDay ? '4px' : '8px',
                           paddingRight: '8px',
                           overflow: 'hidden',
                         }}
@@ -822,8 +863,23 @@ function MonthlyTab({
                             minWidth: 0,
                           }}
                         >
-                          <span style={{ color: 'var(--text-1)', fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                          <span style={{ color: 'var(--text-1)', fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                             {emp.name}
+                            {overtimeDDay && (
+                              <span style={{
+                                fontSize: '9px',
+                                fontWeight: 800,
+                                background: 'var(--amber)',
+                                color: '#fff',
+                                padding: '1px 4px',
+                                borderRadius: '4px',
+                                display: 'inline-block',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                boxShadow: '0 2px 4px rgba(245,158,11,0.2)'
+                              }}>
+                                {overtimeDDay}
+                              </span>
+                            )}
                           </span>
                           <small style={{ color: 'var(--text-2)', fontWeight: 500, fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
                             ({emp.dept})
@@ -835,9 +891,9 @@ function MonthlyTab({
                                 marginTop: 4,
                                 paddingInline: 8,
                                 paddingBlock: 3,
-                                background: 'rgba(220, 38, 38, 0.12)',
-                                color: '#b91c1c',
-                                borderColor: 'rgba(220, 38, 38, 0.28)',
+                                background: 'rgba(208, 107, 107, 0.12)',
+                                color: 'var(--red)',
+                                borderColor: 'rgba(208, 107, 107, 0.30)',
                                 fontSize: 9.5,
                                 fontWeight: 600,
                                 whiteSpace: 'nowrap',
@@ -984,9 +1040,9 @@ function MonthlyTab({
                                 style={{
                                   paddingInline: 8,
                                   paddingBlock: 3,
-                                  background: 'rgba(220, 38, 38, 0.12)',
-                                  color: '#b91c1c',
-                                  borderColor: 'rgba(220, 38, 38, 0.28)',
+                                  background: 'rgba(208, 107, 107, 0.12)',
+                                  color: 'var(--red)',
+                                  borderColor: 'rgba(208, 107, 107, 0.30)',
                                   fontSize: 9.5,
                                   fontWeight: 600,
                                   whiteSpace: 'nowrap',
@@ -1021,9 +1077,9 @@ function MonthlyTab({
                                 style={{
                                   paddingInline: 8,
                                   paddingBlock: 3,
-                                  background: 'rgba(220, 38, 38, 0.12)',
-                                  color: '#b91c1c',
-                                  borderColor: 'rgba(220, 38, 38, 0.28)',
+                                  background: 'rgba(208, 107, 107, 0.12)',
+                                  color: 'var(--red)',
+                                  borderColor: 'rgba(208, 107, 107, 0.30)',
                                   fontSize: 9.5,
                                   fontWeight: 600,
                                   whiteSpace: 'nowrap',
@@ -1039,7 +1095,8 @@ function MonthlyTab({
                     );
                   })}
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>
@@ -1129,6 +1186,7 @@ function MonthlyTab({
               onChangeBaseScheduleStart={setModalBaseStart}
               onChangeBaseScheduleEnd={setModalBaseEnd}
               modalSaving={modalSaving}
+              overtimeRounds={monthlyData?.overtimeRounds || []}
             />
           </div>
         </div>

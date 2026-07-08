@@ -100,11 +100,30 @@ export async function POST(request) {
       return NextResponse.json({ error: '사원번호를 찾을 수 없습니다.' }, { status: 400 });
     }
 
-    const normalizedCheckTime = String(checkTime || '').includes('+09:00')
-      ? checkTime
-      : getIsoTimeForWorkDate(workDate, checkTime || new Date().toISOString());
-
     const requestTypeText = String(checkType || '').trim();
+    const isCheckoutRequest = requestTypeText.includes('퇴근');
+
+    let timePart = '';
+    const rawTime = String(checkTime || '').trim();
+    if (rawTime.includes('T')) {
+      timePart = rawTime.split('T')[1].substring(0, 5);
+    } else if (rawTime.includes(' ')) {
+      timePart = rawTime.split(' ')[1].substring(0, 5);
+    } else {
+      timePart = rawTime.substring(0, 5) || '00:00';
+    }
+
+    let targetDate = workDate;
+    if (isCheckoutRequest) {
+      const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
+      const totalMinutes = hours * 60 + minutes;
+      if (totalMinutes < 6 * 60) {
+        targetDate = shiftKstDateKey(workDate, 1);
+      }
+    }
+
+    const normalizedCheckTime = `${targetDate}T${timePart}:00+09:00`;
+
     const isScheduleRequest = requestTypeText.includes('근무일정') || requestTypeText.includes('일정');
     const parsedNote = parseRequestNote(note);
 

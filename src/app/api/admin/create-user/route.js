@@ -60,22 +60,23 @@ export async function POST(request) {
       return NextResponse.json({ error: '비밀번호는 8자 이상이어야 합니다.' }, { status: 400 });
     }
 
-    const finalUserId = userId?.trim() || normalizedEmpNo;
-
-    const cleanName = name.trim();
-    const cleanTeam = team.trim();
-
     // sa_employees is the local employee master for both Secom and Caps staff.
     // If the employee does not exist yet, create the row so accounts can still be linked.
     const { data: existingEmployee, error: employeeLookupErr } = await supabase
       .from('sa_employees')
-      .select('emp_no, name, dept, company_code, is_active')
+      .select('emp_no, name, dept, email, login_id, company_code, is_active')
       .eq('emp_no', normalizedEmpNo)
       .maybeSingle();
 
     if (employeeLookupErr) {
       return NextResponse.json({ error: `직원 정보 조회 실패: ${employeeLookupErr.message}` }, { status: 500 });
     }
+
+    const finalUserId = userId?.trim() || existingEmployee?.login_id || normalizedEmpNo;
+    const email = existingEmployee?.email || `${finalUserId}@hecto.internal`;
+
+    const cleanName = name.trim();
+    const cleanTeam = team.trim();
 
     const employeePayload = {
       emp_no: normalizedEmpNo,
@@ -95,8 +96,6 @@ export async function POST(request) {
     if (employeeUpsertErr) {
       return NextResponse.json({ error: `직원 정보 저장 실패: ${employeeUpsertErr.message}` }, { status: 500 });
     }
-
-    const email = `${finalUserId}@hecto.internal`;
 
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
     const existing = existingUsers?.users?.find((u) => u.email === email);
