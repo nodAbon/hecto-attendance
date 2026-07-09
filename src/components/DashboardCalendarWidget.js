@@ -11,7 +11,7 @@ import MonthSearchPicker from './MonthSearchPicker';
 import { getMonthRangeList } from '../lib/dashboardUtils';
 import useHolidayCalendar from '../lib/useHolidayCalendar';
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const LEGEND_PRIORITY = {
   연차: 0,
   공가: 1,
