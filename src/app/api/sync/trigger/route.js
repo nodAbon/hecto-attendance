@@ -212,6 +212,7 @@ export async function GET(request) {
         AND y.D_START_DATE <= ?
     `, [MY_COMPANY_CODE, fromDateStr, toDateStr]);
 
+    let uniqueLeaveCount = 0;
     if (leaveRows.length > 0) {
       const records = leaveRows.map(r => ({
         emp_no:     r.emp_no,
@@ -224,7 +225,19 @@ export async function GET(request) {
         status:     r.status,
         synced_at:  new Date().toISOString(),
       }));
-      await supabase.from('sa_leaves').upsert(records, { onConflict: 'emp_no,start_date,leave_code' });
+
+      const uniqueRecords = [];
+      const seen = new Set();
+      for (const r of records) {
+        const key = `${r.emp_no}_${r.start_date}_${r.leave_code}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueRecords.push(r);
+        }
+      }
+
+      await supabase.from('sa_leaves').upsert(uniqueRecords, { onConflict: 'emp_no,start_date,leave_code' });
+      uniqueLeaveCount = uniqueRecords.length;
     }
 
     return NextResponse.json({
@@ -233,7 +246,7 @@ export async function GET(request) {
       stats: {
         employees: empRows.length,
         attendance: attRows.length,
-        leaves: leaveRows.length
+        leaves: uniqueLeaveCount
       }
     });
 

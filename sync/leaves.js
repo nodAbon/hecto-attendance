@@ -123,25 +123,34 @@ async function syncLeaves(conn) {
 
   if (rows.length === 0) return 0;
 
+  const records = rows.map(r => ({
+    emp_no:     r.emp_no,
+    emp_name:   r.emp_name,
+    start_date: r.start_date,
+    end_date:   r.end_date,
+    leave_code: r.leave_code,
+    leave_name: r.leave_name,
+    leave_days: parseFloat(r.leave_days) || 0,
+    status:     r.status,
+    synced_at:  new Date().toISOString(),
+  }));
+
+  const uniqueRecords = [];
+  const seen = new Set();
+  for (const r of records) {
+    const key = `${r.emp_no}_${r.start_date}_${r.leave_code}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueRecords.push(r);
+    }
+  }
+
   const { error } = await supabase
     .from('SA_leaves')
-    .upsert(
-      rows.map(r => ({
-        emp_no:     r.emp_no,
-        emp_name:   r.emp_name,
-        start_date: r.start_date,
-        end_date:   r.end_date,
-        leave_code: r.leave_code,
-        leave_name: r.leave_name,
-        leave_days: parseFloat(r.leave_days) || 0,
-        status:     r.status,
-        synced_at:  new Date().toISOString(),
-      })),
-      { onConflict: 'emp_no,start_date,leave_code' }
-    );
+    .upsert(uniqueRecords, { onConflict: 'emp_no,start_date,leave_code' });
 
   if (error) throw new Error(`연차 upsert 실패: ${error.message}`);
-  return rows.length;
+  return uniqueRecords.length;
 }
 
 async function runSync() {

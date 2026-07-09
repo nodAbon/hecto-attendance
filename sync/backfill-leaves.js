@@ -119,15 +119,25 @@ async function syncLeavesForEmployee(conn, empNo) {
     synced_at: new Date().toISOString(),
   }));
 
+  const uniqueRecords = [];
+  const seen = new Set();
+  for (const r of records) {
+    const key = `${r.emp_no}_${r.start_date}_${r.leave_code}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueRecords.push(r);
+    }
+  }
+
   const { error } = await supabase
     .from('sa_leaves')
-    .upsert(records, { onConflict: 'emp_no,start_date,leave_code' });
+    .upsert(uniqueRecords, { onConflict: 'emp_no,start_date,leave_code' });
 
   if (error) {
     throw new Error(`연차 백필 upsert 실패(${empNo}): ${error.message}`);
   }
 
-  return records.length;
+  return uniqueRecords.length;
 }
 
 async function processQueueOnce(conn) {
