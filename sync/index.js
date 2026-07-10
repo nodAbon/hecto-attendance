@@ -188,9 +188,9 @@ async function syncEmployees(conn) {
 // 2. 세콤 출입기록 동기화 (최근 1일치)
 async function syncSecomAttendance(conn) {
   const now = new Date();
-  // Approved leaves: 7 days ago through 3 months ahead.
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}000000`;
+  // 최근 2시간 전부터 동기화 (네트워크 데이터 소모량 최소화)
+  const fromDate = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}${String(fromDate.getHours()).padStart(2, '0')}${String(fromDate.getMinutes()).padStart(2, '0')}00`;
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -250,10 +250,10 @@ async function syncSecomAttendance(conn) {
 // 3. 캡스 출입기록 동기화 (최근 1일치)
 async function syncCapsAttendance(conn) {
   const now = new Date();
-  // 최근 1일치 (어제부터 오늘까지)
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}000000`;
-  const todayStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  // 최근 2시간 전부터 동기화 (네트워크 데이터 소모량 최소화)
+  const fromDate = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const fromDateStr = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
+  const fromTimeStr = `${String(fromDate.getHours()).padStart(2, '0')}${String(fromDate.getMinutes()).padStart(2, '0')}00`;
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -279,10 +279,12 @@ async function syncCapsAttendance(conn) {
       AND d.I_DEPT = e.I_DEPT
     WHERE COALESCE(e.I_RETIRE_YN, '0') <> '1'
       AND t.E_GROUP = ?
-      AND t.E_DATE >= ?
-      AND t.E_DATE <= ?
+      AND (
+        t.E_DATE > ?
+        OR (t.E_DATE = ? AND t.E_TIME >= ?)
+      )
     ORDER BY t.E_DATE DESC, t.E_TIME DESC
-  `, [MY_COMPANY_CODE, MY_COMPANY_CODE, CAPS_E_GROUP, fromStr.slice(0, 8), todayStr]);
+  `, [MY_COMPANY_CODE, MY_COMPANY_CODE, CAPS_E_GROUP, fromDateStr, fromDateStr, fromTimeStr]);
 
   if (rows.length === 0) return 0;
 
@@ -407,7 +409,7 @@ async function runSync() {
       log('INFO', '임직원 정보 동기화 건너뜀 (오늘 이미 동기화됨)');
     }
 
-    // 출입기록 및 연차 기록 동기화 (30분 주기 실행)
+    // 출입기록 동기화 (30분 주기 실행, 최근 2시간 범위)
     const secomCount  = await syncSecomAttendance(conn);
     const capsCount   = await syncCapsAttendance(conn);
     const leaveCount  = await syncLeaves(conn);
