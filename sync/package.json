@@ -11,6 +11,7 @@
     "list:leave:latest": "node latest-approved-leaves.js",
     "backfill:leaves": "node backfill-leaves.js",
     "backfill:attendance:q1": "node backfill-attendance-range.js",
+    "backfill-caps-by-name": "node backfill-caps-by-name.js",
     "index3days": "node index3days.js",
     "index15days": "node index15days.js"
   },
