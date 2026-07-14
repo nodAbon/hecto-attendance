@@ -21,10 +21,11 @@ const { createClient } = require('@supabase/supabase-js');
 loadSyncEnv();
 
 // --- 백필 대상 설정 ---
-const TARGET_NAME = '박창식';
-const TARGET_EMP_NO = '20260013';
+const TARGET_NAME = '최준희';
+const TARGET_EMP_NO = '20260012';
 const TARGET_COMPANY_CODE = '1600';
-const TARGET_DATE_YMD = '20260713'; // YYYYMMDD 형식
+const START_DATE_YMD = '20260701'; // 조회 시작일 (YYYYMMDD)
+const END_DATE_YMD = '20260714';   // 조회 종료일 (YYYYMMDD)
 
 const MYSQL_CONFIG = {
   host: process.env.MYSQL_HOST,
@@ -55,14 +56,14 @@ function buildGateName(row) {
 }
 
 async function run() {
-  console.log(`[Backfill] 이름: ${TARGET_NAME}, 사번: ${TARGET_EMP_NO}, 일자: ${TARGET_DATE_YMD} 백필 시작...`);
+  console.log(`[Backfill] 이름: ${TARGET_NAME}, 사번: ${TARGET_EMP_NO}, 기간: ${START_DATE_YMD} ~ ${END_DATE_YMD} 백필 시작...`);
   
   let conn;
   try {
     conn = await mysql.createConnection(MYSQL_CONFIG);
     console.log('MySQL 연결 성공.');
 
-    // 1. tenter 테이블에서 이름 매칭으로 쿼리 (사번 유무 상관없이 가져옴)
+    // 1. tenter 테이블에서 이름 매칭으로 쿼리 (기간 조회)
     const [rows] = await conn.execute(`
       SELECT
         E_IDNO      AS idno,
@@ -77,9 +78,10 @@ async function run() {
         E_NAME      AS e_name
       FROM tenter
       WHERE E_NAME LIKE ?
-        AND E_DATE = ?
-      ORDER BY E_TIME ASC
-    `, [`%${TARGET_NAME}%`, TARGET_DATE_YMD]);
+        AND E_DATE >= ?
+        AND E_DATE <= ?
+      ORDER BY E_DATE ASC, E_TIME ASC
+    `, [`%${TARGET_NAME}%`, START_DATE_YMD, END_DATE_YMD]);
 
     console.log(`MySQL에서 검색된 로그: ${rows.length}건`);
     if (rows.length === 0) {
