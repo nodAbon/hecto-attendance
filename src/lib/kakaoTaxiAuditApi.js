@@ -223,6 +223,7 @@ async function fetchKakaoTaxiOrdersPage({
       accept: 'application/json;charset=UTF-8',
       ...headers,
     },
+    cache: 'no-store',
   });
 
   if (!res.ok) {

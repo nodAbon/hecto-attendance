@@ -4,6 +4,8 @@ import { verifySession } from '@/lib/auth';
 import { fetchAttendanceLogs } from '@/lib/supabaseDb';
 import { shiftKstDateKey } from '@/lib/kstDate';
 
+export const dynamic = 'force-dynamic';
+
 const NIGHT_CUTOFF_MINUTES = 6 * 60;
 const LATE_NIGHT_RIDE_MINUTES = 22 * 60;
 
