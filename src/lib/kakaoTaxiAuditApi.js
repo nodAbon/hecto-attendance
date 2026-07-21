@@ -89,6 +89,32 @@ const toMinutes = (value = '') => {
   return (Number(match[1]) * 60) + Number(match[2]);
 };
 
+const getCheckoutMinutesRelative = (checkoutValue = '', workDate = '') => {
+  const text = String(checkoutValue || '').trim();
+  if (!text) return null;
+
+  const matchFull = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/);
+  if (matchFull && workDate) {
+    const logDate = matchFull[1];
+    const hours = Number(matchFull[2]);
+    const minutes = Number(matchFull[3]);
+    if (logDate === workDate) {
+      return (hours * 60) + minutes;
+    }
+    const d1 = new Date(`${workDate}T00:00:00+09:00`);
+    const d2 = new Date(`${logDate}T00:00:00+09:00`);
+    const diffDays = Math.round((d2.getTime() - d1.getTime()) / (24 * 60 * 60 * 1000));
+    return (diffDays * 24 * 60) + (hours * 60) + minutes;
+  }
+
+  const matchTime = text.match(/^(\d{2}):(\d{2})/);
+  if (matchTime) {
+    return (Number(matchTime[1]) * 60) + Number(matchTime[2]);
+  }
+
+  return null;
+};
+
 const getMonthKey = (dateStr = '') => String(dateStr || '').slice(0, 7);
 
 const getAuditWorkDate = (rideValue = '') => {
@@ -128,7 +154,9 @@ const buildActualCheckoutLookup = (logs = []) => {
 
   for (const log of logs || []) {
     const empNo = String(log.empNo || '').trim();
-    const workDate = String(log.workDate || '').trim();
+    const workDate = log.isAdjusted
+      ? String(log.workDate || '').trim()
+      : getAuditWorkDate(log.logTime || log.workDate || '');
     if (!empNo || !workDate) continue;
 
     const key = `${empNo}_${workDate}`;
@@ -152,9 +180,9 @@ const buildActualCheckoutLookup = (logs = []) => {
 
     let checkout = '';
     if (corrected) {
-      checkout = String(corrected.correctedOutTime || '').trim().slice(11, 16);
+      checkout = String(corrected.correctedOutTime || '').trim();
     } else if (hasDistinctCheckout) {
-      checkout = String(lastLog?.logTime || '').split(' ')[1]?.substring(0, 5) || '';
+      checkout = String(lastLog?.logTime || '').trim();
     }
 
     lookup.set(key, checkout || '-');
@@ -384,7 +412,7 @@ export async function buildTaxiAuditRowsFromKakao({
         ? (checkoutLookupByEmpNo.get(matchedKey) || checkoutLookupByName.get(matchedKey))
         : '-';
       const actualOutMinutes = actualOutTime && actualOutTime !== '-'
-        ? toMinutes(actualOutTime)
+        ? getCheckoutMinutesRelative(actualOutTime, row.auditWorkDate)
         : null;
 
       return {

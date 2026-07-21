@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { verifySession } from '@/lib/auth';
 import { fetchAttendanceLogs } from '@/lib/supabaseDb';
+import { shiftKstDateKey } from '@/lib/kstDate';
 
 const NIGHT_CUTOFF_MINUTES = 6 * 60;
 const LATE_NIGHT_RIDE_MINUTES = 22 * 60;
@@ -46,10 +47,7 @@ function parseRideDate(value) {
 }
 
 function shiftDate(dateStr, days) {
-  const base = new Date(`${dateStr}T00:00:00+09:00`);
-  if (Number.isNaN(base.getTime())) return dateStr;
-  base.setDate(base.getDate() + days);
-  return base.toISOString().slice(0, 10);
+  return shiftKstDateKey(dateStr, days);
 }
 
 function getEffectiveWorkDate(rideValue) {
@@ -146,12 +144,40 @@ function toDateParts(text) {
   return { year: match[1], month: match[2], day: match[3] };
 }
 
+function getCheckoutMinutesRelative(checkoutValue = '', workDate = '') {
+  const text = String(checkoutValue || '').trim();
+  if (!text) return null;
+
+  const matchFull = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/);
+  if (matchFull && workDate) {
+    const logDate = matchFull[1];
+    const hours = Number(matchFull[2]);
+    const minutes = Number(matchFull[3]);
+    if (logDate === workDate) {
+      return (hours * 60) + minutes;
+    }
+    const d1 = new Date(`${workDate}T00:00:00+09:00`);
+    const d2 = new Date(`${logDate}T00:00:00+09:00`);
+    const diffDays = Math.round((d2.getTime() - d1.getTime()) / (24 * 60 * 60 * 1000));
+    return (diffDays * 24 * 60) + (hours * 60) + minutes;
+  }
+
+  const matchTime = text.match(/^(\d{2}):(\d{2})/);
+  if (matchTime) {
+    return (Number(matchTime[1]) * 60) + Number(matchTime[2]);
+  }
+
+  return null;
+}
+
 function buildActualCheckoutLookup(logs) {
   const grouped = new Map();
 
   for (const log of logs || []) {
     const empNo = String(log.empNo || '').trim();
-    const workDate = String(log.workDate || '').trim();
+    const workDate = log.isAdjusted
+      ? String(log.workDate || '').trim()
+      : getEffectiveWorkDate(log.logTime || log.workDate || '');
     if (!empNo || !workDate) continue;
 
     const key = `${empNo}_${workDate}`;
@@ -175,9 +201,9 @@ function buildActualCheckoutLookup(logs) {
 
     let checkout = '';
     if (corrected) {
-      checkout = String(corrected.correctedOutTime || '').trim().slice(11, 16);
+      checkout = String(corrected.correctedOutTime || '').trim();
     } else if (hasDistinctCheckout) {
-      checkout = String(lastLog?.logTime || '').split(' ')[1]?.substring(0, 5) || '';
+      checkout = String(lastLog?.logTime || '').trim();
     }
 
     lookup.set(key, checkout || '-');
@@ -300,7 +326,7 @@ export async function POST(request) {
       const matchedKey = lookupKeys.find((key) => checkoutLookupByName.has(key));
       const actualOutTime = matchedKey ? checkoutLookupByName.get(matchedKey) : '-';
       const actualOutMinutes = actualOutTime && actualOutTime !== '-'
-        ? Number(actualOutTime.slice(0, 2)) * 60 + Number(actualOutTime.slice(3, 5))
+        ? getCheckoutMinutesRelative(actualOutTime, auditWorkDate)
         : null;
       const matchedEmployeeList = employeesByName.get(normalizeName(row.employeeName)) || employeesByName.get(normalizeNamePrefix(row.employeeName)) || [];
       const matchedEmployee = matchedEmployeeList[0] || null;
