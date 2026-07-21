@@ -55,25 +55,35 @@ const parseDateTime = (value = '') => {
   const text = String(value || '').trim();
   if (!text) return null;
 
-  const match = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
-  if (match) {
-    return {
-      date: match[1],
-      hours: Number(match[2]),
-      minutes: Number(match[3]),
-      seconds: Number(match[4] || '0'),
-    };
+  let isoText = text;
+  if (/^\d{4}[-/.]\d{2}[-/.]\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(text)) {
+    isoText = text.replace(' ', 'T').replace(/\./g, '-').replace(/\//g, '-') + '+09:00';
   }
 
-  const fallback = new Date(text);
-  if (Number.isNaN(fallback.getTime())) return null;
+  const d = new Date(isoText);
+  if (Number.isNaN(d.getTime())) return null;
 
-  const iso = fallback.toISOString();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(d).reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+
   return {
-    date: iso.slice(0, 10),
-    hours: Number(iso.slice(11, 13)),
-    minutes: Number(iso.slice(14, 16)),
-    seconds: Number(iso.slice(17, 19)),
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    hours: Number(parts.hour),
+    minutes: Number(parts.minute),
+    seconds: Number(parts.second || '0'),
   };
 };
 

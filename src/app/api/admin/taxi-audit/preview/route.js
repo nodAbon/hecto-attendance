@@ -38,13 +38,37 @@ function formatRideLabel(value) {
 
 function parseRideDate(value) {
   const text = String(value || '').trim();
-  const match = text.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-  if (!match) return null;
+  if (!text) return null;
+
+  let isoText = text;
+  if (/^\d{4}[-/.]\d{2}[-/.]\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(text)) {
+    isoText = text.replace(' ', 'T').replace(/\./g, '-').replace(/\//g, '-') + '+09:00';
+  }
+
+  const d = new Date(isoText);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(d).reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+
   return {
-    date: match[1],
-    hours: Number(match[2]),
-    minutes: Number(match[3]),
-    seconds: Number(match[4] || '0'),
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    hours: Number(parts.hour),
+    minutes: Number(parts.minute),
+    seconds: Number(parts.second || '0'),
   };
 }
 
