@@ -189,9 +189,7 @@ function buildActualCheckoutLookup(logs) {
 
   for (const [key, dayLogs] of grouped.entries()) {
     const sorted = [...dayLogs].sort((a, b) => {
-      const orderA = Number.isFinite(Number(a.workOrder)) ? Number(a.workOrder) : 0;
-      const orderB = Number.isFinite(Number(b.workOrder)) ? Number(b.workOrder) : 0;
-      return orderA - orderB || String(a.logTime || '').localeCompare(String(b.logTime || ''));
+      return String(a.logTime || '').localeCompare(String(b.logTime || ''));
     });
 
     const firstLog = sorted[0];
