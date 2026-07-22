@@ -24,10 +24,20 @@ function base64url(input) {
 function normalizePrivateKey(rawKey) {
   if (!rawKey) return '';
   let str = String(rawKey).trim();
+
   if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
     str = str.slice(1, -1);
   }
-  str = str.replace(/\\n/g, '\n');
+
+  str = str.replace(/\\n/g, '\n').replace(/\r/g, '');
+
+  const match = str.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----([\s\S]*?)-----END (?:RSA )?PRIVATE KEY-----/);
+  if (match) {
+    const rawBody = match[1].replace(/\s+/g, '');
+    const formattedBody = rawBody.match(/.{1,64}/g)?.join('\n') || rawBody;
+    return `-----BEGIN PRIVATE KEY-----\n${formattedBody}\n-----END PRIVATE KEY-----`;
+  }
+
   return str;
 }
 
