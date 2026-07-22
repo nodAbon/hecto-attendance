@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import mysql from 'mysql2/promise';
 import { getAdminClient } from '@/lib/supabaseClient';
+import { syncLeavesToNaverWorks } from '@/lib/naverWorks';
 
 export const dynamic = 'force-dynamic';
 
@@ -238,6 +239,25 @@ export async function GET(request) {
 
       await supabase.from('sa_leaves').upsert(uniqueRecords, { onConflict: 'emp_no,start_date,leave_code' });
       uniqueLeaveCount = uniqueRecords.length;
+
+      // 네이버웍스 프로필 상태 동기화
+      try {
+        const empNos = [...new Set(uniqueRecords.map(r => r.emp_no))];
+        const { data: emps } = await supabase
+          .from('sa_employees')
+          .select('emp_no, email')
+          .in('emp_no', empNos);
+
+        const emailMap = new Map((emps || []).map(e => [e.emp_no, e.email]));
+        const leavesWithEmails = uniqueRecords.map(r => ({
+          ...r,
+          email: emailMap.get(r.emp_no) || null,
+        }));
+
+        await syncLeavesToNaverWorks(leavesWithEmails);
+      } catch (nwErr) {
+        console.error('[Sync API Trigger NaverWorks Error]', nwErr.message);
+      }
     }
 
     return NextResponse.json({

@@ -9,6 +9,7 @@
 const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
+const { syncLeavesToNaverWorks } = require('./naverWorks');
 
 loadSyncEnv();
 
@@ -384,6 +385,26 @@ async function syncLeaves(conn) {
     .upsert(uniqueRecords, { onConflict: 'emp_no,start_date,leave_code' });
 
   if (error) throw new Error(`연차 upsert 실패: ${error.message}`);
+
+  // 네이버웍스 프로필 상태 동기화
+  try {
+    const empNos = [...new Set(uniqueRecords.map(r => r.emp_no))];
+    const { data: emps } = await supabase
+      .from('sa_employees')
+      .select('emp_no, email')
+      .in('emp_no', empNos);
+
+    const emailMap = new Map((emps || []).map(e => [e.emp_no, e.email]));
+    const leavesWithEmails = uniqueRecords.map(r => ({
+      ...r,
+      email: emailMap.get(r.emp_no) || null,
+    }));
+
+    await syncLeavesToNaverWorks(leavesWithEmails);
+  } catch (nwErr) {
+    console.error('[NaverWorks Sync Error]', nwErr.message);
+  }
+
   return uniqueRecords.length;
 }
 
