@@ -166,17 +166,17 @@ function calculateLeaveTimeWindow(leave) {
   const code = String(leave.leave_code || leave.leaveCode || '').trim();
   const rawName = String(leave.leave_name || leave.leaveName || '').trim();
 
-  let startTime = `${startDateStr}T09:00:00+09:00`;
-  let endTime = `${endDateStr}T18:00:00+09:00`;
+  let startTime = `${startDateStr}T08:00:00+09:00`;
+  let endTime = `${endDateStr}T17:00:00+09:00`;
   let statusMessage = '연차';
 
   if (code === '16' || code === '61' || rawName.includes('오전') || rawName.includes('4시간휴가 [오전]')) {
-    startTime = `${startDateStr}T09:00:00+09:00`;
-    endTime = `${startDateStr}T13:00:00+09:00`;
+    startTime = `${startDateStr}T08:00:00+09:00`;
+    endTime = `${startDateStr}T12:00:00+09:00`;
     statusMessage = '오전 반차';
   } else if (code === '17' || code === '62' || rawName.includes('오후') || rawName.includes('4시간휴가 [오후]')) {
-    startTime = `${startDateStr}T14:00:00+09:00`;
-    endTime = `${startDateStr}T18:00:00+09:00`;
+    startTime = `${startDateStr}T13:00:00+09:00`;
+    endTime = `${startDateStr}T17:00:00+09:00`;
     statusMessage = '오후 반차';
   } else if (TWO_HOUR_LEAVE_TIMES[code]) {
     const info = TWO_HOUR_LEAVE_TIMES[code];
