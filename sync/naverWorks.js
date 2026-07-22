@@ -213,6 +213,12 @@ async function setUserProfileStatus(email, leave) {
     return { success: false, skipped: true, reason: '날짜 계산 실패' };
   }
 
+  // Naver Works API는 endTime이 현재 시각 이후인 미래/현재 상태만 등록 허용합니다.
+  const endTimeMs = new Date(window.endTime).getTime();
+  if (Number.isFinite(endTimeMs) && endTimeMs <= Date.now()) {
+    return { success: false, skipped: true, reason: '과거 연차 (endTime이 현재 시각 이전)' };
+  }
+
   const url = `https://www.worksapis.com/v1.0/users/${encodeURIComponent(email)}/user-profile-statuses`;
   const res = await fetch(url, {
     method: 'POST',
