@@ -149,6 +149,28 @@ const TWO_HOUR_LEAVE_TIMES = {
   '28': { start: '17:00:00', end: '19:00:00', label: '2시간 휴가 [17-19]' },
 };
 
+const LEAVE_CODE_LABELS = {
+  '12': '연차',
+  '13': '공가',
+  '16': '오전 반차',
+  '17': '오후 반차',
+  '18': '경조휴가',
+  '19': '2시간 휴가 [07-09]',
+  '20': '2시간 휴가 [08-10]',
+  '21': '2시간 휴가 [09-11]',
+  '22': '2시간 휴가 [10-12]',
+  '23': '2시간 휴가 [11-13]',
+  '24': '2시간 휴가 [13-15]',
+  '25': '2시간 휴가 [14-16]',
+  '26': '2시간 휴가 [15-17]',
+  '27': '2시간 휴가 [16-18]',
+  '28': '2시간 휴가 [17-19]',
+  '51': '연차',
+  '60': '연차',
+  '61': '오전 반차',
+  '62': '오후 반차',
+};
+
 function formatDateDashed(rawDateStr) {
   const digits = String(rawDateStr || '').replace(/\D/g, '');
   if (digits.length < 8) return '';
@@ -168,7 +190,7 @@ function calculateLeaveTimeWindow(leave) {
 
   let startTime = `${startDateStr}T08:00:00+09:00`;
   let endTime = `${endDateStr}T17:00:00+09:00`;
-  let statusMessage = '연차';
+  let statusMessage = LEAVE_CODE_LABELS[code] || (rawName && !/^\d+$/.test(rawName) ? rawName : '연차');
 
   if (code === '16' || code === '61' || rawName.includes('오전') || rawName.includes('4시간휴가 [오전]')) {
     startTime = `${startDateStr}T08:00:00+09:00`;
@@ -183,8 +205,6 @@ function calculateLeaveTimeWindow(leave) {
     startTime = `${startDateStr}T${info.start}+09:00`;
     endTime = `${startDateStr}T${info.end}+09:00`;
     statusMessage = info.label;
-  } else if (rawName) {
-    statusMessage = rawName;
   }
 
   const profileStatusId = process.env.NAVER_WORKS_PROFILE_STATUS_ID || 'CUSTOM01';
