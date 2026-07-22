@@ -187,8 +187,10 @@ function calculateLeaveTimeWindow(leave) {
     statusMessage = rawName;
   }
 
+  const profileStatusId = process.env.NAVER_WORKS_PROFILE_STATUS_ID || 'CUSTOM01';
+
   return {
-    profileStatusId: 'ABSENCE',
+    profileStatusId,
     statusMessage,
     startTime,
     endTime,
