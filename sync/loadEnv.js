@@ -5,7 +5,29 @@ function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return false;
 
   const content = fs.readFileSync(filePath, 'utf8');
-  for (const line of content.split(/\r?\n/)) {
+  const lines = content.split(/\r?\n/);
+
+  let currentKey = null;
+  let currentValueLines = [];
+  let inMultiLine = false;
+
+  for (const line of lines) {
+    if (inMultiLine) {
+      const trimmed = line.trim();
+      if (trimmed.endsWith('"') || trimmed.endsWith("'")) {
+        currentValueLines.push(trimmed.slice(0, -1));
+        if (process.env[currentKey] === undefined) {
+          process.env[currentKey] = currentValueLines.join('\n');
+        }
+        inMultiLine = false;
+        currentKey = null;
+        currentValueLines = [];
+      } else {
+        currentValueLines.push(line);
+      }
+      continue;
+    }
+
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
 
@@ -13,13 +35,22 @@ function parseEnvFile(filePath) {
     if (eqIndex === -1) continue;
 
     const key = trimmed.slice(0, eqIndex).trim();
-    if (!key || process.env[key] !== undefined) continue;
+    if (!key) continue;
 
     let value = trimmed.slice(eqIndex + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
+
+    if ((value.startsWith('"') && !value.endsWith('"')) || (value.startsWith("'") && !value.endsWith("'"))) {
+      inMultiLine = true;
+      currentKey = key;
+      currentValueLines = [value.slice(1)];
+    } else {
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      if (process.env[key] === undefined) {
+        process.env[key] = value;
+      }
     }
-    process.env[key] = value;
   }
 
   return true;
