@@ -242,6 +242,29 @@ async function setUserProfileStatus(email, leave) {
   }
 
   const url = `https://www.worksapis.com/v1.0/users/${encodeURIComponent(email)}/user-profile-statuses`;
+
+  // 이미 동일한 상태가 네이버웍스에 등록/예약되어 있는지 확인하여 중복 API 호출 방지
+  try {
+    const checkRes = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    if (checkRes.ok) {
+      const checkData = await checkRes.json().catch(() => ({}));
+      const existingList = checkData.userProfileStatuses || [];
+      const alreadySet = existingList.some((item) =>
+        item.profileStatusId === window.profileStatusId &&
+        item.statusMessage === window.statusMessage &&
+        item.startTime === window.startTime &&
+        item.endTime === window.endTime
+      );
+      if (alreadySet) {
+        return { success: true, skipped: true, reason: '이미 동일한 상태가 등록되어 있음' };
+      }
+    }
+  } catch (checkErr) {
+    // 조회 실패 시 등록 계속 진행
+  }
+
   const res = await fetch(url, {
     method: 'POST',
     headers: {
