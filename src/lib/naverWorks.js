@@ -258,6 +258,9 @@ export async function setUserProfileStatus(email, leave) {
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
+    if (errText.includes('endTime must be after the current time')) {
+      return { success: false, skipped: true, reason: '종료된 연차 (endTime이 현재 시각 이전)' };
+    }
     throw new Error(`[NaverWorks Status Error ${res.status}] ${errText}`);
   }
 
