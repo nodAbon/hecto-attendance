@@ -267,12 +267,15 @@ export async function syncLeavesToNaverWorks(leavesWithEmails = []) {
         skipped++;
       } else {
         processed++;
-        console.log(`[NaverWorks Sync] 상태 설정 완료: ${item.emp_name || item.emp_no} (${email}) - ${res.window.statusMessage} (${res.window.startTime} ~ ${res.window.endTime})`);
       }
     } catch (err) {
       errors++;
       console.error(`[NaverWorks Sync Error] ${item.emp_name || item.emp_no} 상태 설정 실패:`, err.message);
     }
+  }
+
+  if (processed > 0) {
+    console.log(`[NaverWorks Sync] 총 ${processed}건 상태 동기화 완료`);
   }
 
   return { success: errors === 0, processed, skipped, errors };
