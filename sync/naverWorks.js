@@ -269,11 +269,18 @@ async function syncLeavesToNaverWorks(leavesWithEmails = []) {
     return { success: true, processed: 0, skipped: leavesWithEmails.length };
   }
 
+  // 가장 가까운 미래 연차가 가장 마지막에 등록(덮어쓰기)되도록 내림차순 정렬
+  const sortedLeaves = [...leavesWithEmails].sort((a, b) => {
+    const aDate = String(a.start_date || a.startDate || '');
+    const bDate = String(b.start_date || b.startDate || '');
+    return bDate.localeCompare(aDate);
+  });
+
   let processed = 0;
   let skipped = 0;
   let errors = 0;
 
-  for (const item of leavesWithEmails) {
+  for (const item of sortedLeaves) {
     try {
       const email = item.email || item.emp_email;
       const res = await setUserProfileStatus(email, item);
