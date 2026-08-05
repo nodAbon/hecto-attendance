@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { AlertCircle, CarTaxiFront, RefreshCcw, Search, Send, Upload, X } from 'lucide-react';
+import { AlertCircle, CarTaxiFront, CheckCircle2, Clock, FileText, RefreshCcw, Search, Send, Upload, X } from 'lucide-react';
 import EmployeeAdminShell from '../employees/EmployeeAdminShell';
 import { getKstDateKey, shiftKstDateKey } from '@/lib/kstDate';
 
@@ -50,6 +50,8 @@ export default function TaxiAuditPage() {
   const [sendingId, setSendingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [selectedExplanationRow, setSelectedExplanationRow] = useState(null);
+
 
   const displayRows = useMemo(() => {
     const keyword = normalizeKeyword(searchText);
@@ -71,6 +73,7 @@ export default function TaxiAuditPage() {
         row.ticketNo,
         row.orderId,
         row.amount,
+        row.explanationText,
       ]
         .map((item) => normalizeKeyword(item))
         .join(' ');
@@ -80,12 +83,17 @@ export default function TaxiAuditPage() {
 
   const summary = useMemo(() => {
     const employeeCount = new Set(displayRows.map((row) => row.employeeName).filter(Boolean)).size;
+    const submittedCount = displayRows.filter((r) => r.explanationStatus === 'SUBMITTED').length;
+    const pendingCount = displayRows.filter((r) => r.explanationStatus === 'PENDING').length;
     return {
       total: rows.length,
       visible: displayRows.length,
       employees: employeeCount,
+      submitted: submittedCount,
+      pending: pendingCount,
     };
   }, [rows, displayRows]);
+
 
   const resetQuery = () => {
     setQueryStartDate(initialStart);
@@ -190,7 +198,7 @@ export default function TaxiAuditPage() {
     }
 
     const confirmed = window.confirm(
-      `${row.employeeName || row.empNo || row.memberIdentifier}에게 소명 요청 메일을 보내시겠습니까?`,
+      `${row.employeeName || row.empNo || row.memberIdentifier}에게 웹 소명 작성 링크가 포함된 요청 메일을 보냈습니까?`,
     );
     if (!confirmed) return;
 
@@ -209,12 +217,16 @@ export default function TaxiAuditPage() {
       if (!res.ok) throw new Error(json.error || '소명 요청 메일을 보내지 못했습니다.');
 
       setNotice(json.message || '소명 요청 메일을 보냈습니다.');
+      setRows((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, explanationStatus: 'PENDING' } : r))
+      );
     } catch (err) {
       setError(err?.message || '소명 요청 메일을 보내지 못했습니다.');
     } finally {
       setSendingId('');
     }
   };
+
 
   return (
     <EmployeeAdminShell
@@ -416,8 +428,12 @@ export default function TaxiAuditPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>소명 대상 목록</div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-                카카오T 비즈니스 이용내역을 기준으로 22시 이후 탑승이면서 실제 퇴근이 22시 이전인 건만 표시합니다.
+              <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <span>소명 대상: <strong style={{ color: 'var(--text-1)' }}>{summary.total}</strong>건</span>
+                <span>검색 결과: <strong style={{ color: 'var(--text-1)' }}>{summary.visible}</strong>건</span>
+                <span>대상 직원: <strong style={{ color: 'var(--text-1)' }}>{summary.employees}</strong>명</span>
+                {summary.submitted > 0 && <span style={{ color: 'var(--green)', fontWeight: 700 }}>소명 완료: {summary.submitted}건</span>}
+                {summary.pending > 0 && <span style={{ color: 'var(--orange)', fontWeight: 700 }}>소명 대기중: {summary.pending}건</span>}
               </div>
             </div>
             <Badge tone={mode === 'kakao' ? 'blue' : 'gray'}>{queryLoading || legacyLoading ? '조회 중...' : '표시 중'}</Badge>
@@ -443,12 +459,12 @@ export default function TaxiAuditPage() {
               <table className="table" style={{ minWidth: 1160, borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 190 }}>탑승일시</th>
-                    <th style={{ width: 200 }}>직원명</th>
-                    <th style={{ width: 140 }}>실제 퇴근시간</th>
+                    <th style={{ width: 180 }}>탑승일시</th>
+                    <th style={{ width: 180 }}>직원명</th>
+                    <th style={{ width: 130 }}>실제 퇴근시간</th>
                     <th>이용사유</th>
-                    <th style={{ width: 130 }}>결제금액</th>
-                    <th style={{ width: 140 }}>소명요청</th>
+                    <th style={{ width: 120 }}>결제금액</th>
+                    <th style={{ width: 160 }}>소명 상태 / 관리</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -478,28 +494,77 @@ export default function TaxiAuditPage() {
                       </td>
                       <td>
                         <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>
-                        {formatCurrency(row.amount)}
+                          {formatCurrency(row.amount)}
                         </div>
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          className="tab-btn"
-                          onClick={() => requestExplanation(row)}
-                          disabled={sendingId === row.id}
-                          style={{
-                            padding: '7px 12px',
-                            minHeight: 36,
-                            borderColor: 'rgba(59, 130, 246, 0.18)',
-                            color: 'var(--blue)',
-                            background: 'rgba(59, 130, 246, 0.08)',
-                            boxShadow: 'none',
-                            opacity: sendingId === row.id ? 0.7 : 1,
-                          }}
-                        >
-                          <Send size={14} />
-                          {sendingId === row.id ? '전송 중...' : '소명요청'}
-                        </button>
+                        {row.explanationStatus === 'SUBMITTED' ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                            <Badge tone="green">
+                              <CheckCircle2 size={12} style={{ marginRight: 4 }} />
+                              소명 완료
+                            </Badge>
+                            <button
+                              type="button"
+                              className="tab-btn"
+                              onClick={() => setSelectedExplanationRow(row)}
+                              style={{
+                                padding: '4px 8px',
+                                minHeight: 28,
+                                fontSize: 12,
+                                color: 'var(--green)',
+                                borderColor: 'rgba(34, 197, 94, 0.3)',
+                                background: 'rgba(34, 197, 94, 0.08)',
+                              }}
+                            >
+                              <FileText size={12} />
+                              사유 보기
+                            </button>
+                          </div>
+                        ) : row.explanationStatus === 'PENDING' ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                            <Badge tone="orange">
+                              <Clock size={12} style={{ marginRight: 4 }} />
+                              소명 대기
+                            </Badge>
+                            <button
+                              type="button"
+                              className="tab-btn"
+                              onClick={() => requestExplanation(row)}
+                              disabled={sendingId === row.id}
+                              style={{
+                                padding: '4px 8px',
+                                minHeight: 28,
+                                fontSize: 12,
+                                color: 'var(--orange)',
+                                borderColor: 'rgba(245, 158, 11, 0.3)',
+                                background: 'rgba(245, 158, 11, 0.08)',
+                              }}
+                            >
+                              <Send size={12} />
+                              {sendingId === row.id ? '전송중...' : '메일 재발송'}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="tab-btn"
+                            onClick={() => requestExplanation(row)}
+                            disabled={sendingId === row.id}
+                            style={{
+                              padding: '7px 12px',
+                              minHeight: 34,
+                              borderColor: 'rgba(59, 130, 246, 0.18)',
+                              color: 'var(--blue)',
+                              background: 'rgba(59, 130, 246, 0.08)',
+                              boxShadow: 'none',
+                              opacity: sendingId === row.id ? 0.7 : 1,
+                            }}
+                          >
+                            <Send size={14} />
+                            {sendingId === row.id ? '전송 중...' : '소명요청'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -509,6 +574,84 @@ export default function TaxiAuditPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal for viewing submitted explanation */}
+      {selectedExplanationRow ? (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'grid',
+          placeItems: 'center',
+          zIndex: 9999,
+          padding: 16,
+          backdropFilter: 'blur(4px)',
+        }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: 520,
+            padding: 24,
+            borderRadius: 20,
+            display: 'grid',
+            gap: 16,
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle2 size={20} color="var(--green)" />
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>제출된 소명 사유</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedExplanationRow(null)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-2)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'grid', gap: 6, background: 'var(--bg-2)', padding: 12, borderRadius: 12 }}>
+              <div><strong>직원:</strong> {selectedExplanationRow.employeeName} ({selectedExplanationRow.dept})</div>
+              <div><strong>탑승 일시:</strong> {selectedExplanationRow.rideTime || selectedExplanationRow.rideTimeRaw}</div>
+              <div><strong>실제 퇴근:</strong> {selectedExplanationRow.actualOutTime}</div>
+              <div><strong>결제 금액:</strong> {formatCurrency(selectedExplanationRow.amount)}원</div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>직원 소명 작성 내용:</div>
+              <div style={{
+                padding: 14,
+                borderRadius: 12,
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-1)',
+                color: 'var(--text-1)',
+                fontSize: 14,
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                minHeight: 80,
+              }}>
+                {selectedExplanationRow.explanationText || '(작성된 사유가 없습니다)'}
+              </div>
+            </div>
+
+            {selectedExplanationRow.explanationSubmittedAt && (
+              <div style={{ fontSize: 12, color: 'var(--text-2)', textAlign: 'right' }}>
+                제출 시각: {new Date(selectedExplanationRow.explanationSubmittedAt).toLocaleString('ko-KR')}
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="tab-btn primary"
+              onClick={() => setSelectedExplanationRow(null)}
+              style={{ width: '100%', height: 40, justifyContent: 'center', marginTop: 8 }}
+            >
+              확인 닫기
+            </button>
+          </div>
+        </div>
+      ) : null}
     </EmployeeAdminShell>
   );
 }
+

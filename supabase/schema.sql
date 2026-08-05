@@ -311,6 +311,32 @@ CREATE POLICY "sa_ical_subscriptions_admin" ON SA_ical_subscriptions FOR ALL USI
 -- ----------------------------------------------------------------
 -- 인덱스
 -- ----------------------------------------------------------------
+-- ----------------------------------------------------------------
+-- SA_taxi_explanations: 야간 택시 이용 소명 내역
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS SA_taxi_explanations (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token            VARCHAR(100) UNIQUE NOT NULL,
+  order_id         VARCHAR(100),
+  ticket_no        VARCHAR(100),
+  emp_no           VARCHAR(50),
+  employee_name    VARCHAR(100),
+  dept             VARCHAR(100),
+  ride_time        VARCHAR(100),
+  actual_out_time  VARCHAR(100),
+  amount           NUMERIC,
+  pickup           TEXT,
+  dropoff          TEXT,
+  use_reason       TEXT,
+  explanation_text TEXT,
+  status           VARCHAR(20) DEFAULT 'PENDING',  -- PENDING, SUBMITTED, APPROVED, REJECTED
+  requested_at     TIMESTAMPTZ DEFAULT NOW(),
+  submitted_at     TIMESTAMPTZ,
+  decided_at       TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_sa_attendance_emp_no   ON SA_attendance (emp_no);
 CREATE INDEX IF NOT EXISTS idx_sa_attendance_log_time ON SA_attendance (log_time DESC);
 CREATE INDEX IF NOT EXISTS idx_sa_attendance_a_time   ON SA_attendance (a_time DESC);
@@ -325,3 +351,7 @@ CREATE INDEX IF NOT EXISTS idx_sa_attendance_log_adjustments_emp_date ON SA_atte
 CREATE INDEX IF NOT EXISTS idx_sa_attendance_log_adjustments_attendance ON SA_attendance_log_adjustments (attendance_id);
 CREATE INDEX IF NOT EXISTS idx_sa_ical_subscriptions_created_at ON SA_ical_subscriptions (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sa_ical_subscriptions_active ON SA_ical_subscriptions (is_active, revoked_at);
+CREATE INDEX IF NOT EXISTS idx_sa_taxi_explanations_token ON SA_taxi_explanations (token);
+CREATE INDEX IF NOT EXISTS idx_sa_taxi_explanations_emp   ON SA_taxi_explanations (emp_no, status);
+CREATE INDEX IF NOT EXISTS idx_sa_taxi_explanations_order ON SA_taxi_explanations (order_id);
+

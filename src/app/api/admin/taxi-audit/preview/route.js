@@ -365,14 +365,32 @@ export async function POST(request) {
       .filter((row) => Number.isFinite(row.actualOutMinutes) && row.actualOutMinutes < LATE_NIGHT_RIDE_MINUTES)
       .sort(compareByDateThenTime);
 
+    const orderIds = mappedRows.map((r) => r.orderId || r.id || r.ticketNo).filter(Boolean);
+    const { fetchTaxiExplanationsMap } = await import('@/lib/taxiExplanationDb');
+    const expMap = await fetchTaxiExplanationsMap(orderIds);
+
+    const enrichedRows = mappedRows.map((row) => {
+      const orderId = row.orderId || row.id || row.ticketNo;
+      const exp = expMap.get(orderId);
+      return {
+        ...row,
+        explanationRecord: exp || null,
+        explanationStatus: exp?.status || 'NONE',
+        explanationText: exp?.explanation_text || '',
+        explanationSubmittedAt: exp?.submitted_at || null,
+        explanationRequestedAt: exp?.requested_at || null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
       sheetName,
       headers,
-      totalRows: mappedRows.length,
-      rows: mappedRows,
+      totalRows: enrichedRows.length,
+      rows: enrichedRows,
       message: `${file.name || '파일'}을 불러왔습니다.`,
     });
+
   } catch (error) {
     console.error('[Taxi audit preview]', error);
     return NextResponse.json({ error: String(error?.message || error || '파일을 불러오지 못했습니다.') }, { status: 500 });

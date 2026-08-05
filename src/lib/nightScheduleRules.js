@@ -1,5 +1,6 @@
-import { uiText } from './uiText';
-import { isLeaderPosition } from './roleUtils';
+import { uiText } from './uiText.js';
+import { isLeaderPosition } from './roleUtils.js';
+
 
 const normalizeDept = (value = '') => String(value || '').trim().replace(/\s+/g, '');
 const normalizeTime = (value = '', fallback = '00:00') => {

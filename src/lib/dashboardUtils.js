@@ -1,5 +1,6 @@
-import { getKstMonthKey } from './kstDate';
-import { isNightTeamDept } from './nightScheduleRules';
+import { getKstMonthKey } from './kstDate.js';
+import { isNightTeamDept } from './nightScheduleRules.js';
+
 
 export const normalizeDeptName = (value) => String(value ?? '').trim();
 

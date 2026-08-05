@@ -1,7 +1,8 @@
 import nodemailer from 'nodemailer';
-import { getAdminClient } from './supabaseClient';
-import { isLeaderPosition } from './roleUtils';
-import { normalizeEmpNoKey } from './dashboardUtils';
+import { getAdminClient } from './supabaseClient.js';
+import { isLeaderPosition } from './roleUtils.js';
+import { normalizeEmpNoKey } from './dashboardUtils.js';
+
 
 function getSmtpConfig() {
   const host = process.env.NAVER_WORKS_SMTP_HOST || process.env.TAXI_AUDIT_SMTP_HOST;
@@ -123,16 +124,21 @@ async function resolveTaxiAuditMailTargets(row) {
   };
 }
 
-export async function sendTaxiAuditExplanationMail(row) {
+export async function sendTaxiAuditExplanationMail(row, explanationRecord = null, siteBaseUrl = '', overrideRecipientEmail = '') {
   const smtp = getSmtpConfig();
   const fromAddress = process.env.TAXI_AUDIT_MAIL_FROM || smtp.user;
   const fromName = process.env.TAXI_AUDIT_MAIL_FROM_NAME || 'HECTO Q&M 근태관리시스템';
   const replyTo = process.env.TAXI_AUDIT_REPLY_TO || fromAddress;
-  const { recipientEmail, cc } = await resolveTaxiAuditMailTargets(row);
+
+  // 임시 테스트 설정: 소명요청 수신 대상을 bhkim@hecto.co.kr 로 고정 (CC 제외)
+  const recipientEmail = 'bhkim@hecto.co.kr';
+  const cc = [];
 
   if (!recipientEmail) {
     throw new Error('직원 이메일을 찾지 못했습니다. emp_no와 사원 정보를 확인하세요.');
   }
+
+
 
   const transport = nodemailer.createTransport({
     host: smtp.host,
@@ -145,20 +151,32 @@ export async function sendTaxiAuditExplanationMail(row) {
     },
   });
 
+  const baseUrl = siteBaseUrl
+    || process.env.NEXT_PUBLIC_SITE_URL
+    || process.env.SITE_URL
+    || 'https://qnm.hecto.co.kr';
+
+  const token = explanationRecord?.token || '';
+  const explainUrl = token ? `${baseUrl.replace(/\/$/, '')}/taxi-audit/explain?token=${token}` : baseUrl;
+
   const rideTime = String(row.rideTime || row.rideTimeRaw || '-').trim();
   const checkoutTime = String(row.actualOutTime || '-').trim();
   const amount = formatAmount(row.amount);
   const employeeName = String(row.employeeName || '-').trim();
   const dept = String(row.dept || '-').trim();
   const reason = String(row.reason || '-').trim();
+  const pickup = String(row.pickup || '-').trim();
+  const dropoff = String(row.dropoff || '-').trim();
+
   const subject = `[소명요청] 택시 이용 내역 확인 - ${employeeName} / ${rideTime}`;
 
   const text = [
     '안녕하세요.',
     '',
     'HECTO Q&M 근태관리시스템에서 택시 이용 소명 요청드립니다.',
-    '아래의 사유 입력 칸에 내용을 적어 회신해 주시면 됩니다.',
-    '예: 야근 확인 후 귀가했습니다.',
+    '아래 링크를 클릭하여 소명 사유를 작성해 주시기 바랍니다.',
+    '',
+    `소명 작성 웹 페이지: ${explainUrl}`,
     '',
     `직원명: ${employeeName}`,
     `부서: ${dept}`,
@@ -166,65 +184,62 @@ export async function sendTaxiAuditExplanationMail(row) {
     `실제 퇴근시간: ${checkoutTime}`,
     `이용사유: ${reason}`,
     `결제금액: ${amount}`,
-    '',
-    '회신 시 아래 사유 칸에 내용을 적어 보내주세요.',
+    `출발/도착: ${pickup} ➔ ${dropoff}`,
   ].join('\n');
 
   const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #1f2937; background: #f8fafc; padding: 12px;">
-      <div style="max-width: 720px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
-        <div style="padding: 18px 20px; background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%); border-bottom: 1px solid #e5e7eb;">
-          <div style="font-size: 13px; color: #2563eb; font-weight: 700; letter-spacing: 0.02em;">소명 요청</div>
-          <div style="font-size: 20px; font-weight: 700; color: #111827; margin-top: 4px;">택시 이용 내역 확인 요청</div>
-          <div style="font-size: 13px; color: #6b7280; margin-top: 6px;">HECTO Q&amp;M 근태관리시스템에서 자동 발송된 안내입니다.</div>
+    <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #1f2937; background: #f8fafc; padding: 16px;">
+      <div style="max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <div style="padding: 24px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff;">
+          <div style="font-size: 13px; color: #93c5fd; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">HECTO Q&amp;M 근태관리시스템</div>
+          <div style="font-size: 22px; font-weight: 800; margin-top: 6px; letter-spacing: -0.01em;">🚖 야간 택시 이용 소명 요청</div>
+          <div style="font-size: 13px; color: #dbeafe; margin-top: 6px;">아래 내역을 확인하시고 [소명 작성하기] 버튼을 통해 사유를 제출해 주세요.</div>
         </div>
 
-        <div style="padding: 20px;">
-          <p style="margin: 0 0 14px; font-size: 14px; color: #374151;">
-            아래 택시 이용 건에 대해 실제 퇴근 기준과 일치하는지 확인 부탁드립니다.
-            회신하실 수 있도록 아래에 사유 입력 칸을 만들어두었습니다.
+        <div style="padding: 24px;">
+          <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+            안녕하세요, <strong>${escapeHtml(employeeName)}</strong>님.<br/>
+            귀하의 최근 법인 택시 이용 건 중 22시 이후 탑승 건에 대해 소명 확인을 요청드립니다.
           </p>
 
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
-            <thead>
-              <tr>
-                <th style="padding: 10px 12px; text-align: left; background: #f3f4f6; color: #374151; font-size: 13px; border-bottom: 1px solid #e5e7eb;">항목</th>
-                <th style="padding: 10px 12px; text-align: left; background: #f3f4f6; color: #374151; font-size: 13px; border-bottom: 1px solid #e5e7eb;">내용</th>
-              </tr>
-            </thead>
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; font-size: 13px;">
             <tbody>
               <tr>
-                <td style="padding: 10px 12px; width: 160px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f1f5f9;">직원명</td>
-                <td style="padding: 10px 12px; color: #111827; background: #ffffff; border-bottom: 1px solid #f1f5f9;">${escapeHtml(employeeName)}</td>
+                <td style="padding: 11px 14px; width: 140px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">직원명 / 부서</td>
+                <td style="padding: 11px 14px; color: #111827; background: #ffffff; border-bottom: 1px solid #f3f4f6; font-weight: 600;">${escapeHtml(employeeName)} (${escapeHtml(dept)})</td>
               </tr>
               <tr>
-                <td style="padding: 10px 12px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f1f5f9;">부서</td>
-                <td style="padding: 10px 12px; color: #111827; background: #ffffff; border-bottom: 1px solid #f1f5f9;">${escapeHtml(dept)}</td>
+                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">택시 탑승 일시</td>
+                <td style="padding: 11px 14px; color: #dc2626; background: #ffffff; border-bottom: 1px solid #f3f4f6; font-weight: 700;">${escapeHtml(rideTime)}</td>
               </tr>
               <tr>
-                <td style="padding: 10px 12px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f1f5f9;">탑승일시</td>
-                <td style="padding: 10px 12px; color: #111827; background: #ffffff; border-bottom: 1px solid #f1f5f9;">${escapeHtml(rideTime)}</td>
+                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">실제 퇴근 기록 시각</td>
+                <td style="padding: 11px 14px; color: #2563eb; background: #ffffff; border-bottom: 1px solid #f3f4f6; font-weight: 700;">${escapeHtml(checkoutTime)}</td>
               </tr>
               <tr>
-                <td style="padding: 10px 12px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f1f5f9;">실제 퇴근시간</td>
-                <td style="padding: 10px 12px; color: #111827; background: #ffffff; border-bottom: 1px solid #f1f5f9;">${escapeHtml(checkoutTime)}</td>
+                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">출발지 ➔ 도착지</td>
+                <td style="padding: 11px 14px; color: #374151; background: #ffffff; border-bottom: 1px solid #f3f4f6;">${escapeHtml(pickup)} ➔ ${escapeHtml(dropoff)}</td>
               </tr>
               <tr>
-                <td style="padding: 10px 12px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f1f5f9;">이용사유</td>
-                <td style="padding: 10px 12px; color: #111827; background: #ffffff; border-bottom: 1px solid #f1f5f9;">${escapeHtml(reason)}</td>
+                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">카카오T 신청 사유</td>
+                <td style="padding: 11px 14px; color: #374151; background: #ffffff; border-bottom: 1px solid #f3f4f6;">${escapeHtml(reason)}</td>
               </tr>
               <tr>
-                <td style="padding: 10px 12px; color: #6b7280; background: #ffffff;">결제금액</td>
-                <td style="padding: 10px 12px; color: #111827; background: #ffffff;">${escapeHtml(amount)}</td>
+                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; font-weight: 600;">결제 금액</td>
+                <td style="padding: 11px 14px; color: #111827; background: #ffffff; font-weight: 700;">${escapeHtml(amount)}원</td>
               </tr>
             </tbody>
           </table>
 
-          <div style="margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #eff6ff; color: #1d4ed8; font-size: 13px; border: 1px solid #dbeafe;">
-            <div style="font-size: 12px; color: #2563eb; font-weight: 700; margin-bottom: 8px;">사유</div>
-            <div style="padding: 12px; min-height: 64px; border-radius: 10px; border: 1px solid #bfdbfe; background: #ffffff; color: #6b7280;">
-              여기에 회신해 주세요. 예: 야근 확인 후 귀가했습니다.
-            </div>
+          <div style="margin-top: 28px; text-align: center;">
+            <a href="${explainUrl}" target="_blank" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+              👉 소명 작성 페이지로 이동하기
+            </a>
+          </div>
+
+          <div style="margin-top: 20px; text-align: center; font-size: 12px; color: #9ca3af;">
+            버튼이 클릭되지 않는 경우 아래 링크를 주소창에 복사해 붙여넣으세요:<br/>
+            <a href="${explainUrl}" target="_blank" style="color: #2563eb; word-break: break-all;">${explainUrl}</a>
           </div>
         </div>
       </div>
@@ -245,5 +260,8 @@ export async function sendTaxiAuditExplanationMail(row) {
     recipientEmail,
     cc,
     messageId: info.messageId || '',
+    token,
+    explainUrl,
   };
 }
+

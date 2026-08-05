@@ -54,21 +54,35 @@ export async function POST(request) {
       memberIdentifier,
     });
 
+    const rows = result.rows || [];
+    const orderIds = rows.map((r) => r.orderId || r.id || r.ticketNo).filter(Boolean);
+    const { fetchTaxiExplanationsMap } = await import('@/lib/taxiExplanationDb');
+    const expMap = await fetchTaxiExplanationsMap(orderIds);
+
+    const enrichedRows = rows.map((row) => {
+      const orderId = row.orderId || row.id || row.ticketNo;
+      const exp = expMap.get(orderId);
+      return {
+        ...row,
+        explanationRecord: exp || null,
+        explanationStatus: exp?.status || 'NONE',
+        explanationText: exp?.explanation_text || '',
+        explanationSubmittedAt: exp?.submitted_at || null,
+        explanationRequestedAt: exp?.requested_at || null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      rows: result.rows || [],
+      rows: enrichedRows,
       count: result.count || 0,
-      meta: {
-        ...result.meta,
-        startDate,
-        endDate,
-        memberIdentifier: memberIdentifier || '',
-      },
+      meta: result.meta || null,
     });
   } catch (error) {
-    console.error('[Taxi audit kakao]', error);
-    return NextResponse.json({
-      error: String(error?.message || error || '카카오T 조회에 실패했습니다.'),
-    }, { status: 500 });
+    console.error('[Taxi Audit Kakao Query Error]', error);
+    return NextResponse.json(
+      { error: String(error?.message || error || '카카오T 내역을 불러오지 못했습니다.') },
+      { status: 500 }
+    );
   }
 }
