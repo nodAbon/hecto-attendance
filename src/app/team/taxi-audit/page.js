@@ -12,15 +12,16 @@ import {
   RefreshCcw,
   User,
   ArrowRight,
-  ListFilter,
-  Calendar,
+  Filter,
+  CalendarDays,
+  RotateCcw,
 } from 'lucide-react';
 
-function Badge({ tone = 'blue', children }) {
+function StatusBadge({ tone = 'blue', children }) {
   const tones = {
-    green: { bg: 'rgba(34, 197, 94, 0.12)', color: 'var(--green, #22c55e)', border: 'rgba(34, 197, 94, 0.25)' },
-    orange: { bg: 'rgba(245, 158, 11, 0.12)', color: 'var(--orange, #f59e0b)', border: 'rgba(245, 158, 11, 0.25)' },
-    blue: { bg: 'rgba(59, 130, 246, 0.12)', color: 'var(--blue, #3b82f6)', border: 'rgba(59, 130, 246, 0.25)' },
+    green: { bg: 'rgba(34, 197, 94, 0.12)', color: 'var(--green, #16a34a)', border: 'rgba(34, 197, 94, 0.25)' },
+    orange: { bg: 'rgba(245, 158, 11, 0.12)', color: 'var(--orange, #d97706)', border: 'rgba(245, 158, 11, 0.25)' },
+    blue: { bg: 'rgba(59, 130, 246, 0.12)', color: 'var(--blue, #2563eb)', border: 'rgba(59, 130, 246, 0.25)' },
     gray: { bg: 'var(--bg-card-2, #f1f5f9)', color: 'var(--text-2, #64748b)', border: 'var(--border, #cbd5e1)' },
   };
 
@@ -138,22 +139,22 @@ export default function TeamTaxiAuditPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
                   display: 'grid',
                   placeItems: 'center',
-                  background: 'rgba(59, 130, 246, 0.12)',
+                  background: 'rgba(59, 130, 246, 0.14)',
                   color: 'var(--blue)',
                 }}
               >
-                <CarTaxiFront size={20} />
+                <CarTaxiFront size={22} />
               </div>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>
                   부서 소명 현황 요약 {deptName && <span style={{ color: 'var(--blue)' }}>({deptName})</span>}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
                   팀원이 제출한 야간 택시 소명 사유가 이메일 및 시스템에 실시간 연동됩니다.
                 </div>
               </div>
@@ -163,15 +164,15 @@ export default function TeamTaxiAuditPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--bg-card-2)', border: '1px solid var(--border)', fontSize: 13 }}>
                 <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>전체 대상: </span>
-                <span style={{ color: 'var(--text-1)', fontWeight: 700 }}>{totalCount}건</span>
+                <span style={{ color: 'var(--text-1)', fontWeight: 700, fontSize: 15 }}>{totalCount}</span>건
               </div>
               <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', fontSize: 13 }}>
                 <span style={{ color: 'var(--green)', fontWeight: 600 }}>소명 완료: </span>
-                <span style={{ color: 'var(--green)', fontWeight: 700 }}>{submittedCount}건</span>
+                <span style={{ color: 'var(--green)', fontWeight: 700, fontSize: 15 }}>{submittedCount}</span>건
               </div>
               <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', fontSize: 13 }}>
                 <span style={{ color: 'var(--orange)', fontWeight: 600 }}>소명 대기: </span>
-                <span style={{ color: 'var(--orange)', fontWeight: 700 }}>{pendingCount}건</span>
+                <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 15 }}>{pendingCount}</span>건
               </div>
             </div>
           </div>
@@ -184,148 +185,242 @@ export default function TeamTaxiAuditPage() {
           </div>
         )}
 
-        {/* Main Card with Toolbar & Table */}
+        {/* Spacious Main Card with Toolbar & Table */}
         <div className="card" style={{ padding: 0, borderRadius: 'var(--r-md, 12px)', overflow: 'hidden' }}>
-          {/* Spacious Toolbar Header */}
+          {/* Main Integrated Control Bar */}
           <div
             style={{
-              padding: '16px 20px',
+              padding: '18px 20px',
               background: 'var(--bg-card-2)',
               borderBottom: '1px solid var(--border)',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 16,
+              flexDirection: 'column',
+              gap: 14,
             }}
           >
-            {/* Left Controls: Status Tabs & Date Range Picker */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              {/* Status Tabs */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ListFilter size={15} style={{ color: 'var(--text-3)' }} />
-                <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 10, border: '1px solid var(--border)' }}>
+            {/* First Row: Horizontal Filter Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+              {/* Status Filter Tabs (Large & Spacious) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Filter size={16} style={{ color: 'var(--text-3)' }} />
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    gap: 6,
+                    background: 'var(--bg-card)',
+                    padding: 5,
+                    borderRadius: 12,
+                    border: '1.5px solid var(--border)',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                  }}
+                >
                   <button
                     type="button"
                     onClick={() => setStatusFilter('ALL')}
-                    className={`tab-btn ${statusFilter === 'ALL' ? 'active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: 13, minHeight: 32, fontWeight: 600 }}
+                    style={{
+                      padding: '8px 18px',
+                      fontSize: 13,
+                      fontWeight: statusFilter === 'ALL' ? 700 : 500,
+                      borderRadius: 9,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: statusFilter === 'ALL' ? 'var(--blue)' : 'transparent',
+                      color: statusFilter === 'ALL' ? '#ffffff' : 'var(--text-2)',
+                      transition: 'all 0.15s ease',
+                      boxShadow: statusFilter === 'ALL' ? '0 2px 8px rgba(37,99,235,0.3)' : 'none',
+                    }}
                   >
                     전체 ({totalCount})
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFilter('SUBMITTED')}
-                    className={`tab-btn ${statusFilter === 'SUBMITTED' ? 'active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: 13, minHeight: 32, fontWeight: 600 }}
+                    style={{
+                      padding: '8px 18px',
+                      fontSize: 13,
+                      fontWeight: statusFilter === 'SUBMITTED' ? 700 : 500,
+                      borderRadius: 9,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: statusFilter === 'SUBMITTED' ? 'var(--green)' : 'transparent',
+                      color: statusFilter === 'SUBMITTED' ? '#ffffff' : 'var(--text-2)',
+                      transition: 'all 0.15s ease',
+                      boxShadow: statusFilter === 'SUBMITTED' ? '0 2px 8px rgba(34,197,94,0.3)' : 'none',
+                    }}
                   >
                     소명 완료 ({submittedCount})
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFilter('PENDING')}
-                    className={`tab-btn ${statusFilter === 'PENDING' ? 'active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: 13, minHeight: 32, fontWeight: 600 }}
+                    style={{
+                      padding: '8px 18px',
+                      fontSize: 13,
+                      fontWeight: statusFilter === 'PENDING' ? 700 : 500,
+                      borderRadius: 9,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: statusFilter === 'PENDING' ? 'var(--orange)' : 'transparent',
+                      color: statusFilter === 'PENDING' ? '#ffffff' : 'var(--text-2)',
+                      transition: 'all 0.15s ease',
+                      boxShadow: statusFilter === 'PENDING' ? '0 2px 8px rgba(245,158,11,0.3)' : 'none',
+                    }}
                   >
                     소명 대기 ({pendingCount})
                   </button>
                 </div>
               </div>
 
-              {/* Date Range Picker (Spacious & Clear) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', padding: '5px 12px', borderRadius: 10, border: '1px solid var(--border)' }}>
-                <Calendar size={15} style={{ color: 'var(--blue)' }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginRight: 2 }}>조회 기간:</span>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+              {/* Search Bar & Refresh Action */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', width: 250 }}>
+                  <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="팀원명 / 사유 검색..."
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px 8px 36px',
+                      borderRadius: 9,
+                      border: '1.5px solid var(--border)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-1)',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={fetchTeamExplanations}
+                  disabled={loading}
                   style={{
-                    border: '1px solid var(--border)',
-                    borderRadius: 6,
-                    padding: '4px 8px',
-                    background: 'var(--bg-input)',
-                    color: 'var(--text-1)',
+                    padding: '8px 16px',
                     fontSize: 13,
-                    outline: 'none',
-                    minHeight: 30,
+                    fontWeight: 700,
+                    borderRadius: 9,
+                    border: 'none',
+                    background: 'var(--blue)',
+                    color: '#ffffff',
                     cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
                   }}
-                />
-                <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>~</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  style={{
-                    border: '1px solid var(--border)',
-                    borderRadius: 6,
-                    padding: '4px 8px',
-                    background: 'var(--bg-input)',
-                    color: 'var(--text-1)',
-                    fontSize: 13,
-                    outline: 'none',
-                    minHeight: 30,
-                    cursor: 'pointer',
-                  }}
-                />
+                >
+                  <RefreshCcw size={14} className={loading ? 'spin' : ''} />
+                  새로고침
+                </button>
+              </div>
+            </div>
+
+            {/* Second Row: Prominent Date Range Picker */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, pt: 4 }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  background: 'var(--bg-card)',
+                  padding: '8px 16px',
+                  borderRadius: 10,
+                  border: '1.5px solid var(--border)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <CalendarDays size={16} style={{ color: 'var(--blue)' }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>조회 기간 설정:</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: 7,
+                      padding: '6px 12px',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-1)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: 140,
+                    }}
+                  />
+                  <span style={{ fontSize: 14, color: 'var(--text-3)', fontWeight: 700 }}>~</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: 7,
+                      padding: '6px 12px',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-1)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: 140,
+                    }}
+                  />
+                </div>
+
                 {(startDate || endDate) && (
                   <button
                     type="button"
                     onClick={() => { setStartDate(''); setEndDate(''); }}
-                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-3)', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
-                    title="날짜 선택 초기화"
+                    style={{
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card-2)',
+                      borderRadius: 6,
+                      padding: '4px 8px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--text-2)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
                   >
-                    <X size={14} />
+                    <X size={12} /> 날짜 지우기
                   </button>
                 )}
-              </div>
-            </div>
-
-            {/* Right Controls: Search Input & Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ position: 'relative', width: 240 }}>
-                <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="팀원명 / 날짜 / 사유 검색..."
-                  style={{
-                    width: '100%',
-                    padding: '7px 12px 7px 34px',
-                    borderRadius: 8,
-                    border: '1px solid var(--border)',
-                    background: 'var(--bg-input)',
-                    color: 'var(--text-1)',
-                    fontSize: 13,
-                    outline: 'none',
-                    minHeight: 34,
-                  }}
-                />
               </div>
 
               {(searchQuery || statusFilter !== 'ALL' || startDate || endDate) && (
                 <button
                   type="button"
-                  className="tab-btn"
                   onClick={resetFilters}
-                  style={{ padding: '6px 12px', fontSize: 12, minHeight: 34, color: 'var(--text-2)' }}
+                  style={{
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text-2)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
                 >
-                  필터 초기화
+                  <RotateCcw size={12} /> 모든 필터 초기화
                 </button>
               )}
-
-              <button
-                type="button"
-                className="tab-btn primary"
-                onClick={fetchTeamExplanations}
-                disabled={loading}
-                style={{ padding: '6px 14px', fontSize: 13, minHeight: 34, gap: 6, fontWeight: 600 }}
-              >
-                <RefreshCcw size={13} className={loading ? 'spin' : ''} />
-                새로고침
-              </button>
             </div>
           </div>
 
@@ -383,33 +478,37 @@ export default function TeamTaxiAuditPage() {
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         {row.status === 'SUBMITTED' ? (
-                          <Badge tone="green">
+                          <StatusBadge tone="green">
                             <CheckCircle2 size={12} style={{ marginRight: 4 }} />
                             소명 완료
-                          </Badge>
+                          </StatusBadge>
                         ) : (
-                          <Badge tone="orange">
+                          <StatusBadge tone="orange">
                             <Clock size={12} style={{ marginRight: 4 }} />
                             소명 대기
-                          </Badge>
+                          </StatusBadge>
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         {row.status === 'SUBMITTED' ? (
                           <button
                             type="button"
-                            className="tab-btn"
                             onClick={() => setSelectedRow(row)}
                             style={{
-                              padding: '4px 10px',
-                              minHeight: 28,
+                              padding: '5px 12px',
+                              borderRadius: 8,
                               fontSize: 12,
+                              fontWeight: 600,
                               color: 'var(--green)',
-                              borderColor: 'rgba(34, 197, 94, 0.3)',
+                              border: '1px solid rgba(34, 197, 94, 0.3)',
                               background: 'rgba(34, 197, 94, 0.08)',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
                             }}
                           >
-                            <FileText size={12} style={{ marginRight: 4 }} />
+                            <FileText size={13} />
                             사유 보기
                           </button>
                         ) : (
@@ -530,10 +629,10 @@ export default function TeamTaxiAuditPage() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>작성된 소명 사유</div>
-                <Badge tone="green">
+                <StatusBadge tone="green">
                   <CheckCircle2 size={12} style={{ marginRight: 4 }} />
                   소명 제출 완료
-                </Badge>
+                </StatusBadge>
               </div>
               <div style={{
                 padding: '14px 16px',
@@ -558,9 +657,18 @@ export default function TeamTaxiAuditPage() {
 
             <button
               type="button"
-              className="tab-btn primary"
               onClick={() => setSelectedRow(null)}
-              style={{ width: '100%', height: 38, justifyContent: 'center', marginTop: 4, fontWeight: 700 }}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 9,
+                background: 'var(--blue)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+              }}
             >
               닫기
             </button>
