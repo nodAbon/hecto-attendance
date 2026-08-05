@@ -94,66 +94,66 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'var(--bg-body, #f1f4f8)',
-      padding: '24px 16px 48px',
+      background: '#f1f5f9',
+      color: '#0f172a',
+      padding: '28px 16px 56px',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'flex-start',
-      fontFamily: 'var(--font, Pretendard, system-ui, -apple-system, sans-serif)',
+      fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif',
     }}>
       <div style={{
         width: '100%',
         maxWidth: 640,
-        background: 'var(--bg-card, #ffffff)',
+        background: '#ffffff',
         borderRadius: 18,
-        boxShadow: 'var(--shadow-card, 0 10px 28px rgba(0,0,0,0.08))',
+        boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.04)',
         overflow: 'hidden',
-        border: '1px solid var(--border, #e2e8f0)',
+        border: '1px solid #e2e8f0',
       }}>
-        {/* Top Header Banner */}
+        {/* Top Light Header Banner */}
         <div style={{
-          background: '#181d28',
-          color: '#ffffff',
-          padding: '28px 24px 22px',
-          position: 'relative',
+          background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
+          borderBottom: '1px solid #e2e8f0',
+          padding: '24px 28px 20px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{
-              width: 38,
-              height: 38,
+              width: 40,
+              height: 40,
               borderRadius: 10,
-              background: 'rgba(91, 136, 214, 0.16)',
+              background: '#eff6ff',
+              border: '1px solid #dbeafe',
               display: 'grid',
               placeItems: 'center',
-              color: '#5b88d6',
+              color: '#2563eb',
             }}>
               <CarTaxiFront size={20} />
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: '#5b88d6', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: '#2563eb', textTransform: 'uppercase' }}>
                 HECTO Q&M 근태관리시스템
               </div>
-              <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', marginTop: 2, color: '#ecf2f9' }}>
+              <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', marginTop: 2, color: '#0f172a' }}>
                 야간 택시 이용 소명 작성
               </div>
             </div>
           </div>
-          <div style={{ fontSize: 13, color: '#aab6c7', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, marginTop: 4 }}>
             22시 이후 택시 이용 건에 대해 실제 퇴근 시각 기준과 대조하여 소명 사유를 수집합니다.
           </div>
         </div>
 
-
         {/* Content Body */}
-        <div style={{ padding: 28 }}>
+        <div style={{ padding: '24px 28px 28px' }}>
           {loading ? (
             <div style={{ padding: '48px 0', textAlign: 'center', color: '#64748b' }}>
               <div style={{ fontSize: 15, fontWeight: 600 }}>소명 정보를 불러오는 중...</div>
             </div>
           ) : error && !record ? (
             <div style={{
-              padding: 20,
-              borderRadius: 16,
+              padding: 18,
+              borderRadius: 14,
               background: '#fef2f2',
               border: '1px solid #fecaca',
               color: '#991b1b',
@@ -161,19 +161,19 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
               alignItems: 'flex-start',
               gap: 12,
             }}>
-              <AlertTriangle size={20} style={{ shrink: 0, marginTop: 2 }} />
+              <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>오류가 발생했습니다</div>
                 <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>{error}</div>
               </div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: 24 }}>
+            <div style={{ display: 'grid', gap: 22 }}>
               {/* Submission Status Alert */}
               {record?.status === 'SUBMITTED' ? (
                 <div style={{
-                  padding: '16px 20px',
-                  borderRadius: 16,
+                  padding: '14px 18px',
+                  borderRadius: 14,
                   background: '#f0fdf4',
                   border: '1px solid #bbf7d0',
                   color: '#166534',
@@ -181,9 +181,9 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
                   alignItems: 'center',
                   gap: 12,
                 }}>
-                  <CheckCircle2 size={22} color="#16a34a" />
+                  <CheckCircle2 size={20} color="#16a34a" />
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>소명 제출이 완료되었습니다</div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>소명 제출 완료</div>
                     <div style={{ fontSize: 12, color: '#15803d', marginTop: 2 }}>
                       제출 시각: {record?.submitted_at ? new Date(record.submitted_at).toLocaleString('ko-KR') : '방금 전'}
                     </div>
@@ -192,7 +192,7 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
               ) : (
                 <div style={{
                   padding: '14px 18px',
-                  borderRadius: 16,
+                  borderRadius: 14,
                   background: '#fffbeb',
                   border: '1px solid #fde68a',
                   color: '#92400e',
@@ -209,14 +209,14 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
 
               {/* Taxi Audit Item Details */}
               <div style={{
-                borderRadius: 18,
+                borderRadius: 14,
                 border: '1px solid #e2e8f0',
-                background: '#f8fafc',
+                background: '#ffffff',
                 overflow: 'hidden',
               }}>
                 <div style={{
-                  padding: '12px 18px',
-                  background: '#f1f5f9',
+                  padding: '12px 16px',
+                  background: '#f8fafc',
                   borderBottom: '1px solid #e2e8f0',
                   fontSize: 13,
                   fontWeight: 700,
@@ -231,42 +231,42 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
                   </span>
                 </div>
 
-                <div style={{ padding: 18, display: 'grid', gap: 14 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 12, border: '1px solid #edf2f7' }}>
+                <div style={{ padding: 16, display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 10, border: '1px solid #f1f5f9' }}>
                       <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>직원명 / 부서</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 4 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 3 }}>
                         {record?.employee_name || '-'} <span style={{ fontSize: 12, fontWeight: 500, color: '#64748b' }}>({record?.dept || '-'})</span>
                       </div>
                     </div>
 
-                    <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 12, border: '1px solid #edf2f7' }}>
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 10, border: '1px solid #f1f5f9' }}>
                       <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>결제 금액</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 4 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 3 }}>
                         {formatCurrency(record?.amount)}원
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div style={{ background: '#fff5f5', padding: '12px 14px', borderRadius: 12, border: '1px solid #fed7d7' }}>
-                      <div style={{ fontSize: 11, color: '#e53e3e', fontWeight: 700 }}>🚖 택시 탑승 시각</div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#c53030', marginTop: 4 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ background: '#fef2f2', padding: '12px 14px', borderRadius: 10, border: '1px solid #fee2e2' }}>
+                      <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 700 }}>🚖 택시 탑승 시각</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#b91c1c', marginTop: 3 }}>
                         {record?.ride_time || '-'}
                       </div>
                     </div>
 
-                    <div style={{ background: '#ebf8ff', padding: '12px 14px', borderRadius: 12, border: '1px solid #bee3f8' }}>
-                      <div style={{ fontSize: 11, color: '#3182ce', fontWeight: 700 }}>⏰ 실제 퇴근 기록 시각</div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#2b6cb0', marginTop: 4 }}>
+                    <div style={{ background: '#eff6ff', padding: '12px 14px', borderRadius: 10, border: '1px solid #dbeafe' }}>
+                      <div style={{ fontSize: 11, color: '#2563eb', fontWeight: 700 }}>⏰ 실제 퇴근 기록 시각</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#1d4ed8', marginTop: 3 }}>
                         {record?.actual_out_time || '-'}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 12, border: '1px solid #edf2f7' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 10, border: '1px solid #f1f5f9' }}>
                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>출발지 ➔ 도착지</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#334155', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#334155', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>{record?.pickup || '-'}</span>
                       <ArrowRight size={14} color="#94a3b8" />
                       <span>{record?.dropoff || '-'}</span>
@@ -274,9 +274,9 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
                   </div>
 
                   {record?.use_reason && (
-                    <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 12, border: '1px solid #edf2f7' }}>
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 10, border: '1px solid #f1f5f9' }}>
                       <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>카카오T 신청 사유</div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: '#334155', marginTop: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#334155', marginTop: 3 }}>
                         {record.use_reason}
                       </div>
                     </div>
@@ -285,9 +285,9 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
               </div>
 
               {/* Explanation Textarea Form */}
-              <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
+              <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>
                     소명 사유 작성 <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <textarea
@@ -298,8 +298,9 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
                     style={{
                       width: '100%',
                       padding: 14,
-                      borderRadius: 14,
+                      borderRadius: 12,
                       border: '1.5px solid #cbd5e1',
+                      background: '#ffffff',
                       fontSize: 14,
                       lineHeight: 1.6,
                       color: '#0f172a',
@@ -312,7 +313,7 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
                     onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginTop: 6 }}>
-                    <span>구체적인 사유를 작성해 주시면 빠른 승인 처리에 도움이 됩니다.</span>
+                    <span>구체적인 사유를 작성해 주시면 처리에 도움이 됩니다.</span>
                     <span>{explanationText.length} 자</span>
                   </div>
                 </div>
@@ -335,14 +336,14 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
                   style={{
                     width: '100%',
                     padding: '14px 20px',
-                    borderRadius: 14,
-                    background: submitting || !explanationText.trim() ? '#94a3b8' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    borderRadius: 12,
+                    background: submitting || !explanationText.trim() ? '#94a3b8' : '#2563eb',
                     color: '#ffffff',
                     fontSize: 15,
                     fontWeight: 700,
                     border: 'none',
                     cursor: submitting || !explanationText.trim() ? 'not-allowed' : 'pointer',
-                    boxShadow: submitting || !explanationText.trim() ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
+                    boxShadow: submitting || !explanationText.trim() ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.25)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -355,7 +356,7 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
                 </button>
               </form>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
                 <ShieldCheck size={16} color="#94a3b8" />
                 <span>제출된 소명 내역은 근태 관리 시스템 DB에 안전하게 저장됩니다.</span>
               </div>
