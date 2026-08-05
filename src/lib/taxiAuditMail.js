@@ -268,3 +268,128 @@ export async function sendTaxiAuditExplanationMail(row, explanationRecord = null
   };
 }
 
+/**
+ * 팀원이 소명 제출 완료 시 해당 팀장에게 알림 이메일 전송
+ */
+export async function sendTaxiAuditLeaderNotificationMail(record, siteBaseUrl = '') {
+  if (!record) return null;
+
+  try {
+    const smtp = getSmtpConfig();
+    const fromAddress = process.env.TAXI_AUDIT_MAIL_FROM || smtp.user;
+    const fromName = process.env.TAXI_AUDIT_MAIL_FROM_NAME || 'HECTO Q&M 근태관리시스템';
+    const replyTo = process.env.TAXI_AUDIT_REPLY_TO || fromAddress;
+
+    // 테스트 환경: bhkim@hecto.co.kr 고정 (실서버 시 resolveTaxiAuditMailTargets 활용 가능)
+    const leaderEmail = 'bhkim@hecto.co.kr';
+    if (!leaderEmail) return null;
+
+    const employeeName = String(record.employee_name || '-').trim();
+    const dept = String(record.dept || '-').trim();
+    const rideTime = String(record.ride_time || '-').trim();
+    const actualOutTime = String(record.actual_out_time || '-').trim();
+    const amount = formatAmount(record.amount);
+    const explanationText = String(record.explanation_text || '-').trim();
+    const pickup = String(record.pickup || '-').trim();
+    const dropoff = String(record.dropoff || '-').trim();
+
+    const subject = `[팀원 소명제출] ${dept} ${employeeName} 직원의 야간 택시 이용 소명 내역`;
+
+    const text = [
+      '안녕하세요, 팀장님.',
+      '',
+      `[${dept}] ${employeeName} 직원이 야간 택시 이용에 대한 소명 사유를 제출하였습니다.`,
+      '',
+      `· 직원명: ${employeeName} (${dept})`,
+      `· 탑승일시: ${rideTime}`,
+      `· 실제 퇴근 기록: ${actualOutTime}`,
+      `· 결제 금액: ${amount}원`,
+      `· 출발/도착: ${pickup} ➔ ${dropoff}`,
+      `· 제출된 소명 사유: ${explanationText}`,
+      '',
+      '자세한 내용은 근태관리 시스템 [팀원 택시 소명 내역] 메뉴에서 확인하실 수 있습니다.',
+    ].join('\n');
+
+    const html = `
+      <div style="font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #11141b; background: #f1f4f8; padding: 20px 12px;">
+        <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(15,23,42,0.06);">
+          <div style="padding: 24px 28px; background: #181d28; color: #ffffff;">
+            <div style="font-size: 11px; font-weight: 700; color: #5b88d6; letter-spacing: 0.05em; text-transform: uppercase;">HECTO Q&amp;M 근태관리시스템</div>
+            <div style="font-size: 20px; font-weight: 700; margin-top: 6px; color: #ecf2f9; letter-spacing: -0.02em;">팀원 야간 택시 소명 제출 안내</div>
+            <div style="font-size: 13px; color: #aab6c7; margin-top: 4px;">부서 팀원이 소명 사유를 작성하여 제출하였습니다.</div>
+          </div>
+
+          <div style="padding: 28px;">
+            <p style="margin: 0 0 18px; font-size: 14px; color: #334155; line-height: 1.6;">
+              안녕하세요, <strong>${escapeHtml(dept)}</strong> 팀장님.<br/>
+              귀하의 부서 팀원 <strong>${escapeHtml(employeeName)}</strong> 직원이 야간 택시 이용 소명을 작성 완료하였습니다.
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; font-size: 13px; margin-bottom: 20px;">
+              <tbody>
+                <tr>
+                  <td style="padding: 11px 14px; width: 140px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">팀원명 / 부서</td>
+                  <td style="padding: 11px 14px; color: #0f172a; background: #ffffff; border-bottom: 1px solid #e2e8f0; font-weight: 700;">${escapeHtml(employeeName)} (${escapeHtml(dept)})</td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">택시 탑승 일시</td>
+                  <td style="padding: 11px 14px; color: #d06b6b; background: #ffffff; border-bottom: 1px solid #e2e8f0; font-weight: 700;">${escapeHtml(rideTime)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">실제 퇴근 기록 시각</td>
+                  <td style="padding: 11px 14px; color: #5b88d6; background: #ffffff; border-bottom: 1px solid #e2e8f0; font-weight: 700;">${escapeHtml(actualOutTime)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">출발지 ➔ 도착지</td>
+                  <td style="padding: 11px 14px; color: #334155; background: #ffffff; border-bottom: 1px solid #e2e8f0;">${escapeHtml(pickup)} ➔ ${escapeHtml(dropoff)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; font-weight: 600;">결제 금액</td>
+                  <td style="padding: 11px 14px; color: #0f172a; background: #ffffff; font-weight: 700;">${escapeHtml(amount)}원</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+              <div style="font-size: 12px; font-weight: 700; color: #2563eb; margin-bottom: 6px;">📝 팀원이 작성한 소명 사유</div>
+              <div style="font-size: 14px; color: #0f172a; line-height: 1.6; white-space: pre-wrap; font-weight: 500;">
+                ${escapeHtml(explanationText)}
+              </div>
+            </div>
+
+            <div style="margin-top: 24px; text-align: center; font-size: 12px; color: #94a3b8;">
+              근태관리시스템 ➔ [팀원 택시 소명 내역] 메뉴에서 전체 내역 조회가 가능합니다.
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const transport = nodemailer.createTransport({
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure,
+      requireTLS: !smtp.secure && smtp.port === 587,
+      auth: {
+        user: smtp.user,
+        pass: smtp.pass,
+      },
+    });
+
+    const info = await transport.sendMail({
+      from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
+      to: leaderEmail,
+      replyTo,
+      subject,
+      text,
+      html,
+    });
+
+    return { leaderEmail, messageId: info.messageId };
+  } catch (err) {
+    console.error('[Taxi Audit Leader Mail Error]', err);
+    return null;
+  }
+}
+
+

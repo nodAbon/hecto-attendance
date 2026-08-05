@@ -24,10 +24,12 @@ const GENERAL_ITEMS = [
 const LEADER_ITEMS = [
   { href: '/?tab=MONTHLY', label: '월간 근태보고', icon: CalendarDays, iconStyle: { color: 'var(--green)' }, category: '부서' },
   // { href: '/?tab=EMPLOYEES', label: '직원 일정관리', icon: Users, iconStyle: { color: 'var(--orange)' }, category: '부서' },
+  { href: '/team/taxi-audit', label: '팀원 택시 소명 내역', icon: CarTaxiFront, iconStyle: { color: 'var(--cyan)' }, activeHref: '/team/taxi-audit', category: '부서' },
   { href: '/attendance-records', label: '출입기록 조회 및 조정', icon: Clock, iconStyle: { color: 'var(--blue)' }, category: '부서' },
   { href: '/admin/ical-subscriptions', label: '캘린더 링크 생성', icon: CalendarDays, iconStyle: { color: 'var(--purple)' }, activeHref: '/admin/ical-subscriptions', category: '부서' },
   { href: '/?tab=MANUAL_APPROVAL', label: '수동 요청 내역', icon: CheckCircle, iconStyle: { color: 'var(--red)' }, category: '부서' },
 ];
+
 
 const OVERTIME_ITEM = { href: '/?tab=OVERTIME', label: '초과근무 관리', icon: Clock, iconStyle: { color: 'var(--amber)' }, category: '부서' };
 

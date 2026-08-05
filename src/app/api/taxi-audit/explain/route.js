@@ -43,11 +43,22 @@ export async function POST(request) {
 
     const updated = await submitTaxiExplanation({ token, explanationText });
 
+    // 팀장 알림 이메일 비동기 발송
+    try {
+      const { sendTaxiAuditLeaderNotificationMail } = await import('@/lib/taxiAuditMail');
+      sendTaxiAuditLeaderNotificationMail(updated).catch((err) => {
+        console.error('Async leader mail notification error:', err);
+      });
+    } catch (mailErr) {
+      console.warn('Leader mail import warning:', mailErr);
+    }
+
     return NextResponse.json({
       success: true,
       message: '소명 사유가 성공적으로 제출되었습니다.',
       data: updated,
     });
+
   } catch (error) {
     console.error('[Taxi Audit Explain POST]', error);
     return NextResponse.json(
