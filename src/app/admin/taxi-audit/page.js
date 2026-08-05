@@ -191,6 +191,43 @@ export default function TaxiAuditPage() {
     }
   };
 
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const openExplanationModal = async (row) => {
+    setSelectedExplanationRow(row);
+    setModalLoading(true);
+    try {
+      const orderId = row.orderId || row.id || row.ticketNo;
+      const res = await fetch(`/api/admin/taxi-audit/explanation-detail?orderId=${encodeURIComponent(orderId)}`);
+      const json = await res.json();
+      if (res.ok && json.data) {
+        const freshExp = json.data;
+        setSelectedExplanationRow((prev) => ({
+          ...(prev || row),
+          explanationText: freshExp.explanation_text || prev?.explanationText || '',
+          explanationStatus: freshExp.status || prev?.explanationStatus || 'SUBMITTED',
+          explanationSubmittedAt: freshExp.submitted_at || prev?.explanationSubmittedAt,
+        }));
+        setRows((prevRows) =>
+          prevRows.map((r) =>
+            r.id === row.id
+              ? {
+                  ...r,
+                  explanationText: freshExp.explanation_text || r.explanationText,
+                  explanationStatus: freshExp.status || r.explanationStatus,
+                  explanationSubmittedAt: freshExp.submitted_at || r.explanationSubmittedAt,
+                }
+              : r
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Failed to load fresh explanation detail:', err);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   const requestExplanation = async (row) => {
     if (!row?.empNo && !row?.memberIdentifier) {
       setError('직원 식별 정보를 찾을 수 없습니다.');
@@ -226,6 +263,7 @@ export default function TaxiAuditPage() {
       setSendingId('');
     }
   };
+
 
 
   return (
@@ -507,7 +545,7 @@ export default function TaxiAuditPage() {
                             <button
                               type="button"
                               className="tab-btn"
-                              onClick={() => setSelectedExplanationRow(row)}
+                              onClick={() => openExplanationModal(row)}
                               style={{
                                 padding: '4px 8px',
                                 minHeight: 28,
@@ -520,6 +558,7 @@ export default function TaxiAuditPage() {
                               <FileText size={12} />
                               사유 보기
                             </button>
+
                           </div>
                         ) : row.explanationStatus === 'PENDING' ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
@@ -679,11 +718,24 @@ export default function TaxiAuditPage() {
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>작성된 소명 사유</div>
-                <Badge tone="green">
-                  <CheckCircle2 size={12} style={{ marginRight: 4 }} />
-                  소명 제출 완료
-                </Badge>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>작성된 소명 사유</span>
+                  {modalLoading && <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 600 }}>(실시간 동기화 중...)</span>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => openExplanationModal(selectedExplanationRow)}
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-2)', padding: 2 }}
+                    title="새로고침"
+                  >
+                    <RefreshCcw size={12} />
+                  </button>
+                  <Badge tone="green">
+                    <CheckCircle2 size={12} style={{ marginRight: 4 }} />
+                    소명 제출 완료
+                  </Badge>
+                </div>
               </div>
               <div style={{
                 padding: '14px 16px',
