@@ -188,63 +188,66 @@ export async function sendTaxiAuditExplanationMail(row, explanationRecord = null
   ].join('\n');
 
   const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #1f2937; background: #f8fafc; padding: 16px;">
-      <div style="max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <div style="padding: 24px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff;">
-          <div style="font-size: 13px; color: #93c5fd; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">HECTO Q&amp;M 근태관리시스템</div>
-          <div style="font-size: 22px; font-weight: 800; margin-top: 6px; letter-spacing: -0.01em;">🚖 야간 택시 이용 소명 요청</div>
-          <div style="font-size: 13px; color: #dbeafe; margin-top: 6px;">아래 내역을 확인하시고 [소명 작성하기] 버튼을 통해 사유를 제출해 주세요.</div>
+    <div style="font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #11141b; background: #f1f4f8; padding: 20px 12px;">
+      <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(15,23,42,0.06);">
+        <div style="padding: 24px 28px; background: #181d28; color: #ffffff;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 700; color: #5b88d6; letter-spacing: 0.05em; text-transform: uppercase;">HECTO Q&amp;M 근태관리시스템</span>
+          </div>
+          <div style="font-size: 20px; font-weight: 700; margin-top: 6px; color: #ecf2f9; letter-spacing: -0.02em;">야간 택시 이용 소명 요청</div>
+          <div style="font-size: 13px; color: #aab6c7; margin-top: 4px;">아래 내역을 확인하시고 [소명 작성하기] 버튼을 통해 사유를 입력해 주세요.</div>
         </div>
 
-        <div style="padding: 24px;">
-          <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+        <div style="padding: 28px;">
+          <p style="margin: 0 0 18px; font-size: 14px; color: #334155; line-height: 1.6;">
             안녕하세요, <strong>${escapeHtml(employeeName)}</strong>님.<br/>
-            귀하의 최근 법인 택시 이용 건 중 22시 이후 탑승 건에 대해 소명 확인을 요청드립니다.
+            최근 법인 택시 이용 건 중 22시 이후 탑승 건에 대해 실제 퇴근 시각 기준과 대조하여 소명 사유를 수집하고 있습니다.
           </p>
 
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; font-size: 13px;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; font-size: 13px;">
             <tbody>
               <tr>
-                <td style="padding: 11px 14px; width: 140px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">직원명 / 부서</td>
-                <td style="padding: 11px 14px; color: #111827; background: #ffffff; border-bottom: 1px solid #f3f4f6; font-weight: 600;">${escapeHtml(employeeName)} (${escapeHtml(dept)})</td>
+                <td style="padding: 11px 14px; width: 140px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">직원명 / 부서</td>
+                <td style="padding: 11px 14px; color: #0f172a; background: #ffffff; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${escapeHtml(employeeName)} (${escapeHtml(dept)})</td>
               </tr>
               <tr>
-                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">택시 탑승 일시</td>
-                <td style="padding: 11px 14px; color: #dc2626; background: #ffffff; border-bottom: 1px solid #f3f4f6; font-weight: 700;">${escapeHtml(rideTime)}</td>
+                <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">택시 탑승 일시</td>
+                <td style="padding: 11px 14px; color: #d06b6b; background: #ffffff; border-bottom: 1px solid #e2e8f0; font-weight: 700;">${escapeHtml(rideTime)}</td>
               </tr>
               <tr>
-                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">실제 퇴근 기록 시각</td>
-                <td style="padding: 11px 14px; color: #2563eb; background: #ffffff; border-bottom: 1px solid #f3f4f6; font-weight: 700;">${escapeHtml(checkoutTime)}</td>
+                <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">실제 퇴근 기록 시각</td>
+                <td style="padding: 11px 14px; color: #5b88d6; background: #ffffff; border-bottom: 1px solid #e2e8f0; font-weight: 700;">${escapeHtml(checkoutTime)}</td>
               </tr>
               <tr>
-                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">출발지 ➔ 도착지</td>
-                <td style="padding: 11px 14px; color: #374151; background: #ffffff; border-bottom: 1px solid #f3f4f6;">${escapeHtml(pickup)} ➔ ${escapeHtml(dropoff)}</td>
+                <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">출발지 ➔ 도착지</td>
+                <td style="padding: 11px 14px; color: #334155; background: #ffffff; border-bottom: 1px solid #e2e8f0;">${escapeHtml(pickup)} ➔ ${escapeHtml(dropoff)}</td>
               </tr>
               <tr>
-                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-weight: 600;">카카오T 신청 사유</td>
-                <td style="padding: 11px 14px; color: #374151; background: #ffffff; border-bottom: 1px solid #f3f4f6;">${escapeHtml(reason)}</td>
+                <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600;">카카오T 신청 사유</td>
+                <td style="padding: 11px 14px; color: #334155; background: #ffffff; border-bottom: 1px solid #e2e8f0;">${escapeHtml(reason)}</td>
               </tr>
               <tr>
-                <td style="padding: 11px 14px; color: #6b7280; background: #f9fafb; font-weight: 600;">결제 금액</td>
-                <td style="padding: 11px 14px; color: #111827; background: #ffffff; font-weight: 700;">${escapeHtml(amount)}원</td>
+                <td style="padding: 11px 14px; color: #64748b; background: #f8fafc; font-weight: 600;">결제 금액</td>
+                <td style="padding: 11px 14px; color: #0f172a; background: #ffffff; font-weight: 700;">${escapeHtml(amount)}원</td>
               </tr>
             </tbody>
           </table>
 
           <div style="margin-top: 28px; text-align: center;">
-            <a href="${explainUrl}" target="_blank" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+            <a href="${explainUrl}" target="_blank" style="display: inline-block; padding: 13px 28px; background: #5b88d6; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(91,136,214,0.3);">
               👉 소명 작성 페이지로 이동하기
             </a>
           </div>
 
-          <div style="margin-top: 20px; text-align: center; font-size: 12px; color: #9ca3af;">
-            버튼이 클릭되지 않는 경우 아래 링크를 주소창에 복사해 붙여넣으세요:<br/>
-            <a href="${explainUrl}" target="_blank" style="color: #2563eb; word-break: break-all;">${explainUrl}</a>
+          <div style="margin-top: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+            버튼이 클릭되지 않는 경우 아래 링크를 클릭하거나 주소창에 복사해 주세요:<br/>
+            <a href="${explainUrl}" target="_blank" style="color: #5b88d6; word-break: break-all;">${explainUrl}</a>
           </div>
         </div>
       </div>
     </div>
   `;
+
 
   const info = await transport.sendMail({
     from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,

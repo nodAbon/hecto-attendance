@@ -83,7 +83,7 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
       if (!res.ok) throw new Error(json.error || '제출에 실패했습니다.');
 
       setRecord(json.data || { ...record, explanation_text: explanationText, status: 'SUBMITTED' });
-      setSuccessMsg('소명 사유가 제출되었습니다. 승인 대기 중입니다.');
+      setSuccessMsg('소명 사유가 성공적으로 제출되었습니다.');
     } catch (err) {
       setError(err?.message || '제출에 실패했습니다.');
     } finally {
@@ -94,54 +94,55 @@ export default function TaxiExplainPage({ searchParams: searchParamsPromise }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%)',
+      background: 'var(--bg-body, #f1f4f8)',
       padding: '24px 16px 48px',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'flex-start',
-      fontFamily: 'var(--font-sans, system-ui, -apple-system, sans-serif)',
+      fontFamily: 'var(--font, Pretendard, system-ui, -apple-system, sans-serif)',
     }}>
       <div style={{
         width: '100%',
         maxWidth: 640,
-        background: '#ffffff',
-        borderRadius: 24,
-        boxShadow: '0 20px 40px -15px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.1)',
+        background: 'var(--bg-card, #ffffff)',
+        borderRadius: 18,
+        boxShadow: 'var(--shadow-card, 0 10px 28px rgba(0,0,0,0.08))',
         overflow: 'hidden',
-        border: '1px solid #e2e8f0',
+        border: '1px solid var(--border, #e2e8f0)',
       }}>
         {/* Top Header Banner */}
         <div style={{
-          background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+          background: '#181d28',
           color: '#ffffff',
-          padding: '32px 28px 24px',
+          padding: '28px 24px 22px',
           position: 'relative',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: 'rgba(255, 255, 255, 0.18)',
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: 'rgba(91, 136, 214, 0.16)',
               display: 'grid',
               placeItems: 'center',
-              backdropFilter: 'blur(4px)',
+              color: '#5b88d6',
             }}>
-              <CarTaxiFront size={22} color="#ffffff" />
+              <CarTaxiFront size={20} />
             </div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: '#93c5fd', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: '#5b88d6', textTransform: 'uppercase' }}>
                 HECTO Q&M 근태관리시스템
               </div>
-              <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', marginTop: 2 }}>
+              <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', marginTop: 2, color: '#ecf2f9' }}>
                 야간 택시 이용 소명 작성
               </div>
             </div>
           </div>
-          <div style={{ fontSize: 13, color: '#dbeafe', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: '#aab6c7', lineHeight: 1.5 }}>
             22시 이후 택시 이용 건에 대해 실제 퇴근 시각 기준과 대조하여 소명 사유를 수집합니다.
           </div>
         </div>
+
 
         {/* Content Body */}
         <div style={{ padding: 28 }}>

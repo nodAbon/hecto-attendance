@@ -580,77 +580,144 @@ export default function TaxiAuditPage() {
         <div style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'grid',
           placeItems: 'center',
           zIndex: 9999,
           padding: 16,
-          backdropFilter: 'blur(4px)',
+          backdropFilter: 'blur(6px)',
         }}>
           <div className="card" style={{
             width: '100%',
-            maxWidth: 520,
-            padding: 24,
-            borderRadius: 20,
+            maxWidth: 540,
+            padding: 22,
+            borderRadius: 'var(--r-lg, 14px)',
+            border: '1px solid var(--border)',
+            background: 'var(--bg-card)',
+            color: 'var(--text-1)',
+            boxShadow: 'var(--shadow-card)',
             display: 'grid',
             gap: 16,
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <CheckCircle2 size={20} color="var(--green)" />
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>제출된 소명 사유</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: 'rgba(91, 136, 214, 0.14)',
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: 'var(--blue)',
+                }}>
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>소명 사유 상세</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-2)' }}>직원이 웹에서 작성하여 제출한 소명 내역입니다.</div>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedExplanationRow(null)}
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-2)' }}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: 'var(--text-2)',
+                  padding: 4,
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'grid', gap: 6, background: 'var(--bg-2)', padding: 12, borderRadius: 12 }}>
-              <div><strong>직원:</strong> {selectedExplanationRow.employeeName} ({selectedExplanationRow.dept})</div>
-              <div><strong>탑승 일시:</strong> {selectedExplanationRow.rideTime || selectedExplanationRow.rideTimeRaw}</div>
-              <div><strong>실제 퇴근:</strong> {selectedExplanationRow.actualOutTime}</div>
-              <div><strong>결제 금액:</strong> {formatCurrency(selectedExplanationRow.amount)}원</div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 10,
+              padding: 12,
+              borderRadius: 'var(--r-md, 10px)',
+              background: 'var(--bg-card-2)',
+              border: '1px solid var(--border)',
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>직원명 / 부서</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginTop: 2 }}>
+                  {selectedExplanationRow.employeeName} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>({selectedExplanationRow.dept || '-'})</span>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>결제 금액</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginTop: 2 }}>
+                  {formatCurrency(selectedExplanationRow.amount)}원
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600 }}>🚖 탑승 일시</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)', marginTop: 2 }}>
+                  {selectedExplanationRow.rideTime || selectedExplanationRow.rideTimeRaw}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 600 }}>⏰ 실제 퇴근</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue)', marginTop: 2 }}>
+                  {selectedExplanationRow.actualOutTime}
+                </div>
+              </div>
+              {selectedExplanationRow.pickup || selectedExplanationRow.dropoff ? (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>출발지 ➔ 도착지</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginTop: 2 }}>
+                    {selectedExplanationRow.pickup || '-'} ➔ {selectedExplanationRow.dropoff || '-'}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>직원 소명 작성 내용:</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>작성된 소명 사유</div>
+                <Badge tone="green">
+                  <CheckCircle2 size={12} style={{ marginRight: 4 }} />
+                  소명 제출 완료
+                </Badge>
+              </div>
               <div style={{
-                padding: 14,
-                borderRadius: 12,
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-1)',
+                padding: '14px 16px',
+                borderRadius: 'var(--r-md, 10px)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-input)',
                 color: 'var(--text-1)',
                 fontSize: 14,
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
-                minHeight: 80,
+                minHeight: 90,
               }}>
                 {selectedExplanationRow.explanationText || '(작성된 사유가 없습니다)'}
               </div>
             </div>
 
-            {selectedExplanationRow.explanationSubmittedAt && (
+            {selectedExplanationRow.explanationSubmittedAt ? (
               <div style={{ fontSize: 12, color: 'var(--text-2)', textAlign: 'right' }}>
                 제출 시각: {new Date(selectedExplanationRow.explanationSubmittedAt).toLocaleString('ko-KR')}
               </div>
-            )}
+            ) : null}
 
             <button
               type="button"
               className="tab-btn primary"
               onClick={() => setSelectedExplanationRow(null)}
-              style={{ width: '100%', height: 40, justifyContent: 'center', marginTop: 8 }}
+              style={{ width: '100%', height: 38, justifyContent: 'center', marginTop: 4, fontWeight: 700 }}
             >
-              확인 닫기
+              닫기
             </button>
           </div>
         </div>
       ) : null}
+
     </EmployeeAdminShell>
   );
 }
