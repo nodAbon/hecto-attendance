@@ -19,7 +19,7 @@ import {
 function StatusBadge({ tone = 'blue', children }) {
   const tones = {
     green: { bg: 'rgba(34, 197, 94, 0.12)', color: 'var(--green, #16a34a)', border: 'rgba(34, 197, 94, 0.25)' },
-    orange: { bg: 'rgba(245, 158, 11, 0.12)', color: 'var(--orange, #d97706)', border: 'rgba(245, 158, 11, 0.25)' },
+    orange: { bg: 'rgba(245, 158, 11, 0.12)', color: '#d97706', border: 'rgba(245, 158, 11, 0.25)' },
     blue: { bg: 'rgba(59, 130, 246, 0.12)', color: 'var(--blue, #2563eb)', border: 'rgba(59, 130, 246, 0.25)' },
     gray: { bg: 'var(--bg-card-2, #f1f5f9)', color: 'var(--text-2, #64748b)', border: 'var(--border, #cbd5e1)' },
   };
@@ -188,12 +188,12 @@ export default function TeamTaxiAuditPage() {
                 <span style={{ color: 'var(--text-1)', fontWeight: 700, fontSize: 14 }}>{totalCount}</span>건
               </div>
               <div style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', fontSize: 13, whiteSpace: 'nowrap' }}>
-                <span style={{ color: 'var(--green)', fontWeight: 600 }}>소명 완료: </span>
-                <span style={{ color: 'var(--green)', fontWeight: 700, fontSize: 14 }}>{submittedCount}</span>건
+                <span style={{ color: '#16a34a', fontWeight: 600 }}>소명 완료: </span>
+                <span style={{ color: '#16a34a', fontWeight: 700, fontSize: 14 }}>{submittedCount}</span>건
               </div>
               <div style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', fontSize: 13, whiteSpace: 'nowrap' }}>
-                <span style={{ color: 'var(--orange)', fontWeight: 600 }}>소명 대기: </span>
-                <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 14 }}>{pendingCount}</span>건
+                <span style={{ color: '#d97706', fontWeight: 600 }}>소명 대기: </span>
+                <span style={{ color: '#d97706', fontWeight: 700, fontSize: 14 }}>{pendingCount}</span>건
               </div>
             </div>
           </div>
@@ -253,10 +253,10 @@ export default function TeamTaxiAuditPage() {
                       borderRadius: 7,
                       border: 'none',
                       cursor: 'pointer',
-                      background: statusFilter === 'ALL' ? 'var(--blue)' : 'transparent',
+                      background: statusFilter === 'ALL' ? '#2563eb' : 'transparent',
                       color: statusFilter === 'ALL' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
-                      boxShadow: statusFilter === 'ALL' ? '0 2px 6px rgba(37,99,235,0.25)' : 'none',
+                      boxShadow: statusFilter === 'ALL' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none',
                       whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -264,7 +264,7 @@ export default function TeamTaxiAuditPage() {
                       lineHeight: 1,
                     }}
                   >
-                    전체 ({totalCount})
+                    <span>전체 ({totalCount})</span>
                   </button>
                   <button
                     type="button"
@@ -277,10 +277,10 @@ export default function TeamTaxiAuditPage() {
                       borderRadius: 7,
                       border: 'none',
                       cursor: 'pointer',
-                      background: statusFilter === 'SUBMITTED' ? 'var(--green)' : 'transparent',
+                      background: statusFilter === 'SUBMITTED' ? '#16a34a' : 'transparent',
                       color: statusFilter === 'SUBMITTED' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
-                      boxShadow: statusFilter === 'SUBMITTED' ? '0 2px 6px rgba(34,197,94,0.25)' : 'none',
+                      boxShadow: statusFilter === 'SUBMITTED' ? '0 2px 6px rgba(22,163,74,0.3)' : 'none',
                       whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -288,7 +288,7 @@ export default function TeamTaxiAuditPage() {
                       lineHeight: 1,
                     }}
                   >
-                    소명 완료 ({submittedCount})
+                    <span>소명 완료 ({submittedCount})</span>
                   </button>
                   <button
                     type="button"
@@ -301,10 +301,10 @@ export default function TeamTaxiAuditPage() {
                       borderRadius: 7,
                       border: 'none',
                       cursor: 'pointer',
-                      background: statusFilter === 'PENDING' ? 'var(--orange)' : 'transparent',
+                      background: statusFilter === 'PENDING' ? '#d97706' : 'transparent',
                       color: statusFilter === 'PENDING' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
-                      boxShadow: statusFilter === 'PENDING' ? '0 2px 6px rgba(245,158,11,0.25)' : 'none',
+                      boxShadow: statusFilter === 'PENDING' ? '0 2px 6px rgba(217,119,6,0.35)' : 'none',
                       whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -312,7 +312,7 @@ export default function TeamTaxiAuditPage() {
                       lineHeight: 1,
                     }}
                   >
-                    소명 대기 ({pendingCount})
+                    <span>소명 대기 ({pendingCount})</span>
                   </button>
                 </div>
               </div>
