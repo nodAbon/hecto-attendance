@@ -206,9 +206,9 @@ export default function TeamTaxiAuditPage() {
           </div>
         )}
 
-        {/* Main Card with STRICT 38px HEIGHT-MATCHED TOOLBAR & Table */}
+        {/* Main Card with STRICT 36px MATCHED OUTER HEIGHTS & Table */}
         <div className="card" style={{ padding: 0, borderRadius: 'var(--r-md, 10px)', overflow: 'hidden' }}>
-          {/* CONTROL BAR WITH EXACT 38px MATCHED HEIGHT BOXES */}
+          {/* CONTROL BAR WITH 100% IDENTICAL 36px HEIGHT BOXES */}
           <div
             style={{
               padding: '12px 16px',
@@ -222,9 +222,9 @@ export default function TeamTaxiAuditPage() {
               overflowX: 'auto',
             }}
           >
-            {/* Left Side: Status Filter Tabs AND Date Range Picker on EXACT SAME LINE with SAME 38px HEIGHT */}
+            {/* Left Side: Status Filter Tabs AND Date Range Picker on EXACT SAME LINE with SAME 36px HEIGHT */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'nowrap' }}>
-              {/* Filter Icon & Tabs Wrapper (Height: 38px) */}
+              {/* Filter Icon & Tabs Wrapper (Height: 36px, Padding: 3px) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 <Filter size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
                 <div
@@ -232,7 +232,7 @@ export default function TeamTaxiAuditPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 3,
-                    height: 38,
+                    height: 36,
                     padding: 3,
                     borderRadius: 10,
                     border: '1.5px solid var(--border)',
@@ -246,9 +246,9 @@ export default function TeamTaxiAuditPage() {
                     type="button"
                     onClick={() => setStatusFilter('ALL')}
                     style={{
-                      height: '100%',
-                      padding: '0 14px',
-                      fontSize: 13,
+                      height: 28,
+                      padding: '0 12px',
+                      fontSize: 12,
                       fontWeight: statusFilter === 'ALL' ? 700 : 500,
                       borderRadius: 7,
                       border: 'none',
@@ -260,17 +260,19 @@ export default function TeamTaxiAuditPage() {
                       whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
+                      boxSizing: 'border-box',
+                      lineHeight: 1,
                     }}
                   >
-                    <span>전체 ({totalCount})</span>
+                    전체 ({totalCount})
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFilter('SUBMITTED')}
                     style={{
-                      height: '100%',
-                      padding: '0 14px',
-                      fontSize: 13,
+                      height: 28,
+                      padding: '0 12px',
+                      fontSize: 12,
                       fontWeight: statusFilter === 'SUBMITTED' ? 700 : 500,
                       borderRadius: 7,
                       border: 'none',
@@ -282,17 +284,19 @@ export default function TeamTaxiAuditPage() {
                       whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
+                      boxSizing: 'border-box',
+                      lineHeight: 1,
                     }}
                   >
-                    <span>소명 완료 ({submittedCount})</span>
+                    소명 완료 ({submittedCount})
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFilter('PENDING')}
                     style={{
-                      height: '100%',
-                      padding: '0 14px',
-                      fontSize: 13,
+                      height: 28,
+                      padding: '0 12px',
+                      fontSize: 12,
                       fontWeight: statusFilter === 'PENDING' ? 700 : 500,
                       borderRadius: 7,
                       border: 'none',
@@ -304,21 +308,23 @@ export default function TeamTaxiAuditPage() {
                       whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
+                      boxSizing: 'border-box',
+                      lineHeight: 1,
                     }}
                   >
-                    <span>소명 대기 ({pendingCount})</span>
+                    소명 대기 ({pendingCount})
                   </button>
                 </div>
               </div>
 
-              {/* Date Range Picker (EXACT 38px HEIGHT MATCH!) */}
+              {/* Date Range Picker (Height: 36px, Padding: 3px 10px) */}
               <div
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  height: 38,
-                  padding: '0 12px',
+                  height: 36,
+                  padding: '3px 10px',
                   borderRadius: 10,
                   border: '1.5px solid var(--border)',
                   background: 'var(--bg-card)',
@@ -327,8 +333,8 @@ export default function TeamTaxiAuditPage() {
                   flexShrink: 0,
                 }}
               >
-                <CalendarDays size={15} style={{ color: 'var(--blue)', flexShrink: 0 }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>조회 기간:</span>
+                <CalendarDays size={14} style={{ color: 'var(--blue)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', whiteSpace: 'nowrap', lineHeight: 1 }}>조회 기간:</span>
                 <input
                   type="date"
                   value={startDate}
@@ -336,8 +342,8 @@ export default function TeamTaxiAuditPage() {
                   style={{
                     height: 28,
                     border: '1px solid var(--border)',
-                    borderRadius: 6,
-                    padding: '0 6px',
+                    borderRadius: 7,
+                    padding: '0 8px',
                     background: 'var(--bg-input)',
                     color: 'var(--text-1)',
                     fontSize: 12,
@@ -345,9 +351,10 @@ export default function TeamTaxiAuditPage() {
                     outline: 'none',
                     cursor: 'pointer',
                     boxSizing: 'border-box',
+                    lineHeight: 1,
                   }}
                 />
-                <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700 }}>~</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700, lineHeight: 1 }}>~</span>
                 <input
                   type="date"
                   value={endDate}
@@ -355,8 +362,8 @@ export default function TeamTaxiAuditPage() {
                   style={{
                     height: 28,
                     border: '1px solid var(--border)',
-                    borderRadius: 6,
-                    padding: '0 6px',
+                    borderRadius: 7,
+                    padding: '0 8px',
                     background: 'var(--bg-input)',
                     color: 'var(--text-1)',
                     fontSize: 12,
@@ -364,14 +371,15 @@ export default function TeamTaxiAuditPage() {
                     outline: 'none',
                     cursor: 'pointer',
                     boxSizing: 'border-box',
+                    lineHeight: 1,
                   }}
                 />
               </div>
             </div>
 
-            {/* Right Side: Search Input & Actions (38px Height Matched) */}
+            {/* Right Side: Search Input & Actions (36px Height Matched) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'nowrap' }}>
-              <div style={{ position: 'relative', width: 190, height: 38 }}>
+              <div style={{ position: 'relative', width: 190, height: 36 }}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
                 <input
                   type="text"
@@ -398,7 +406,7 @@ export default function TeamTaxiAuditPage() {
                   type="button"
                   onClick={resetFilters}
                   style={{
-                    height: 38,
+                    height: 36,
                     border: '1px solid var(--border)',
                     background: 'transparent',
                     color: 'var(--text-2)',
@@ -423,7 +431,7 @@ export default function TeamTaxiAuditPage() {
                 onClick={fetchTeamExplanations}
                 disabled={loading}
                 style={{
-                  height: 38,
+                  height: 36,
                   padding: '0 14px',
                   fontSize: 12,
                   fontWeight: 700,
