@@ -244,6 +244,7 @@ export default function TeamTaxiAuditPage() {
                 >
                   <button
                     type="button"
+                    className="filter-tab-btn"
                     onClick={() => setStatusFilter('ALL')}
                     style={{
                       height: 28,
@@ -254,6 +255,7 @@ export default function TeamTaxiAuditPage() {
                       border: 'none',
                       cursor: 'pointer',
                       background: statusFilter === 'ALL' ? '#2563eb' : 'transparent',
+                      backgroundImage: 'none',
                       color: statusFilter === 'ALL' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
                       boxShadow: statusFilter === 'ALL' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none',
@@ -268,6 +270,7 @@ export default function TeamTaxiAuditPage() {
                   </button>
                   <button
                     type="button"
+                    className="filter-tab-btn"
                     onClick={() => setStatusFilter('SUBMITTED')}
                     style={{
                       height: 28,
@@ -278,6 +281,7 @@ export default function TeamTaxiAuditPage() {
                       border: 'none',
                       cursor: 'pointer',
                       background: statusFilter === 'SUBMITTED' ? '#16a34a' : 'transparent',
+                      backgroundImage: 'none',
                       color: statusFilter === 'SUBMITTED' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
                       boxShadow: statusFilter === 'SUBMITTED' ? '0 2px 6px rgba(22,163,74,0.3)' : 'none',
@@ -292,6 +296,7 @@ export default function TeamTaxiAuditPage() {
                   </button>
                   <button
                     type="button"
+                    className="filter-tab-btn"
                     onClick={() => setStatusFilter('PENDING')}
                     style={{
                       height: 28,
@@ -302,6 +307,7 @@ export default function TeamTaxiAuditPage() {
                       border: 'none',
                       cursor: 'pointer',
                       background: statusFilter === 'PENDING' ? '#d97706' : 'transparent',
+                      backgroundImage: 'none',
                       color: statusFilter === 'PENDING' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
                       boxShadow: statusFilter === 'PENDING' ? '0 2px 6px rgba(217,119,6,0.35)' : 'none',

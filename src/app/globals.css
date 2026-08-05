@@ -574,7 +574,7 @@ body {
 
 .login-btn,
 .ui-btn,
-button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.tracker-day-cell__edit):not(.calendar-day) {
+button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.tracker-day-cell__edit):not(.calendar-day):not(.filter-tab-btn) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -601,7 +601,7 @@ button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.t
 
 .login-btn:hover,
 .ui-btn:hover,
-button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.tracker-day-cell__edit):not(.calendar-day):hover {
+button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.tracker-day-cell__edit):not(.calendar-day):not(.filter-tab-btn):hover {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
     var(--bg-card-2);
@@ -612,7 +612,7 @@ button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.t
 
 .login-btn:disabled,
 .ui-btn:disabled,
-button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.tracker-day-cell__edit):not(.calendar-day):disabled {
+button:not(.icon-btn):not(.tab-btn):not(.sidebar-util-btn):not(.kpi-card):not(.tracker-day-cell__edit):not(.calendar-day):not(.filter-tab-btn):disabled {
   opacity: 0.55;
   cursor: default;
 }
