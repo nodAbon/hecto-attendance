@@ -31,7 +31,7 @@ function Badge({ tone = 'blue', children }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '3px 9px',
+        padding: '4px 10px',
         borderRadius: 9999,
         fontSize: 12,
         fontWeight: 600,
@@ -92,7 +92,6 @@ export default function TeamTaxiAuditPage() {
     const rideTimeStr = String(r.ride_time || '');
     const requestedAtStr = String(r.requested_at || '');
 
-    // 텍스트/이름/날짜 검색
     const textMatch =
       !queryLower ||
       String(r.employee_name || '').toLowerCase().includes(queryLower) ||
@@ -101,16 +100,14 @@ export default function TeamTaxiAuditPage() {
       rideTimeStr.includes(queryLower) ||
       requestedAtStr.includes(queryLower);
 
-    // 상태 필터
     const statusMatch =
       statusFilter === 'ALL' ||
       (statusFilter === 'SUBMITTED' && r.status === 'SUBMITTED') ||
       (statusFilter === 'PENDING' && r.status !== 'SUBMITTED');
 
-    // 날짜 기간 필터 (YYYY-MM-DD)
     let dateMatch = true;
     if (startDate || endDate) {
-      const rowDate = rideTimeStr.substring(0, 10); // "YYYY-MM-DD"
+      const rowDate = rideTimeStr.substring(0, 10);
       if (startDate && rowDate && rowDate < startDate) dateMatch = false;
       if (endDate && rowDate && rowDate > endDate) dateMatch = false;
     }
@@ -134,15 +131,15 @@ export default function TeamTaxiAuditPage() {
       title={`팀원 택시 소명 현황 ${deptName ? `(${deptName})` : ''}`}
       subtitle="22시 이후 부서 팀원들의 법인 택시 이용건 및 제출된 소명 사유를 확인합니다."
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Top Summary Header Banner */}
-        <div className="card" style={{ padding: '14px 18px', borderRadius: 'var(--r-md, 10px)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="card" style={{ padding: '16px 20px', borderRadius: 'var(--r-md, 12px)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   borderRadius: 10,
                   display: 'grid',
                   placeItems: 'center',
@@ -150,29 +147,29 @@ export default function TeamTaxiAuditPage() {
                   color: 'var(--blue)',
                 }}
               >
-                <CarTaxiFront size={18} />
+                <CarTaxiFront size={20} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>
                   부서 소명 현황 요약 {deptName && <span style={{ color: 'var(--blue)' }}>({deptName})</span>}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
                   팀원이 제출한 야간 택시 소명 사유가 이메일 및 시스템에 실시간 연동됩니다.
                 </div>
               </div>
             </div>
 
-            {/* Compact Stat Badges */}
+            {/* Stat Badges */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ padding: '6px 12px', borderRadius: 8, background: 'var(--bg-card-2)', border: '1px solid var(--border)', fontSize: 12 }}>
+              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--bg-card-2)', border: '1px solid var(--border)', fontSize: 13 }}>
                 <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>전체 대상: </span>
                 <span style={{ color: 'var(--text-1)', fontWeight: 700 }}>{totalCount}건</span>
               </div>
-              <div style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)', fontSize: 12 }}>
+              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', fontSize: 13 }}>
                 <span style={{ color: 'var(--green)', fontWeight: 600 }}>소명 완료: </span>
                 <span style={{ color: 'var(--green)', fontWeight: 700 }}>{submittedCount}건</span>
               </div>
-              <div style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: 12 }}>
+              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', fontSize: 13 }}>
                 <span style={{ color: 'var(--orange)', fontWeight: 600 }}>소명 대기: </span>
                 <span style={{ color: 'var(--orange)', fontWeight: 700 }}>{pendingCount}건</span>
               </div>
@@ -182,36 +179,37 @@ export default function TeamTaxiAuditPage() {
 
         {/* Error Alert */}
         {error && (
-          <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--red)', fontSize: 13 }}>
+          <div style={{ padding: '14px 18px', borderRadius: 10, background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--red)', fontSize: 13 }}>
             {error}
           </div>
         )}
 
         {/* Main Card with Toolbar & Table */}
-        <div className="card" style={{ padding: 0, borderRadius: 'var(--r-md, 10px)', overflow: 'hidden' }}>
-          {/* Integrated Toolbar Header */}
+        <div className="card" style={{ padding: 0, borderRadius: 'var(--r-md, 12px)', overflow: 'hidden' }}>
+          {/* Spacious Toolbar Header */}
           <div
             style={{
-              padding: '10px 16px',
+              padding: '16px 20px',
               background: 'var(--bg-card-2)',
               borderBottom: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: 10,
+              gap: 16,
             }}
           >
-            {/* Left: Filter Tabs & Date Range Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <ListFilter size={14} style={{ color: 'var(--text-3)' }} />
-                <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 3, borderRadius: 8, border: '1px solid var(--border)' }}>
+            {/* Left Controls: Status Tabs & Date Range Picker */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              {/* Status Tabs */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ListFilter size={15} style={{ color: 'var(--text-3)' }} />
+                <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 10, border: '1px solid var(--border)' }}>
                   <button
                     type="button"
                     onClick={() => setStatusFilter('ALL')}
                     className={`tab-btn ${statusFilter === 'ALL' ? 'active' : ''}`}
-                    style={{ padding: '3px 10px', fontSize: 12, minHeight: 26 }}
+                    style={{ padding: '6px 14px', fontSize: 13, minHeight: 32, fontWeight: 600 }}
                   >
                     전체 ({totalCount})
                   </button>
@@ -219,7 +217,7 @@ export default function TeamTaxiAuditPage() {
                     type="button"
                     onClick={() => setStatusFilter('SUBMITTED')}
                     className={`tab-btn ${statusFilter === 'SUBMITTED' ? 'active' : ''}`}
-                    style={{ padding: '3px 10px', fontSize: 12, minHeight: 26 }}
+                    style={{ padding: '6px 14px', fontSize: 13, minHeight: 32, fontWeight: 600 }}
                   >
                     소명 완료 ({submittedCount})
                   </button>
@@ -227,40 +225,47 @@ export default function TeamTaxiAuditPage() {
                     type="button"
                     onClick={() => setStatusFilter('PENDING')}
                     className={`tab-btn ${statusFilter === 'PENDING' ? 'active' : ''}`}
-                    style={{ padding: '3px 10px', fontSize: 12, minHeight: 26 }}
+                    style={{ padding: '6px 14px', fontSize: 13, minHeight: 32, fontWeight: 600 }}
                   >
                     소명 대기 ({pendingCount})
                   </button>
                 </div>
               </div>
 
-              {/* Date Range Picker */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-card)', padding: '3px 8px', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <Calendar size={13} style={{ color: 'var(--blue)' }} />
+              {/* Date Range Picker (Spacious & Clear) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', padding: '5px 12px', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <Calendar size={15} style={{ color: 'var(--blue)' }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginRight: 2 }}>조회 기간:</span>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   style={{
-                    border: 'none',
-                    background: 'transparent',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    background: 'var(--bg-input)',
                     color: 'var(--text-1)',
-                    fontSize: 12,
+                    fontSize: 13,
                     outline: 'none',
+                    minHeight: 30,
                     cursor: 'pointer',
                   }}
                 />
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>~</span>
+                <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>~</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   style={{
-                    border: 'none',
-                    background: 'transparent',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    background: 'var(--bg-input)',
                     color: 'var(--text-1)',
-                    fontSize: 12,
+                    fontSize: 13,
                     outline: 'none',
+                    minHeight: 30,
                     cursor: 'pointer',
                   }}
                 />
@@ -268,19 +273,19 @@ export default function TeamTaxiAuditPage() {
                   <button
                     type="button"
                     onClick={() => { setStartDate(''); setEndDate(''); }}
-                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-3)', padding: '0 2px' }}
-                    title="날짜 초기화"
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-3)', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
+                    title="날짜 선택 초기화"
                   >
-                    <X size={12} />
+                    <X size={14} />
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Right: Search Input & Refresh Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ position: 'relative', width: 200 }}>
-                <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+            {/* Right Controls: Search Input & Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ position: 'relative', width: 240 }}>
+                <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
                 <input
                   type="text"
                   value={searchQuery}
@@ -288,13 +293,14 @@ export default function TeamTaxiAuditPage() {
                   placeholder="팀원명 / 날짜 / 사유 검색..."
                   style={{
                     width: '100%',
-                    padding: '5px 10px 5px 28px',
-                    borderRadius: 7,
+                    padding: '7px 12px 7px 34px',
+                    borderRadius: 8,
                     border: '1px solid var(--border)',
                     background: 'var(--bg-input)',
                     color: 'var(--text-1)',
-                    fontSize: 12,
+                    fontSize: 13,
                     outline: 'none',
+                    minHeight: 34,
                   }}
                 />
               </div>
@@ -304,7 +310,7 @@ export default function TeamTaxiAuditPage() {
                   type="button"
                   className="tab-btn"
                   onClick={resetFilters}
-                  style={{ padding: '5px 8px', fontSize: 11, minHeight: 28, color: 'var(--text-3)' }}
+                  style={{ padding: '6px 12px', fontSize: 12, minHeight: 34, color: 'var(--text-2)' }}
                 >
                   필터 초기화
                 </button>
@@ -312,12 +318,12 @@ export default function TeamTaxiAuditPage() {
 
               <button
                 type="button"
-                className="tab-btn"
+                className="tab-btn primary"
                 onClick={fetchTeamExplanations}
                 disabled={loading}
-                style={{ padding: '5px 10px', fontSize: 12, minHeight: 28, gap: 4 }}
+                style={{ padding: '6px 14px', fontSize: 13, minHeight: 34, gap: 6, fontWeight: 600 }}
               >
-                <RefreshCcw size={12} className={loading ? 'spin' : ''} />
+                <RefreshCcw size={13} className={loading ? 'spin' : ''} />
                 새로고침
               </button>
             </div>
@@ -328,25 +334,25 @@ export default function TeamTaxiAuditPage() {
             <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--bg-card-2)', borderBottom: '1px solid var(--border)', color: 'var(--text-2)' }}>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600 }}>팀원명 / 부서</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600 }}>택시 탑승 일시</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600 }}>실제 퇴근 시각</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600 }}>출발지 ➔ 도착지</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600 }}>결제 금액</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600 }}>소명 상태</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600 }}>소명 사유</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>팀원명 / 부서</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>택시 탑승 일시</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>실제 퇴근 시각</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>출발지 ➔ 도착지</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>결제 금액</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>소명 상태</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>소명 사유</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)' }}>
+                    <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)' }}>
                       팀원 소명 내역을 불러오는 중...
                     </td>
                   </tr>
                 ) : filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)' }}>
+                    <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)' }}>
                       {searchQuery || startDate || endDate ? '검색/필터 조건에 해당하는 소명 건이 없습니다.' : '등록된 팀원 택시 소명 내역이 없습니다.'}
                     </td>
                   </tr>
@@ -356,54 +362,54 @@ export default function TeamTaxiAuditPage() {
                       key={row.id || row.token || idx}
                       style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s' }}
                     >
-                      <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-1)' }}>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-1)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <User size={13} color="var(--text-3)" />
+                          <User size={14} color="var(--text-3)" />
                           <span>{row.employee_name || '-'}</span>
-                          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-2)' }}>({row.dept || '-'})</span>
+                          <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>({row.dept || '-'})</span>
                         </div>
                       </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--red)', fontWeight: 700 }}>
+                      <td style={{ padding: '12px 16px', color: 'var(--red)', fontWeight: 700 }}>
                         {row.ride_time || '-'}
                       </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--blue)', fontWeight: 700 }}>
+                      <td style={{ padding: '12px 16px', color: 'var(--blue)', fontWeight: 700 }}>
                         {row.actual_out_time || '-'}
                       </td>
-                      <td style={{ padding: '10px 14px', color: 'var(--text-2)', fontSize: 12 }}>
+                      <td style={{ padding: '12px 16px', color: 'var(--text-2)', fontSize: 12 }}>
                         {row.pickup || row.dropoff ? `${row.pickup || '-'} ➔ ${row.dropoff || '-'}` : '-'}
                       </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--text-1)' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text-1)' }}>
                         {formatCurrency(row.amount)}원
                       </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         {row.status === 'SUBMITTED' ? (
                           <Badge tone="green">
-                            <CheckCircle2 size={11} style={{ marginRight: 3 }} />
+                            <CheckCircle2 size={12} style={{ marginRight: 4 }} />
                             소명 완료
                           </Badge>
                         ) : (
                           <Badge tone="orange">
-                            <Clock size={11} style={{ marginRight: 3 }} />
+                            <Clock size={12} style={{ marginRight: 4 }} />
                             소명 대기
                           </Badge>
                         )}
                       </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         {row.status === 'SUBMITTED' ? (
                           <button
                             type="button"
                             className="tab-btn"
                             onClick={() => setSelectedRow(row)}
                             style={{
-                              padding: '3px 8px',
-                              minHeight: 26,
+                              padding: '4px 10px',
+                              minHeight: 28,
                               fontSize: 12,
                               color: 'var(--green)',
                               borderColor: 'rgba(34, 197, 94, 0.3)',
                               background: 'rgba(34, 197, 94, 0.08)',
                             }}
                           >
-                            <FileText size={12} style={{ marginRight: 3 }} />
+                            <FileText size={12} style={{ marginRight: 4 }} />
                             사유 보기
                           </button>
                         ) : (
