@@ -53,15 +53,38 @@ function formatCurrency(val) {
   return new Intl.NumberFormat('ko-KR').format(Math.round(num));
 }
 
+function getKstDateStr(dateObj) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(dateObj); // "YYYY-MM-DD"
+}
+
+function getDefaultDateRange() {
+  const now = new Date();
+  const todayStr = getKstDateStr(now);
+
+  const past = new Date(now);
+  past.setMonth(past.getMonth() - 1);
+  const oneMonthAgoStr = getKstDateStr(past);
+
+  return { todayStr, oneMonthAgoStr };
+}
+
 export default function TeamTaxiAuditPage() {
+  const defaultDates = getDefaultDateRange();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [rows, setRows] = useState([]);
   const [deptName, setDeptName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(defaultDates.oneMonthAgoStr);
+  const [endDate, setEndDate] = useState(defaultDates.todayStr);
   const [selectedRow, setSelectedRow] = useState(null);
 
   const fetchTeamExplanations = async () => {
@@ -123,8 +146,8 @@ export default function TeamTaxiAuditPage() {
   const resetFilters = () => {
     setSearchQuery('');
     setStatusFilter('ALL');
-    setStartDate('');
-    setEndDate('');
+    setStartDate(defaultDates.oneMonthAgoStr);
+    setEndDate(defaultDates.todayStr);
   };
 
   return (
@@ -162,15 +185,15 @@ export default function TeamTaxiAuditPage() {
 
             {/* Stat Badges */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--bg-card-2)', border: '1px solid var(--border)', fontSize: 13 }}>
+              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--bg-card-2)', border: '1px solid var(--border)', fontSize: 13, whiteSpace: 'nowrap' }}>
                 <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>전체 대상: </span>
                 <span style={{ color: 'var(--text-1)', fontWeight: 700, fontSize: 15 }}>{totalCount}</span>건
               </div>
-              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', fontSize: 13 }}>
+              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', fontSize: 13, whiteSpace: 'nowrap' }}>
                 <span style={{ color: 'var(--green)', fontWeight: 600 }}>소명 완료: </span>
                 <span style={{ color: 'var(--green)', fontWeight: 700, fontSize: 15 }}>{submittedCount}</span>건
               </div>
-              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', fontSize: 13 }}>
+              <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', fontSize: 13, whiteSpace: 'nowrap' }}>
                 <span style={{ color: 'var(--orange)', fontWeight: 600 }}>소명 대기: </span>
                 <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 15 }}>{pendingCount}</span>건
               </div>
@@ -200,18 +223,20 @@ export default function TeamTaxiAuditPage() {
           >
             {/* First Row: Horizontal Filter Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-              {/* Status Filter Tabs (Large & Spacious) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Filter size={16} style={{ color: 'var(--text-3)' }} />
+              {/* Status Filter Tabs (Single-line guaranteed with whiteSpace: nowrap) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
+                <Filter size={16} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
                 <div
                   style={{
                     display: 'inline-flex',
+                    alignItems: 'center',
                     gap: 6,
                     background: 'var(--bg-card)',
                     padding: 5,
                     borderRadius: 12,
                     border: '1.5px solid var(--border)',
                     boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                    flexWrap: 'nowrap',
                   }}
                 >
                   <button
@@ -220,7 +245,7 @@ export default function TeamTaxiAuditPage() {
                     style={{
                       padding: '8px 18px',
                       fontSize: 13,
-                      fontWeight: statusFilter === 'ALL' ? 700 : 500,
+                      fontWeight: statusFilter === 'ALL' ? 700 : 600,
                       borderRadius: 9,
                       border: 'none',
                       cursor: 'pointer',
@@ -228,9 +253,14 @@ export default function TeamTaxiAuditPage() {
                       color: statusFilter === 'ALL' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
                       boxShadow: statusFilter === 'ALL' ? '0 2px 8px rgba(37,99,235,0.3)' : 'none',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
                     }}
                   >
-                    전체 ({totalCount})
+                    <span>전체</span>
+                    <span>({totalCount})</span>
                   </button>
                   <button
                     type="button"
@@ -238,7 +268,7 @@ export default function TeamTaxiAuditPage() {
                     style={{
                       padding: '8px 18px',
                       fontSize: 13,
-                      fontWeight: statusFilter === 'SUBMITTED' ? 700 : 500,
+                      fontWeight: statusFilter === 'SUBMITTED' ? 700 : 600,
                       borderRadius: 9,
                       border: 'none',
                       cursor: 'pointer',
@@ -246,9 +276,14 @@ export default function TeamTaxiAuditPage() {
                       color: statusFilter === 'SUBMITTED' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
                       boxShadow: statusFilter === 'SUBMITTED' ? '0 2px 8px rgba(34,197,94,0.3)' : 'none',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
                     }}
                   >
-                    소명 완료 ({submittedCount})
+                    <span>소명 완료</span>
+                    <span>({submittedCount})</span>
                   </button>
                   <button
                     type="button"
@@ -256,7 +291,7 @@ export default function TeamTaxiAuditPage() {
                     style={{
                       padding: '8px 18px',
                       fontSize: 13,
-                      fontWeight: statusFilter === 'PENDING' ? 700 : 500,
+                      fontWeight: statusFilter === 'PENDING' ? 700 : 600,
                       borderRadius: 9,
                       border: 'none',
                       cursor: 'pointer',
@@ -264,9 +299,14 @@ export default function TeamTaxiAuditPage() {
                       color: statusFilter === 'PENDING' ? '#ffffff' : 'var(--text-2)',
                       transition: 'all 0.15s ease',
                       boxShadow: statusFilter === 'PENDING' ? '0 2px 8px rgba(245,158,11,0.3)' : 'none',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
                     }}
                   >
-                    소명 대기 ({pendingCount})
+                    <span>소명 대기</span>
+                    <span>({pendingCount})</span>
                   </button>
                 </div>
               </div>
@@ -312,6 +352,7 @@ export default function TeamTaxiAuditPage() {
                     alignItems: 'center',
                     gap: 6,
                     boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <RefreshCcw size={14} className={loading ? 'spin' : ''} />
@@ -320,8 +361,8 @@ export default function TeamTaxiAuditPage() {
               </div>
             </div>
 
-            {/* Second Row: Prominent Date Range Picker */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, pt: 4 }}>
+            {/* Second Row: Default Selected Date Range (1 Month Ago ~ Today) */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
               <div
                 style={{
                   display: 'inline-flex',
@@ -334,12 +375,12 @@ export default function TeamTaxiAuditPage() {
                   flexWrap: 'wrap',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                   <CalendarDays size={16} style={{ color: 'var(--blue)' }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>조회 기간 설정:</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
                   <input
                     type="date"
                     value={startDate}
@@ -377,10 +418,10 @@ export default function TeamTaxiAuditPage() {
                   />
                 </div>
 
-                {(startDate || endDate) && (
+                {(startDate !== defaultDates.oneMonthAgoStr || endDate !== defaultDates.todayStr) && (
                   <button
                     type="button"
-                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                    onClick={() => { setStartDate(defaultDates.oneMonthAgoStr); setEndDate(defaultDates.todayStr); }}
                     style={{
                       border: '1px solid var(--border)',
                       background: 'var(--bg-card-2)',
@@ -393,14 +434,15 @@ export default function TeamTaxiAuditPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    <X size={12} /> 날짜 지우기
+                    <X size={12} /> 기본 한달로 초기화
                   </button>
                 )}
               </div>
 
-              {(searchQuery || statusFilter !== 'ALL' || startDate || endDate) && (
+              {(searchQuery || statusFilter !== 'ALL' || startDate !== defaultDates.oneMonthAgoStr || endDate !== defaultDates.todayStr) && (
                 <button
                   type="button"
                   onClick={resetFilters}
@@ -416,6 +458,7 @@ export default function TeamTaxiAuditPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <RotateCcw size={12} /> 모든 필터 초기화
