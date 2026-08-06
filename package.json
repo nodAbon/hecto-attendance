@@ -9,7 +9,9 @@
     "lint": "eslint",
     "check:kakao-taxi": "node scripts/check_kakao_taxi_api.mjs",
     "inspect_yuncha_master": "node scratch/inspect_yuncha_master.js",
-    "inspect:yuncha-master": "node scratch/inspect_yuncha_master.js"
+    "inspect:yuncha-master": "node scratch/inspect_yuncha_master.js",
+    "inspect_emp": "node scratch/inspect_emp_20240052.js",
+    "inspect:emp": "node scratch/inspect_emp_20240052.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
