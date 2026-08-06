@@ -11,7 +11,9 @@
     "inspect_yuncha_master": "node scratch/inspect_yuncha_master.js",
     "inspect:yuncha-master": "node scratch/inspect_yuncha_master.js",
     "inspect_emp": "node scratch/inspect_emp_20240052.js",
-    "inspect:emp": "node scratch/inspect_emp_20240052.js"
+    "inspect:emp": "node scratch/inspect_emp_20240052.js",
+    "list_tables": "node scratch/list_all_5_tables.js",
+    "list:tables": "node scratch/list_all_5_tables.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
