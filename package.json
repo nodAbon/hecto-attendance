@@ -15,7 +15,9 @@
     "list_tables": "node scratch/list_all_5_tables.js",
     "list:tables": "node scratch/list_all_5_tables.js",
     "inspect_subholi": "node scratch/inspect_subholi_column.js",
-    "inspect:subholi": "node scratch/inspect_subholi_column.js"
+    "inspect:subholi": "node scratch/inspect_subholi_column.js",
+    "inspect_all_dbs": "node scratch/inspect_all_databases.js",
+    "inspect:all-dbs": "node scratch/inspect_all_databases.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
