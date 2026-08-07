@@ -165,6 +165,12 @@ function formatDateDashed(rawDateStr) {
   return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
 }
 
+function isBusinessManagementTeam(dept) {
+  if (!dept) return false;
+  const d = String(dept).replace(/\s+/g, '');
+  return d.includes('사업관리1팀') || d.includes('사업관리2팀') || d.includes('사업관리3팀');
+}
+
 export function calculateLeaveTimeWindow(leave) {
   const startDateStr = formatDateDashed(leave.start_date || leave.startDate);
   const endDateStr = formatDateDashed(leave.end_date || leave.endDate);
@@ -172,18 +178,33 @@ export function calculateLeaveTimeWindow(leave) {
 
   const code = String(leave.leave_code || leave.leaveCode || '').trim();
   const rawName = String(leave.leave_name || leave.leaveName || '').trim();
+  const dept = leave.dept || leave.dept_name || leave.department || '';
 
-  let startTime = `${startDateStr}T08:00:00+09:00`;
-  let endTime = `${endDateStr}T17:00:00+09:00`;
+  const isSpecialTeam = isBusinessManagementTeam(dept);
+
+  let startTime = isSpecialTeam
+    ? `${startDateStr}T10:00:00+09:00`
+    : `${startDateStr}T08:00:00+09:00`;
+  let endTime = isSpecialTeam
+    ? `${endDateStr}T19:00:00+09:00`
+    : `${endDateStr}T17:00:00+09:00`;
   let statusMessage = LEAVE_CODE_LABELS[code] || (rawName && !/^\d+$/.test(rawName) ? rawName : '연차');
 
   if (code === '16' || code === '61' || rawName.includes('오전') || rawName.includes('4시간휴가 [오전]')) {
-    startTime = `${startDateStr}T08:00:00+09:00`;
-    endTime = `${startDateStr}T12:00:00+09:00`;
+    startTime = isSpecialTeam
+      ? `${startDateStr}T10:00:00+09:00`
+      : `${startDateStr}T08:00:00+09:00`;
+    endTime = isSpecialTeam
+      ? `${startDateStr}T15:00:00+09:00`
+      : `${startDateStr}T12:00:00+09:00`;
     statusMessage = '오전 반차';
   } else if (code === '17' || code === '62' || rawName.includes('오후') || rawName.includes('4시간휴가 [오후]')) {
-    startTime = `${startDateStr}T13:00:00+09:00`;
-    endTime = `${startDateStr}T17:00:00+09:00`;
+    startTime = isSpecialTeam
+      ? `${startDateStr}T15:00:00+09:00`
+      : `${startDateStr}T13:00:00+09:00`;
+    endTime = isSpecialTeam
+      ? `${startDateStr}T19:00:00+09:00`
+      : `${startDateStr}T17:00:00+09:00`;
     statusMessage = '오후 반차';
   } else if (TWO_HOUR_LEAVE_TIMES[code]) {
     const info = TWO_HOUR_LEAVE_TIMES[code];

@@ -196,6 +196,7 @@ export async function GET(request) {
       SELECT
         y.I_EMPLOY_NO          AS emp_no,
         e.N_EMPLOY_NAME        AS emp_name,
+        d.N_DEPT               AS dept,
         y.D_START_DATE         AS start_date,
         y.D_END_DATE           AS end_date,
         y.I_CODE               AS leave_code,
@@ -218,6 +219,7 @@ export async function GET(request) {
       const records = leaveRows.map(r => ({
         emp_no:     r.emp_no,
         emp_name:   r.emp_name,
+        dept:       r.dept,
         start_date: r.start_date,
         end_date:   r.end_date,
         leave_code: r.leave_code,
@@ -245,14 +247,18 @@ export async function GET(request) {
         const empNos = [...new Set(uniqueRecords.map(r => r.emp_no))];
         const { data: emps } = await supabase
           .from('sa_employees')
-          .select('emp_no, email')
+          .select('emp_no, email, dept')
           .in('emp_no', empNos);
 
-        const emailMap = new Map((emps || []).map(e => [e.emp_no, e.email]));
-        const leavesWithEmails = uniqueRecords.map(r => ({
-          ...r,
-          email: emailMap.get(r.emp_no) || null,
-        }));
+        const empMap = new Map((emps || []).map(e => [e.emp_no, e]));
+        const leavesWithEmails = uniqueRecords.map(r => {
+          const emp = empMap.get(r.emp_no);
+          return {
+            ...r,
+            dept: r.dept || emp?.dept || null,
+            email: emp?.email || null,
+          };
+        });
 
         await syncLeavesToNaverWorks(leavesWithEmails);
       } catch (nwErr) {
