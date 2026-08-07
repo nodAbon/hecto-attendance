@@ -32,6 +32,15 @@ function formatCurrency(val) {
   return new Intl.NumberFormat('ko-KR').format(Math.round(num));
 }
 
+function formatRideTimeTwoLines(rideTimeStr) {
+  if (!rideTimeStr || rideTimeStr === '-') return { date: '-', time: '' };
+  const parts = String(rideTimeStr).trim().split(' ');
+  if (parts.length >= 2) {
+    return { date: parts[0], time: parts[1] };
+  }
+  return { date: rideTimeStr, time: '' };
+}
+
 function StatBadge({ tone = 'blue', children }) {
   const tones = {
     purple: { bg: 'rgba(168, 85, 247, 0.12)', color: '#a855f7', border: 'rgba(168, 85, 247, 0.25)' },
@@ -970,54 +979,88 @@ export default function TaxiReportPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
               <thead>
                 <tr style={{ backgroundColor: 'var(--bg-main, #f8fafc)', borderBottom: '1px solid var(--border, #e2e8f0)' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>승차 일시</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>사원명</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>부서</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>이용목적 (사유)</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>출발지 ➔ 도착지</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>호출/차종</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>결제금액</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>추가호출비</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, whiteSpace: 'nowrap', minWidth: 100 }}>승차 일시</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, whiteSpace: 'nowrap', minWidth: 100 }}>부서</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, whiteSpace: 'nowrap', minWidth: 90 }}>사원명</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, minWidth: 200 }}>출발지 ➔ 도착지</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, minWidth: 160 }}>이용목적</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', minWidth: 105 }}>결제금액</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', minWidth: 105 }}>추가호출비</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-2, #64748b)' }}>
+                    <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-2, #64748b)' }}>
                       조회된 이용내역이 없습니다.
                     </td>
                   </tr>
                 ) : (
-                  filteredRows.map((row) => (
-                    <tr key={row.id} style={{ borderBottom: '1px solid var(--border, #f1f5f9)' }}>
-                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.rideTime}</td>
-                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>{row.employeeName}</td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <StatBadge tone="gray">{row.dept}</StatBadge>
-                      </td>
-                      <td style={{ padding: '10px 14px' }}>{row.reason}</td>
-                      <td style={{ padding: '10px 14px', fontSize: 12 }}>
-                        <span style={{ color: 'var(--text-1, #1e293b)' }}>{row.pickup || '-'}</span>
-                        <span style={{ color: 'var(--text-2, #94a3b8)', margin: '0 4px' }}>➔</span>
-                        <span style={{ color: 'var(--text-1, #1e293b)' }}>{row.dropoff || '-'}</span>
-                      </td>
-                      <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-2, #64748b)' }}>
-                        {row.verticalProductName || row.taxiKind || '일반'}
-                      </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700 }}>
-                        {formatCurrency(row.amount)}원
-                      </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                        {row.hasExtraFee ? (
-                          <span style={{ color: 'var(--rose, #f43f5e)', fontWeight: 600 }}>
-                            +{formatCurrency(row.platformFee)}원
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-2, #94a3b8)' }}>-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  filteredRows.map((row) => {
+                    const { date, time } = formatRideTimeTwoLines(row.rideTime);
+                    return (
+                      <tr key={row.id} style={{ borderBottom: '1px solid var(--border, #f1f5f9)' }}>
+                        {/* 1. 승차 일시 (2줄 표시) */}
+                        <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1, #1e293b)' }}>{date}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-2, #64748b)', marginTop: 2 }}>{time}</div>
+                        </td>
+
+                        {/* 2. 부서 */}
+                        <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                          <StatBadge tone="gray">{row.dept}</StatBadge>
+                        </td>
+
+                        {/* 3. 사원명 (1줄 표시, 너비 확보) */}
+                        <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>
+                          {row.employeeName}
+                        </td>
+
+                        {/* 4. 출발지 -> 도착지 (2줄 표시) */}
+                        <td style={{ padding: '10px 14px', fontSize: 12 }}>
+                          <div
+                            style={{ color: 'var(--text-1, #1e293b)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 240 }}
+                            title={row.pickup}
+                          >
+                            {row.pickup || '-'}
+                          </div>
+                          <div
+                            style={{ color: 'var(--text-2, #64748b)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 240, fontSize: 11 }}
+                            title={row.dropoff}
+                          >
+                            <span style={{ color: 'var(--blue, #3b82f6)', fontWeight: 700, marginRight: 4 }}>➔</span>
+                            {row.dropoff || '-'}
+                          </div>
+                        </td>
+
+                        {/* 5. 이용목적 (늘린 공간) */}
+                        <td style={{ padding: '10px 14px', minWidth: 160 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1, #1e293b)' }}>{row.reason}</div>
+                          {(row.verticalProductName || row.taxiKind) && (
+                            <div style={{ fontSize: 11, color: 'var(--text-2, #94a3b8)', marginTop: 2 }}>
+                              {row.verticalProductName || row.taxiKind}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 6. 결제금액 (1줄 표시) */}
+                        <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          {formatCurrency(row.amount)}원
+                        </td>
+
+                        {/* 7. 추가호출비 (1줄 표시) */}
+                        <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {row.hasExtraFee ? (
+                            <span style={{ color: 'var(--rose, #f43f5e)', fontWeight: 600 }}>
+                              +{formatCurrency(row.platformFee)}원
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-2, #94a3b8)' }}>-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
