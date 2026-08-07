@@ -362,6 +362,7 @@ async function syncLeaves(conn) {
   const records = rows.map(r => ({
     emp_no:     r.emp_no,
     emp_name:   r.emp_name,
+    dept:       r.dept,
     start_date: r.start_date,
     end_date:   r.end_date,
     leave_code: r.leave_code,
@@ -381,9 +382,11 @@ async function syncLeaves(conn) {
     }
   }
 
+  // DB upsert 시에는 sa_leaves 스키마에 없는 dept 컬럼 제거
+  const recordsForDb = uniqueRecords.map(({ dept, ...rest }) => rest);
   const { error } = await supabase
     .from('sa_leaves')
-    .upsert(uniqueRecords, { onConflict: 'emp_no,start_date,leave_code' });
+    .upsert(recordsForDb, { onConflict: 'emp_no,start_date,leave_code' });
 
   if (error) throw new Error(`연차 upsert 실패: ${error.message}`);
 
@@ -400,7 +403,7 @@ async function syncLeaves(conn) {
       const emp = empMap.get(r.emp_no);
       return {
         ...r,
-        dept: emp?.dept || null,
+        dept: r.dept || emp?.dept || null,
         email: emp?.email || null,
       };
     });
