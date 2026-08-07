@@ -219,7 +219,6 @@ export async function GET(request) {
       const records = leaveRows.map(r => ({
         emp_no:     r.emp_no,
         emp_name:   r.emp_name,
-        dept:       r.dept,
         start_date: r.start_date,
         end_date:   r.end_date,
         leave_code: r.leave_code,
@@ -255,7 +254,7 @@ export async function GET(request) {
           const emp = empMap.get(r.emp_no);
           return {
             ...r,
-            dept: r.dept || emp?.dept || null,
+            dept: emp?.dept || null,
             email: emp?.email || null,
           };
         });
