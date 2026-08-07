@@ -9,7 +9,8 @@ import {
   RefreshCcw,
   Building2,
   Clock,
-  DollarSign,
+  Banknote,
+  Coins,
   FileText,
   Filter,
   ArrowUpDown,
@@ -20,6 +21,8 @@ import {
   Award,
   Sparkles,
   Zap,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { getKstDateKey, shiftKstDateKey } from '@/lib/kstDate';
 
@@ -67,9 +70,11 @@ export default function TaxiReportPage() {
 
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(today);
+  const [selectedDept, setSelectedDept] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [reportData, setReportData] = useState(null);
+  const [meta, setMeta] = useState({ permissionScope: 'SINGLE_DEPT', userDept: '', allowedDepts: null });
 
   // 부서별 현황 View 모드: 'both' | 'kpi' | 'table'
   const [deptViewMode, setDeptViewMode] = useState('both');
@@ -77,7 +82,7 @@ export default function TaxiReportPage() {
   // 전체 이용내역 검색어
   const [tableSearch, setTableSearch] = useState('');
 
-  const fetchReport = async (start = startDate, end = endDate) => {
+  const fetchReport = async (start = startDate, end = endDate, deptFilter = selectedDept) => {
     try {
       setLoading(true);
       setError('');
@@ -85,13 +90,16 @@ export default function TaxiReportPage() {
       const res = await fetch('/api/team/taxi-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate: start, endDate: end }),
+        body: JSON.stringify({ startDate: start, endDate: end, dept: deptFilter }),
       });
 
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '리포트 데이터를 불러오지 못했습니다.');
 
       setReportData(json.data || null);
+      if (json.meta) {
+        setMeta(json.meta);
+      }
     } catch (err) {
       console.error('[Taxi Report Fetch Error]', err);
       setError(err?.message || '리포트 데이터를 불러오는 도중 오류가 발생했습니다.');
@@ -102,7 +110,7 @@ export default function TaxiReportPage() {
   };
 
   useEffect(() => {
-    fetchReport(initialStart, today);
+    fetchReport(initialStart, today, 'ALL');
   }, []);
 
   // Quick Date presets
@@ -122,12 +130,11 @@ export default function TaxiReportPage() {
       }
       const lastMonthStr = `${y}-${String(m).padStart(2, '0')}`;
       start = `${lastMonthStr}-01`;
-      // last day of last month
       const lastDay = new Date(y, m, 0).getDate();
       const lastMonthEnd = `${lastMonthStr}-${String(lastDay).padStart(2, '0')}`;
       setStartDate(start);
       setEndDate(lastMonthEnd);
-      fetchReport(start, lastMonthEnd);
+      fetchReport(start, lastMonthEnd, selectedDept);
       return;
     } else {
       start = shiftKstDateKey(end, -days + 1);
@@ -135,7 +142,13 @@ export default function TaxiReportPage() {
 
     setStartDate(start);
     setEndDate(end);
-    fetchReport(start, end);
+    fetchReport(start, end, selectedDept);
+  };
+
+  const handleDeptChange = (e) => {
+    const deptVal = e.target.value;
+    setSelectedDept(deptVal);
+    fetchReport(startDate, endDate, deptVal);
   };
 
   // Filtered rows for full transaction table
@@ -169,6 +182,7 @@ export default function TaxiReportPage() {
   const extraFeeStats = reportData?.extraFeeStats;
   const reasonStats = reportData?.reasonStats || [];
   const dailyStats = reportData?.dailyStats || [];
+  const availableDepts = reportData?.availableDepts || [];
 
   return (
     <EmployeeAdminShell activeTab="/team/taxi-report">
@@ -184,29 +198,40 @@ export default function TaxiReportPage() {
               기간별 카카오T 택시 이용 현황, 부서별/시간대별 패턴, 추가 호출비 및 이용사유 집계 리포트입니다.
             </p>
           </div>
-          <button
-            onClick={() => fetchReport()}
-            disabled={loading}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--border, #cbd5e1)',
-              backgroundColor: 'var(--bg-card, #ffffff)',
-              color: 'var(--text-1, #1e293b)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
-            새로고침
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* 권한 영역 표시 배지 */}
+            <StatBadge tone={meta.permissionScope === 'ADMIN' ? 'purple' : meta.permissionScope === 'EXTERNAL_BIZ' ? 'amber' : 'blue'}>
+              <ShieldCheck size={13} style={{ marginRight: 4 }} />
+              {meta.permissionScope === 'ADMIN' && '전체 부서 조회 권한 (관리자)'}
+              {meta.permissionScope === 'EXTERNAL_BIZ' && '외부사업 4개 팀 공유 권한'}
+              {meta.permissionScope === 'SINGLE_DEPT' && `${meta.userDept || '소속팀'} 전용 권한`}
+            </StatBadge>
+
+            <button
+              onClick={() => fetchReport()}
+              disabled={loading}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                borderRadius: 8,
+                border: '1px solid var(--border, #cbd5e1)',
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                color: 'var(--text-1, #1e293b)',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: loading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
+              새로고침
+            </button>
+          </div>
         </div>
 
-        {/* 1. 최상단 날짜 기간선택창 (Date Range Picker Bar) */}
+        {/* 1. 최상단 날짜 및 부서 선택바 (Date & Dept Range Picker Bar) */}
         <div
           style={{
             backgroundColor: 'var(--bg-card, #ffffff)',
@@ -224,7 +249,7 @@ export default function TaxiReportPage() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <Calendar size={18} style={{ color: 'var(--blue, #3b82f6)' }} />
-            <span style={{ fontWeight: 600, fontSize: 14 }}>조회 기간 설정:</span>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>조회 기간:</span>
 
             <input
               type="date"
@@ -254,6 +279,60 @@ export default function TaxiReportPage() {
               }}
             />
 
+            {/* 부서 필터 선택 (권한별 구분) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+              <Building2 size={16} style={{ color: 'var(--indigo, #6366f1)' }} />
+              <span style={{ fontWeight: 600, fontSize: 14 }}>부서 선택:</span>
+              {meta.permissionScope === 'SINGLE_DEPT' ? (
+                <span
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    backgroundColor: 'var(--bg-main, #f1f5f9)',
+                    border: '1px solid var(--border, #cbd5e1)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: 'var(--blue, #2563eb)',
+                  }}
+                >
+                  {meta.userDept || '소속팀'}
+                </span>
+              ) : (
+                <select
+                  value={selectedDept}
+                  onChange={handleDeptChange}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border, #cbd5e1)',
+                    backgroundColor: 'var(--bg-main, #f8fafc)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'inherit',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="ALL">
+                    {meta.permissionScope === 'ADMIN' ? '전체 부서 (All)' : '외부사업팀 전체 (4개 부서)'}
+                  </option>
+                  {meta.permissionScope === 'EXTERNAL_BIZ' ? (
+                    <>
+                      <option value="사업개발팀">사업개발팀</option>
+                      <option value="사업관리1팀">사업관리1팀</option>
+                      <option value="사업관리2팀">사업관리2팀</option>
+                      <option value="사업관리3팀">사업관리3팀</option>
+                    </>
+                  ) : (
+                    availableDepts.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))
+                  )}
+                </select>
+              )}
+            </div>
+
             <button
               onClick={() => fetchReport()}
               disabled={loading}
@@ -269,6 +348,7 @@ export default function TaxiReportPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
+                marginLeft: 4,
               }}
             >
               <Search size={15} />
@@ -352,7 +432,7 @@ export default function TaxiReportPage() {
           </div>
         )}
 
-        {/* Global Summary KPI Grid */}
+        {/* Global Summary KPI Grid (KRW 아이콘 표시 반영) */}
         {summary && (
           <div
             style={{
@@ -377,6 +457,7 @@ export default function TaxiReportPage() {
               <div style={{ fontSize: 26, fontWeight: 800 }}>{summary.totalCount.toLocaleString()}건</div>
             </div>
 
+            {/* 총 이용금액: KRW (원) 표시 아이콘 반영 */}
             <div
               style={{
                 backgroundColor: 'var(--bg-card, #ffffff)',
@@ -387,7 +468,10 @@ export default function TaxiReportPage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2, #64748b)', fontSize: 13, marginBottom: 6 }}>
                 <span>총 이용금액</span>
-                <DollarSign size={18} style={{ color: 'var(--amber, #f59e0b)' }} />
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Coins size={17} style={{ color: 'var(--amber, #f59e0b)' }} />
+                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--amber, #f59e0b)', letterSpacing: 0.5 }}>KRW (원)</span>
+                </div>
               </div>
               <div style={{ fontSize: 26, fontWeight: 800 }}>{formatCurrency(summary.totalAmount)}원</div>
             </div>
@@ -557,7 +641,6 @@ export default function TaxiReportPage() {
                           </div>
                         </div>
 
-                        {/* Progress Bar for amount ratio */}
                         <div style={{ height: 6, borderRadius: 3, backgroundColor: 'var(--border, #e2e8f0)', overflow: 'hidden' }}>
                           <div
                             style={{
@@ -741,7 +824,7 @@ export default function TaxiReportPage() {
           </div>
         </div>
 
-        {/* 5. 주요 이용사유 현황 (Main Usage Reasons) */}
+        {/* 5. 주요 이용사유 현황 (TOP 4만 1행 카드 형태) */}
         <div
           style={{
             backgroundColor: 'var(--bg-card, #ffffff)',

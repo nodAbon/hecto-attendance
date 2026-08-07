@@ -454,6 +454,7 @@ export async function fetchKakaoTaxiReportData({
   endDate,
   memberIdentifier = '',
   filterDept = '',
+  allowedDepts = null,
 } = {}) {
   const { orders, count } = await fetchKakaoTaxiOrders({
     startDate,
@@ -524,7 +525,9 @@ export async function fetchKakaoTaxiReportData({
     }
   }
 
-  let rows = rawNormalized.map((row) => {
+  const normalizeDeptKey = (val = '') => String(val || '').replace(/\s+/g, '').trim().toLowerCase();
+
+  const allEnrichedRows = rawNormalized.map((row) => {
     const normalizedIdentifier = normalizeEmpNoKey(row.memberIdentifier);
     const directEmp = normalizedIdentifier ? employeeByEmpNo.get(normalizedIdentifier) : null;
     const nameMatchedEmp = employeesByName.get(normalizeName(row.employeeName));
@@ -540,8 +543,18 @@ export async function fetchKakaoTaxiReportData({
     };
   });
 
-  if (filterDept) {
-    rows = rows.filter((r) => r.dept === filterDept);
+  let scopeFilteredRows = allEnrichedRows;
+  if (Array.isArray(allowedDepts) && allowedDepts.length > 0) {
+    const allowedSet = new Set(allowedDepts.map((d) => normalizeDeptKey(d)));
+    scopeFilteredRows = allEnrichedRows.filter((r) => allowedSet.has(normalizeDeptKey(r.dept)));
+  }
+
+  const availableDepts = [...new Set(scopeFilteredRows.map((r) => r.dept).filter(Boolean))].sort();
+
+  let rows = scopeFilteredRows;
+  if (filterDept && filterDept !== 'ALL') {
+    const targetNorm = normalizeDeptKey(filterDept);
+    rows = rows.filter((r) => normalizeDeptKey(r.dept) === targetNorm);
   }
 
   rows.sort((a, b) => String(b.rideTimeRaw || '').localeCompare(String(a.rideTimeRaw || '')));
@@ -688,6 +701,7 @@ export async function fetchKakaoTaxiReportData({
     extraFeeStats,
     reasonStats,
     dailyStats,
+    availableDepts,
     rows,
     count,
   };
