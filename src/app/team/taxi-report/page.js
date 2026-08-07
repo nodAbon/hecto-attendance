@@ -481,10 +481,7 @@ export default function TaxiReportPage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2, #64748b)', fontSize: 13, marginBottom: 6 }}>
                 <span>총 이용금액</span>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Coins size={17} style={{ color: 'var(--amber, #f59e0b)' }} />
-                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--amber, #f59e0b)', letterSpacing: 0.5 }}>KRW (원)</span>
-                </div>
+                <Coins size={18} style={{ color: 'var(--amber, #f59e0b)' }} />
               </div>
               <div style={{ fontSize: 26, fontWeight: 800 }}>{formatCurrency(summary.totalAmount)}원</div>
             </div>
