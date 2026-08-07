@@ -72,7 +72,21 @@ export async function POST(request) {
       return NextResponse.json({ error: `조회 기간은 최대 ${MAX_RANGE_DAYS}일까지만 가능합니다.` }, { status: 400 });
     }
 
-    const userDept = String(session.dept || '').trim();
+    let userDept = String(session.dept || session.team || '').trim();
+
+    if (!userDept && session.empNo) {
+      const { getAdminClient } = await import('@/lib/supabaseClient');
+      const supabase = getAdminClient();
+      const { data: empData } = await supabase
+        .from('sa_employees')
+        .select('dept')
+        .eq('emp_no', session.empNo)
+        .maybeSingle();
+      if (empData?.dept) {
+        userDept = String(empData.dept).trim();
+      }
+    }
+
     let permissionScope = 'SINGLE_DEPT';
     let allowedDepts = null;
 
@@ -84,7 +98,7 @@ export async function POST(request) {
       allowedDepts = EXTERNAL_BIZ_DEPTS;
     } else {
       permissionScope = 'SINGLE_DEPT';
-      allowedDepts = [userDept];
+      allowedDepts = userDept ? [userDept] : null;
     }
 
     const reportData = await fetchKakaoTaxiReportData({

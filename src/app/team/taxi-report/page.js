@@ -183,6 +183,7 @@ export default function TaxiReportPage() {
   const reasonStats = reportData?.reasonStats || [];
   const dailyStats = reportData?.dailyStats || [];
   const availableDepts = reportData?.availableDepts || [];
+  const displayDeptName = meta.userDept || availableDepts[0] || deptStats[0]?.dept || '소속팀';
 
   return (
     <EmployeeAdminShell activeTab="/team/taxi-report">
@@ -205,7 +206,7 @@ export default function TaxiReportPage() {
               <ShieldCheck size={13} style={{ marginRight: 4 }} />
               {meta.permissionScope === 'ADMIN' && '전체 부서 조회 권한 (관리자)'}
               {meta.permissionScope === 'EXTERNAL_BIZ' && '외부사업 4개 팀 공유 권한'}
-              {meta.permissionScope === 'SINGLE_DEPT' && `${meta.userDept || '소속팀'} 전용 권한`}
+              {meta.permissionScope === 'SINGLE_DEPT' && `${displayDeptName} 전용 권한`}
             </StatBadge>
 
             <button
@@ -282,20 +283,23 @@ export default function TaxiReportPage() {
             {/* 부서 필터 선택 (권한별 구분) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
               <Building2 size={16} style={{ color: 'var(--indigo, #6366f1)' }} />
-              <span style={{ fontWeight: 600, fontSize: 14 }}>부서 선택:</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>부서:</span>
               {meta.permissionScope === 'SINGLE_DEPT' ? (
                 <span
                   style={{
                     padding: '6px 12px',
                     borderRadius: 8,
-                    backgroundColor: 'var(--bg-main, #f1f5f9)',
-                    border: '1px solid var(--border, #cbd5e1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
                     fontSize: 13,
                     fontWeight: 700,
                     color: 'var(--blue, #2563eb)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}
                 >
-                  {meta.userDept || '소속팀'}
+                  {displayDeptName}
                 </span>
               ) : (
                 <select

@@ -74,6 +74,7 @@ export async function verifySession(request) {
     isLeader: resolvedProfile.position === '팀장' || resolvedProfile.position === '실장' || resolvedProfile.position === '대표이사',
     position: resolvedProfile.position || '',
     team: employee?.dept || '',
+    dept: employee?.dept || '',
     rank: resolvedProfile.rank || '',
     mustChangePassword: !!resolvedProfile.must_change_password
   };
