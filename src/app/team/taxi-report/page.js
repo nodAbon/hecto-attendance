@@ -754,14 +754,14 @@ export default function TaxiReportPage() {
         >
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileText size={20} style={{ color: 'var(--blue, #3b82f6)' }} />
-            주요 이용사유 현황
+            주요 이용사유 현황 (TOP 4)
           </h2>
           <p style={{ fontSize: 12, color: 'var(--text-2, #64748b)', margin: '0 0 16px 0' }}>
-            카카오T 승차 시 선택한 용도/사유별 이용 건수 및 금액 집계입니다.
+            카카오T 승차 시 선택한 용도/사유 상위 4개 항목의 이용 건수 및 금액 집계입니다.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-            {reasonStats.map((item, idx) => (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            {reasonStats.slice(0, 4).map((item, idx) => (
               <div
                 key={item.reason || idx}
                 style={{
@@ -773,7 +773,7 @@ export default function TaxiReportPage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <span style={{ fontWeight: 700, fontSize: 14 }}>{item.reason}</span>
-                  <StatBadge tone="blue">{item.countRatio}%</StatBadge>
+                  <StatBadge tone={idx === 0 ? 'purple' : idx === 1 ? 'blue' : 'gray'}>{item.countRatio}%</StatBadge>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
                   <span>{item.count}건</span>
