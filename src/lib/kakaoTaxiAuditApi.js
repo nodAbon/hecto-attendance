@@ -448,3 +448,248 @@ export async function buildTaxiAuditRowsFromKakao({
     },
   };
 }
+
+export async function fetchKakaoTaxiReportData({
+  startDate,
+  endDate,
+  memberIdentifier = '',
+  filterDept = '',
+} = {}) {
+  const { orders, count } = await fetchKakaoTaxiOrders({
+    startDate,
+    endDate,
+    memberIdentifier,
+  });
+
+  const months = new Set();
+  const rawNormalized = (orders || []).map((order, index) => {
+    const rideTimeRaw = String(order.departure_time || order.call_time || '').trim();
+    const rideDate = parseDateTime(rideTimeRaw);
+    if (rideDate?.date) months.add(getMonthKey(rideDate.date));
+
+    const amount = getOrderAmount(order);
+    const platformFee = Number(order.platform_fee || 0);
+
+    const paymentItems = Array.isArray(order.payment_items) ? order.payment_items : [];
+    const paidItem = paymentItems.find((item) => String(item?.status || '').toLowerCase() === 'paid') || paymentItems[0] || null;
+
+    const extraFeeFromItems = paymentItems
+      .filter((item) => {
+        const name = String(item?.name || item?.item_name || '').toLowerCase();
+        return name.includes('호출') || name.includes('플랫폼') || name.includes('스마트');
+      })
+      .reduce((sum, item) => sum + Number(item?.amount || 0), 0);
+
+    const totalExtraFee = Math.max(platformFee, extraFeeFromItems);
+
+    return {
+      id: String(order.id || `${index}`),
+      orderId: String(order.id || '').trim(),
+      ticketNo: String(order.id || '').trim(),
+      rideTimeRaw,
+      rideTime: formatDateTime(rideTimeRaw),
+      callTime: formatDateTime(String(order.call_time || '').trim()),
+      rideDate,
+      employeeName: String(order.member_name || '').trim(),
+      dept: String(order.member_department || '').trim() || '미지정',
+      reason: String(order.use_code || order.vertical_product_name || '택시 이용').trim(),
+      amount,
+      platformFee: totalExtraFee,
+      hasExtraFee: totalExtraFee > 0,
+      status: String(paidItem?.status || order.payment_items?.[0]?.status || '').trim(),
+      pickup: String(order.departure_point || '').trim(),
+      dropoff: String(order.arrival_point || '').trim(),
+      memberIdentifier: String(order.member_identifier || '').trim(),
+      verticalProductName: String(order.vertical_product_name || '').trim(),
+      taxiKind: String(order.taxi_kind || '').trim(),
+      useCode: String(order.use_code || '').trim(),
+      rawOrder: order,
+    };
+  });
+
+  const employeeByEmpNo = new Map();
+  const employeesByName = new Map();
+
+  for (const month of [...months].filter(Boolean)) {
+    const { employees = [] } = await fetchAttendanceLogs(month).catch(() => ({ employees: [] }));
+    for (const emp of employees || []) {
+      const empNo = String(emp.empNo || '').trim();
+      const name = String(emp.name || '').trim();
+      const dept = String(emp.dept || '').trim();
+      if (empNo) employeeByEmpNo.set(empNo, { empNo, name, dept });
+      const exactName = normalizeName(name);
+      if (exactName && !employeesByName.has(exactName)) {
+        employeesByName.set(exactName, { empNo, name, dept });
+      }
+    }
+  }
+
+  let rows = rawNormalized.map((row) => {
+    const normalizedIdentifier = normalizeEmpNoKey(row.memberIdentifier);
+    const directEmp = normalizedIdentifier ? employeeByEmpNo.get(normalizedIdentifier) : null;
+    const nameMatchedEmp = employeesByName.get(normalizeName(row.employeeName));
+    const matched = directEmp || nameMatchedEmp;
+
+    const dept = matched?.dept || row.dept || '미지정';
+    const employeeName = matched?.name || row.employeeName || '미상';
+
+    return {
+      ...row,
+      dept,
+      employeeName,
+    };
+  });
+
+  if (filterDept) {
+    rows = rows.filter((r) => r.dept === filterDept);
+  }
+
+  rows.sort((a, b) => String(b.rideTimeRaw || '').localeCompare(String(a.rideTimeRaw || '')));
+
+  const totalCount = rows.length;
+  const totalAmount = rows.reduce((sum, r) => sum + r.amount, 0);
+  const avgAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
+
+  const deptMap = new Map();
+  rows.forEach((r) => {
+    const dept = r.dept || '미지정';
+    if (!deptMap.has(dept)) {
+      deptMap.set(dept, { dept, count: 0, amount: 0 });
+    }
+    const curr = deptMap.get(dept);
+    curr.count += 1;
+    curr.amount += r.amount;
+  });
+
+  const deptStats = [...deptMap.values()]
+    .map((d) => ({
+      ...d,
+      countRatio: totalCount > 0 ? Number(((d.count / totalCount) * 100).toFixed(1)) : 0,
+      amountRatio: totalAmount > 0 ? Number(((d.amount / totalAmount) * 100).toFixed(1)) : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount || b.count - a.count);
+
+  let eveningCount = 0;
+  let eveningAmount = 0;
+  let lateNightCount = 0;
+  let lateNightAmount = 0;
+  let daytimeCount = 0;
+  let daytimeAmount = 0;
+
+  rows.forEach((r) => {
+    const hours = r.rideDate?.hours ?? null;
+    if (hours === null) return;
+
+    if (hours >= 19 && hours < 24) {
+      eveningCount += 1;
+      eveningAmount += r.amount;
+    } else if (hours >= 0 && hours < 6) {
+      lateNightCount += 1;
+      lateNightAmount += r.amount;
+    } else {
+      daytimeCount += 1;
+      daytimeAmount += r.amount;
+    }
+  });
+
+  const timeWindowStats = {
+    evening: {
+      label: '저녁/야근 (19:00 ~ 24:00)',
+      count: eveningCount,
+      amount: eveningAmount,
+      countRatio: totalCount > 0 ? Number(((eveningCount / totalCount) * 100).toFixed(1)) : 0,
+      amountRatio: totalAmount > 0 ? Number(((eveningAmount / totalAmount) * 100).toFixed(1)) : 0,
+    },
+    lateNight: {
+      label: '심야/새벽 (00:00 ~ 06:00)',
+      count: lateNightCount,
+      amount: lateNightAmount,
+      countRatio: totalCount > 0 ? Number(((lateNightCount / totalCount) * 100).toFixed(1)) : 0,
+      amountRatio: totalAmount > 0 ? Number(((lateNightAmount / totalAmount) * 100).toFixed(1)) : 0,
+    },
+    daytime: {
+      label: '주간/기타 (06:00 ~ 19:00)',
+      count: daytimeCount,
+      amount: daytimeAmount,
+      countRatio: totalCount > 0 ? Number(((daytimeCount / totalCount) * 100).toFixed(1)) : 0,
+      amountRatio: totalAmount > 0 ? Number(((daytimeAmount / totalAmount) * 100).toFixed(1)) : 0,
+    },
+  };
+
+  const extraFeeRows = rows.filter((r) => r.hasExtraFee);
+  const extraFeeTripCount = extraFeeRows.length;
+  const extraFeeTotalAmount = rows.reduce((sum, r) => sum + r.platformFee, 0);
+
+  const extraFeeStats = {
+    tripCount: extraFeeTripCount,
+    tripRatio: totalCount > 0 ? Number(((extraFeeTripCount / totalCount) * 100).toFixed(1)) : 0,
+    totalFeeAmount: extraFeeTotalAmount,
+    amountRatio: totalAmount > 0 ? Number(((extraFeeTotalAmount / totalAmount) * 100).toFixed(1)) : 0,
+  };
+
+  const reasonMap = new Map();
+  rows.forEach((r) => {
+    const reason = r.reason || '기타/미지정';
+    if (!reasonMap.has(reason)) {
+      reasonMap.set(reason, { reason, count: 0, amount: 0 });
+    }
+    const curr = reasonMap.get(reason);
+    curr.count += 1;
+    curr.amount += r.amount;
+  });
+
+  const reasonStats = [...reasonMap.values()]
+    .map((item) => ({
+      ...item,
+      countRatio: totalCount > 0 ? Number(((item.count / totalCount) * 100).toFixed(1)) : 0,
+      amountRatio: totalAmount > 0 ? Number(((item.amount / totalAmount) * 100).toFixed(1)) : 0,
+    }))
+    .sort((a, b) => b.count - a.count || b.amount - a.amount);
+
+  const dailyMap = new Map();
+  rows.forEach((r) => {
+    const dateStr = r.rideDate?.date || '기타';
+    if (!dailyMap.has(dateStr)) {
+      dailyMap.set(dateStr, {
+        date: dateStr,
+        count: 0,
+        amount: 0,
+        eveningCount: 0,
+        lateNightCount: 0,
+      });
+    }
+    const curr = dailyMap.get(dateStr);
+    curr.count += 1;
+    curr.amount += r.amount;
+    const hours = r.rideDate?.hours ?? null;
+    if (hours !== null) {
+      if (hours >= 19 && hours < 24) curr.eveningCount += 1;
+      if (hours >= 0 && hours < 6) curr.lateNightCount += 1;
+    }
+  });
+
+  const dailyStats = [...dailyMap.values()]
+    .map((d) => ({
+      ...d,
+      avgAmount: d.count > 0 ? Math.round(d.amount / d.count) : 0,
+    }))
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  return {
+    summary: {
+      totalCount,
+      totalAmount,
+      avgAmount,
+      activeDeptsCount: deptStats.length,
+      activeEmployeesCount: new Set(rows.map((r) => r.employeeName)).size,
+    },
+    deptStats,
+    timeWindowStats,
+    extraFeeStats,
+    reasonStats,
+    dailyStats,
+    rows,
+    count,
+  };
+}
+
