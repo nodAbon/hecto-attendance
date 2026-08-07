@@ -263,9 +263,26 @@ export async function setUserProfileStatus(email, leave) {
       if (alreadySet) {
         return { success: true, skipped: true, reason: '이미 동일한 상태가 등록되어 있음' };
       }
+
+      // 같은 날짜에 등록된 이전 상태(시간대가 다른 상태)가 있다면 삭제하여 새로운 시간대로 업데이트
+      const startDateStr = window.startTime.slice(0, 10);
+      const oldItems = existingList.filter((item) =>
+        item.profileStatusId === window.profileStatusId &&
+        item.startTime && item.startTime.startsWith(startDateStr)
+      );
+
+      for (const oldItem of oldItems) {
+        if (oldItem.userProfileStatusId) {
+          const deleteUrl = `${url}/${encodeURIComponent(oldItem.userProfileStatusId)}`;
+          await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+          }).catch(() => {});
+        }
+      }
     }
   } catch (checkErr) {
-    // 조회 실패 시 등록 계속 진행
+    // 조회/삭제 실패 시 등록 계속 진행
   }
 
   const res = await fetch(url, {
