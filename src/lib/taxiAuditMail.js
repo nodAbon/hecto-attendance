@@ -54,7 +54,7 @@ function resolveFallbackEmail(employee = {}) {
 
 async function resolveTaxiAuditMailTargets(row) {
   const supabase = getAdminClient();
-  const empNo = normalizeEmpNoKey(row?.empNo || row?.memberIdentifier);
+  const empNo = normalizeEmpNoKey(row?.empNo || row?.memberIdentifier || row?.emp_no);
 
   if (!empNo) {
     throw new Error('소명 대상 직원 정보를 찾을 수 없습니다.');
@@ -130,9 +130,9 @@ export async function sendTaxiAuditExplanationMail(row, explanationRecord = null
   const fromName = process.env.TAXI_AUDIT_MAIL_FROM_NAME || 'HECTO Q&M 근태관리시스템';
   const replyTo = process.env.TAXI_AUDIT_REPLY_TO || fromAddress;
 
-  // 임시 테스트 설정: 소명요청 수신 대상을 bhkim@hecto.co.kr 로 고정 (CC 제외)
-  const recipientEmail = 'bhkim@hecto.co.kr';
-  const cc = [];
+  const targets = await resolveTaxiAuditMailTargets(row);
+  const recipientEmail = overrideRecipientEmail || targets.recipientEmail;
+  const cc = targets.cc || [];
 
   if (!recipientEmail) {
     throw new Error('직원 이메일을 찾지 못했습니다. emp_no와 사원 정보를 확인하세요.');
@@ -280,8 +280,8 @@ export async function sendTaxiAuditLeaderNotificationMail(record, siteBaseUrl = 
     const fromName = process.env.TAXI_AUDIT_MAIL_FROM_NAME || 'HECTO Q&M 근태관리시스템';
     const replyTo = process.env.TAXI_AUDIT_REPLY_TO || fromAddress;
 
-    // 테스트 환경: bhkim@hecto.co.kr 고정 (실서버 시 resolveTaxiAuditMailTargets 활용 가능)
-    const leaderEmail = 'bhkim@hecto.co.kr';
+    const targets = await resolveTaxiAuditMailTargets(record).catch(() => null);
+    const leaderEmail = targets?.cc?.find((email) => email !== 'hq_admin@hecto.co.kr') || targets?.cc?.[0];
     if (!leaderEmail) return null;
 
     const employeeName = String(record.employee_name || '-').trim();
