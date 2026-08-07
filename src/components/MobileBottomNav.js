@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { canViewOvertimeMenu } from '../lib/overtimeRules';
+import { canViewOvertimeMenu, canViewManualApprovalMenu } from '../lib/overtimeRules';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -65,7 +65,11 @@ export default function MobileBottomNav({
   const visibleMore = MOBILE_MORE_ITEMS.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
     if (item.leaderOnly && !isAdmin && !isLeader) return false;
-    if (item.key === 'OVERTIME' && !canViewOvertimeMenu({ isAdmin, isLeader, dept: profile?.dept, position: profile?.position })) {
+    const userDept = profile?.dept || profile?.team || '';
+    if (item.key === 'OVERTIME' && !canViewOvertimeMenu({ isAdmin, isLeader, dept: userDept, position: profile?.position })) {
+      return false;
+    }
+    if (item.key === 'MANUAL_APPROVAL' && !canViewManualApprovalMenu({ isAdmin, isLeader, dept: userDept, position: profile?.position })) {
       return false;
     }
     // Don't show items already in primary tabs

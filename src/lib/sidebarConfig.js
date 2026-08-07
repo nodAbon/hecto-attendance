@@ -13,7 +13,7 @@ import {
   Moon,
   User,
 } from 'lucide-react';
-import { canViewOvertimeMenu, isExecutivePosition } from './overtimeRules';
+import { canViewOvertimeMenu, canViewManualApprovalMenu, isExecutivePosition } from './overtimeRules';
 
 const GENERAL_ITEMS = [
   { href: '/?tab=DASHBOARD', label: '대시보드', icon: LayoutDashboard, iconStyle: { color: 'var(--blue)' }, category: '일반' },
@@ -49,7 +49,13 @@ export function getMainSidebarItems({ isAdmin = false, isLeader = false, dept = 
   const items = [...GENERAL_ITEMS];
 
   if (canSeeLeaderItems({ isAdmin, isLeader, position })) {
-    items.push(...LEADER_ITEMS);
+    const leaderItems = LEADER_ITEMS.filter((item) => {
+      if (item.href === '/?tab=MANUAL_APPROVAL') {
+        return canViewManualApprovalMenu({ isAdmin, isLeader, position, dept });
+      }
+      return true;
+    });
+    items.push(...leaderItems);
   }
 
   if (canViewOvertimeMenu({ isAdmin, isLeader, position, dept })) {

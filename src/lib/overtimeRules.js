@@ -18,3 +18,11 @@ export const canViewOvertimeMenu = ({ isAdmin = false, isLeader = false, positio
   return false;
 };
 
+export const canViewManualApprovalMenu = ({ isAdmin = false, isLeader = false, position = '', dept = '' } = {}) => {
+  if (isAdmin) return true;
+  if (isExecutivePosition(position)) return true;
+  if (isLeader && isOvertimeTeamDept(dept)) return true;
+  return false;
+};
+
+
