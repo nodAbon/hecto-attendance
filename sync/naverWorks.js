@@ -352,8 +352,6 @@ async function syncLeavesToNaverWorks(leavesWithEmails = []) {
         skipped++;
       } else {
         processed++;
-        const win = res.window || {};
-        console.log(`[NaverWorks Sync] ${item.emp_name || item.emp_no} (${item.dept || '부서미지정'}) <${email}>: ${win.statusMessage} (${win.startTime} ~ ${win.endTime}) 설정 완료`);
       }
     } catch (err) {
       errors++;
