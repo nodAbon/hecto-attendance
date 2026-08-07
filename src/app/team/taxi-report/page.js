@@ -195,7 +195,7 @@ export default function TaxiReportPage() {
   const displayDeptName = meta.userDept || availableDepts[0] || deptStats[0]?.dept || '소속팀';
 
   return (
-    <EmployeeAdminShell activeTab="/team/taxi-report">
+    <EmployeeAdminShell activeHref="/team/taxi-report">
       <div style={{ paddingBottom: 60, maxWidth: 1300, margin: '0 auto' }}>
         {/* Header Title */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>

@@ -152,6 +152,7 @@ export default function TeamTaxiAuditPage() {
     <EmployeeAdminShell
       title={`팀원 택시 소명 현황 ${deptName ? `(${deptName})` : ''}`}
       subtitle="22시 이후 부서 팀원들의 법인 택시 이용건 및 제출된 소명 사유를 확인합니다."
+      activeHref="/team/taxi-audit"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Top Summary Header Banner */}

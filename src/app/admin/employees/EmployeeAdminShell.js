@@ -8,7 +8,8 @@ import { usePersistentTheme } from '../../../lib/usePersistentTheme';
 import AppSidebar from '../../../components/AppSidebar';
 import { getMainSidebarItems, sidebarActionIcons } from '../../../lib/sidebarConfig';
 
-export default function EmployeeAdminShell({ title, subtitle, children, activeHref = '/admin/employees' }) {
+export default function EmployeeAdminShell({ title, subtitle, children, activeHref, activeTab }) {
+  const currentActiveHref = activeHref || activeTab || '/admin/employees';
   const router = useRouter();
   const [time, setTime] = useState('');
   const [userProfile, setUserProfile] = useState(() => {
@@ -86,7 +87,7 @@ export default function EmployeeAdminShell({ title, subtitle, children, activeHr
     const itemTab = tabMatch ? tabMatch[1] : null;
     return {
       ...item,
-      active: item.href === activeHref || item.activeHref === activeHref,
+      active: item.href === currentActiveHref || item.activeHref === currentActiveHref,
       onClick: () => {
         router.push(item.href);
       },
