@@ -313,6 +313,7 @@ export default function DashboardShell({
         {activeTab === 'DASHBOARD' && data && (
           <DashboardTab
             data={data}
+            loading={refreshing}
             viewDeptFilter={resolvedDeptFilterValue}
             isAdmin={isAdmin}
             isLeader={isLeader}

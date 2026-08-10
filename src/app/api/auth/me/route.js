@@ -14,6 +14,7 @@ export async function GET(request) {
     const cookieHeader = request?.headers?.get?.('cookie') || '';
     let accessToken = getCookieValueFromHeader(cookieHeader, 'sb-access-token');
     let fallbackEmpNo = getCookieValueFromHeader(cookieHeader, 'user-emp-no') || '';
+    let fallbackLoginId = getCookieValueFromHeader(cookieHeader, 'user-login-id') || '';
 
     if (!accessToken) {
       try {
@@ -21,6 +22,9 @@ export async function GET(request) {
         accessToken = cookieStore.get('sb-access-token')?.value || null;
         if (!fallbackEmpNo) {
           fallbackEmpNo = cookieStore.get('user-emp-no')?.value || '';
+        }
+        if (!fallbackLoginId) {
+          fallbackLoginId = cookieStore.get('user-login-id')?.value || '';
         }
       } catch (e) {
         // cookies() fallback
@@ -37,11 +41,15 @@ export async function GET(request) {
       return NextResponse.json({ success: false, user: null }, { status: 401 });
     }
 
+    const userId = userData.user.id;
+    const emailLoginId = userData.user.email?.split('@')[0] || '';
+    const loginId = fallbackLoginId || emailLoginId;
+
     const profileSelect = 'id, emp_no, is_admin, position, rank, must_change_password';
     let { data: profile } = await supabase
       .from('sa_profiles')
       .select(profileSelect)
-      .eq('id', userData.user.id)
+      .eq('id', userId)
       .maybeSingle();
 
     if (!profile && fallbackEmpNo) {
@@ -53,59 +61,65 @@ export async function GET(request) {
       profile = fallbackProfile || null;
     }
 
-    if (!profile && fallbackEmpNo) {
-      const { data: employee } = await supabase
+    // 직원 정보 조회 (sa_employees) - login_id, emp_no, email 모두 대응
+    let matchedEmployee = null;
+    const lookupKeys = [profile?.emp_no, fallbackEmpNo, loginId, emailLoginId].filter(Boolean);
+    if (lookupKeys.length > 0) {
+      const { data: empList } = await supabase
         .from('sa_employees')
-        .select('emp_no, dept, name')
-        .eq('emp_no', fallbackEmpNo)
-        .maybeSingle();
+        .select('*')
+        .or(`emp_no.in.(${lookupKeys.join(',')}),login_id.in.(${lookupKeys.join(',')}),email.eq.${userData.user.email}`)
+        .limit(1);
 
-      if (employee) {
-        const bootstrapProfile = {
-          id: userData.user.id,
-          emp_no: employee.emp_no,
-          dept: employee.dept || '',
-          rank: '',
-          position: '',
-          must_change_password: false,
-          is_admin: false,
-          updated_at: new Date().toISOString(),
-        };
-
-        const { error: bootstrapError } = await supabase
-          .from('sa_profiles')
-          .upsert(bootstrapProfile, { onConflict: 'id' });
-
-        if (!bootstrapError) {
-          profile = bootstrapProfile;
-        }
+      if (empList && empList.length > 0) {
+        matchedEmployee = empList[0];
       }
     }
 
-    if (!profile) {
-      return NextResponse.json({ success: false, user: null }, { status: 401 });
+    const realEmpNo = matchedEmployee?.emp_no || profile?.emp_no || fallbackEmpNo || loginId;
+    const realLoginId = matchedEmployee?.login_id || loginId;
+    const realName = matchedEmployee?.name || userData.user.user_metadata?.name || loginId;
+    const realDept = matchedEmployee?.dept || '';
+
+    const resolvedIsAdmin = isAdminRole(profile || {}) || realLoginId === 'admin' || profile?.position === '관리자';
+    const position = profile?.position || '';
+    const rank = profile?.rank || '';
+
+    // 프로필 부트스트랩
+    if (!profile && realEmpNo) {
+      const bootstrapProfile = {
+        id: userId,
+        emp_no: realEmpNo,
+        dept: realDept,
+        rank: rank,
+        position: position,
+        must_change_password: false,
+        is_admin: resolvedIsAdmin,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: bootstrapError } = await supabase
+        .from('sa_profiles')
+        .upsert(bootstrapProfile, { onConflict: 'id' });
+
+      if (!bootstrapError) {
+        profile = bootstrapProfile;
+      }
     }
-
-    const { data: employee } = await supabase
-      .from('sa_employees')
-      .select('dept, name')
-      .eq('emp_no', profile.emp_no)
-      .maybeSingle();
-
-    const resolvedIsAdmin = isAdminRole(profile || {});
 
     return NextResponse.json({
       success: true,
       user: {
-        userId: profile.id || userData.user.id,
-        empNo: profile.emp_no,
-        name: employee?.name || '',
-        loginId: userData.user.email?.split('@')[0] || '',
+        userId: profile?.id || userId,
+        empNo: realEmpNo,
+        name: realName,
+        loginId: realLoginId,
         isAdmin: resolvedIsAdmin,
-        position: profile.position || '',
-        team: employee?.dept || '',
-        rank: profile.rank || '',
-        mustChangePassword: !!profile.must_change_password,
+        position: position,
+        team: realDept,
+        dept: realDept,
+        rank: rank,
+        mustChangePassword: !!profile?.must_change_password,
       },
     });
   } catch (err) {

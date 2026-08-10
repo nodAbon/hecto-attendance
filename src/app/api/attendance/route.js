@@ -342,20 +342,24 @@ export async function GET(request) {
     const allEmployeesMap = new Map();
     if (employees && employees.length > 0) {
       employees.forEach((emp) => {
-        allEmployeesMap.set(emp.empNo, {
-          empNo: emp.empNo,
+        const empNo = emp.empNo || emp.emp_no;
+        if (!empNo) return;
+        allEmployeesMap.set(empNo, {
+          empNo,
           name: emp.name,
           dept: emp.dept,
-          cardNo: ''
+          cardNo: emp.cardNo || ''
         });
       });
     } else {
       logs.forEach((log) => {
-        allEmployeesMap.set(log.empNo, {
-          empNo: log.empNo,
+        const empNo = log.empNo || log.emp_no || log.Sabun;
+        if (!empNo) return;
+        allEmployeesMap.set(empNo, {
+          empNo,
           name: log.name,
           dept: log.dept,
-          cardNo: log.cardNo
+          cardNo: log.cardNo || ''
         });
       });
     }
