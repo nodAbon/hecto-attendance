@@ -173,6 +173,9 @@ export const getTabFromLocation = () => {
 };
 
 export const matchesDeptFilter = (dept, filter) => {
-  const normalizedFilter = normalizeDeptName(filter);
-  return !normalizedFilter || normalizedFilter === 'ALL' || normalizeDeptName(dept) === normalizedFilter;
+  const normalizedFilter = normalizeDeptLoose(filter);
+  if (!normalizedFilter || normalizedFilter === 'ALL' || normalizedFilter === '전체' || normalizedFilter === '전체부서' || normalizedFilter === '전체부서보기') {
+    return true;
+  }
+  return normalizeDeptLoose(dept) === normalizedFilter;
 };
