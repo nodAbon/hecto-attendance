@@ -43,12 +43,12 @@ function formatRideTimeTwoLines(rideTimeStr) {
 
 function StatBadge({ tone = 'blue', children }) {
   const tones = {
-    purple: { bg: 'rgba(168, 85, 247, 0.12)', color: '#a855f7', border: 'rgba(168, 85, 247, 0.25)' },
-    amber: { bg: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.25)' },
-    blue: { bg: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.25)' },
-    green: { bg: 'rgba(34, 197, 94, 0.12)', color: '#22c55e', border: 'rgba(34, 197, 94, 0.25)' },
-    rose: { bg: 'rgba(244, 63, 94, 0.12)', color: '#f43f5e', border: 'rgba(244, 63, 94, 0.25)' },
-    gray: { bg: 'var(--bg-card-2, #f1f5f9)', color: 'var(--text-2, #64748b)', border: 'var(--border, #cbd5e1)' },
+    purple: { bg: 'rgba(157, 123, 216, 0.16)', color: 'var(--purple, #9d7bd8)', border: 'rgba(157, 123, 216, 0.35)' },
+    amber: { bg: 'rgba(201, 150, 75, 0.16)', color: 'var(--amber, #c9964b)', border: 'rgba(201, 150, 75, 0.35)' },
+    blue: { bg: 'rgba(91, 136, 214, 0.16)', color: 'var(--blue, #5b88d6)', border: 'rgba(91, 136, 214, 0.35)' },
+    green: { bg: 'rgba(95, 169, 113, 0.16)', color: 'var(--green, #5fa971)', border: 'rgba(95, 169, 113, 0.35)' },
+    rose: { bg: 'rgba(208, 107, 107, 0.16)', color: 'var(--red, #d06b6b)', border: 'rgba(208, 107, 107, 0.35)' },
+    gray: { bg: 'var(--bg-input)', color: 'var(--text-2)', border: 'var(--border)' },
   };
 
   const current = tones[tone] || tones.gray;
@@ -200,11 +200,11 @@ export default function TaxiReportPage() {
         {/* Header Title */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <CarTaxiFront size={28} style={{ color: 'var(--amber, #f59e0b)' }} />
+            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-1)' }}>
+              <CarTaxiFront size={28} style={{ color: 'var(--amber)' }} />
               카카오T 이용 분석 리포트
             </h1>
-            <p style={{ fontSize: 14, color: 'var(--text-2, #64748b)', margin: '4px 0 0 0' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '4px 0 0 0' }}>
               기간별 카카오T 택시 이용 현황, 부서별/시간대별 패턴, 추가 호출비 및 이용사유 집계 리포트입니다.
             </p>
           </div>
@@ -219,6 +219,7 @@ export default function TaxiReportPage() {
             </StatBadge>
 
             <button
+              type="button"
               onClick={() => fetchReport()}
               disabled={loading}
               style={{
@@ -226,13 +227,15 @@ export default function TaxiReportPage() {
                 alignItems: 'center',
                 gap: 6,
                 padding: '8px 14px',
+                minHeight: 34,
                 borderRadius: 8,
-                border: '1px solid var(--border, #cbd5e1)',
-                backgroundColor: 'var(--bg-card, #ffffff)',
-                color: 'var(--text-1, #1e293b)',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-card-2)',
+                color: 'var(--text-1)',
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: 'none',
               }}
             >
               <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
@@ -243,66 +246,75 @@ export default function TaxiReportPage() {
 
         {/* 1. 최상단 날짜 및 부서 선택바 (Date & Dept Range Picker Bar) */}
         <div
+          className="taxi-report-section-card"
           style={{
-            backgroundColor: 'var(--bg-card, #ffffff)',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: 14,
             padding: '16px 20px',
-            border: '1px solid var(--border, #e2e8f0)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-card)',
             marginBottom: 24,
             display: 'flex',
             alignItems: 'center',
-            justify: 'space-between',
+            justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 16,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <Calendar size={18} style={{ color: 'var(--blue, #3b82f6)' }} />
-            <span style={{ fontWeight: 600, fontSize: 14 }}>조회 기간:</span>
+            <Calendar size={18} style={{ color: 'var(--blue)' }} />
+            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>조회 기간:</span>
 
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              className="taxi-report-input"
               style={{
                 padding: '8px 12px',
                 borderRadius: 8,
-                border: '1px solid var(--border, #cbd5e1)',
-                backgroundColor: 'var(--bg-main, #f8fafc)',
-                fontSize: 14,
-                color: 'inherit',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-1)',
+                fontSize: 13.5,
+                fontWeight: 500,
+                outline: 'none',
+                colorScheme: 'dark light',
               }}
             />
-            <span style={{ color: 'var(--text-2, #64748b)' }}>~</span>
+            <span style={{ color: 'var(--text-3)' }}>~</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              className="taxi-report-input"
               style={{
                 padding: '8px 12px',
                 borderRadius: 8,
-                border: '1px solid var(--border, #cbd5e1)',
-                backgroundColor: 'var(--bg-main, #f8fafc)',
-                fontSize: 14,
-                color: 'inherit',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-1)',
+                fontSize: 13.5,
+                fontWeight: 500,
+                outline: 'none',
+                colorScheme: 'dark light',
               }}
             />
 
             {/* 부서 필터 선택 (권한별 구분) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
-              <Building2 size={16} style={{ color: 'var(--indigo, #6366f1)' }} />
-              <span style={{ fontWeight: 600, fontSize: 14 }}>부서:</span>
+              <Building2 size={16} style={{ color: 'var(--purple)' }} />
+              <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>부서:</span>
               {meta.permissionScope === 'SINGLE_DEPT' ? (
                 <span
                   style={{
                     padding: '6px 12px',
                     borderRadius: 8,
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    backgroundColor: 'rgba(91, 136, 214, 0.12)',
+                    border: '1px solid rgba(91, 136, 214, 0.28)',
                     fontSize: 13,
                     fontWeight: 700,
-                    color: 'var(--blue, #2563eb)',
+                    color: 'var(--blue)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4,
@@ -314,14 +326,16 @@ export default function TaxiReportPage() {
                 <select
                   value={selectedDept}
                   onChange={handleDeptChange}
+                  className="taxi-report-select"
                   style={{
                     padding: '8px 12px',
                     borderRadius: 8,
-                    border: '1px solid var(--border, #cbd5e1)',
-                    backgroundColor: 'var(--bg-main, #f8fafc)',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-input)',
+                    color: 'var(--text-1)',
                     fontSize: 13,
                     fontWeight: 600,
-                    color: 'inherit',
+                    outline: 'none',
                     cursor: 'pointer',
                   }}
                 >
@@ -347,12 +361,14 @@ export default function TaxiReportPage() {
             </div>
 
             <button
+              type="button"
               onClick={() => fetchReport()}
               disabled={loading}
               style={{
                 padding: '8px 18px',
+                minHeight: 34,
                 borderRadius: 8,
-                backgroundColor: 'var(--blue, #2563eb)',
+                backgroundColor: 'var(--blue)',
                 color: '#fff',
                 fontWeight: 600,
                 fontSize: 14,
@@ -362,6 +378,7 @@ export default function TaxiReportPage() {
                 alignItems: 'center',
                 gap: 6,
                 marginLeft: 4,
+                boxShadow: '0 2px 8px rgba(91, 136, 214, 0.3)',
               }}
             >
               <Search size={15} />
@@ -370,54 +387,74 @@ export default function TaxiReportPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-2, #64748b)', marginRight: 4 }}>빠른 선택:</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)', marginRight: 4 }}>빠른 선택:</span>
             <button
+              type="button"
               onClick={() => handleQuickPreset(7)}
+              className="taxi-report-quick-btn"
               style={{
-                padding: '6px 10px',
+                padding: '6px 11px',
+                minHeight: 28,
                 borderRadius: 6,
                 fontSize: 12,
-                border: '1px solid var(--border, #e2e8f0)',
-                backgroundColor: 'var(--bg-main, #f1f5f9)',
+                fontWeight: 600,
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-2)',
                 cursor: 'pointer',
               }}
             >
               최근 7일
             </button>
             <button
+              type="button"
               onClick={() => handleQuickPreset(30)}
+              className="taxi-report-quick-btn"
               style={{
-                padding: '6px 10px',
+                padding: '6px 11px',
+                minHeight: 28,
                 borderRadius: 6,
                 fontSize: 12,
-                border: '1px solid var(--border, #e2e8f0)',
-                backgroundColor: 'var(--bg-main, #f1f5f9)',
+                fontWeight: 600,
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-2)',
                 cursor: 'pointer',
               }}
             >
               최근 30일
             </button>
             <button
+              type="button"
               onClick={() => handleQuickPreset('thisMonth')}
+              className="taxi-report-quick-btn"
               style={{
-                padding: '6px 10px',
+                padding: '6px 11px',
+                minHeight: 28,
                 borderRadius: 6,
                 fontSize: 12,
-                border: '1px solid var(--border, #e2e8f0)',
-                backgroundColor: 'var(--bg-main, #f1f5f9)',
+                fontWeight: 600,
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-2)',
                 cursor: 'pointer',
               }}
             >
               이번 달
             </button>
             <button
+              type="button"
               onClick={() => handleQuickPreset('lastMonth')}
+              className="taxi-report-quick-btn"
               style={{
-                padding: '6px 10px',
+                padding: '6px 11px',
+                minHeight: 28,
                 borderRadius: 6,
                 fontSize: 12,
-                border: '1px solid var(--border, #e2e8f0)',
-                backgroundColor: 'var(--bg-main, #f1f5f9)',
+                fontWeight: 600,
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-2)',
                 cursor: 'pointer',
               }}
             >
@@ -431,9 +468,9 @@ export default function TaxiReportPage() {
             style={{
               padding: '14px 18px',
               borderRadius: 10,
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#ef4444',
+              backgroundColor: 'rgba(208, 107, 107, 0.12)',
+              border: '1px solid rgba(208, 107, 107, 0.28)',
+              color: 'var(--red)',
               marginBottom: 20,
               display: 'flex',
               alignItems: 'center',
@@ -445,7 +482,7 @@ export default function TaxiReportPage() {
           </div>
         )}
 
-        {/* Global Summary KPI Grid (KRW 아이콘 표시 반영) */}
+        {/* Global Summary KPI Grid */}
         {summary && (
           <div
             style={{
@@ -456,65 +493,72 @@ export default function TaxiReportPage() {
             }}
           >
             <div
+              className="taxi-report-kpi-card"
               style={{
-                backgroundColor: 'var(--bg-card, #ffffff)',
+                backgroundColor: 'var(--bg-card)',
                 borderRadius: 12,
                 padding: 18,
-                border: '1px solid var(--border, #e2e8f0)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2, #64748b)', fontSize: 13, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2)', fontSize: 13, marginBottom: 6 }}>
                 <span>총 이용건수</span>
-                <CarTaxiFront size={18} style={{ color: 'var(--blue, #3b82f6)' }} />
+                <CarTaxiFront size={18} style={{ color: 'var(--blue)' }} />
               </div>
-              <div style={{ fontSize: 26, fontWeight: 800 }}>{summary.totalCount.toLocaleString()}건</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-1)' }}>{summary.totalCount.toLocaleString()}건</div>
             </div>
 
-            {/* 총 이용금액: KRW (원) 표시 아이콘 반영 */}
             <div
+              className="taxi-report-kpi-card"
               style={{
-                backgroundColor: 'var(--bg-card, #ffffff)',
+                backgroundColor: 'var(--bg-card)',
                 borderRadius: 12,
                 padding: 18,
-                border: '1px solid var(--border, #e2e8f0)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2, #64748b)', fontSize: 13, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2)', fontSize: 13, marginBottom: 6 }}>
                 <span>총 이용금액</span>
-                <Coins size={18} style={{ color: 'var(--amber, #f59e0b)' }} />
+                <Coins size={18} style={{ color: 'var(--amber)' }} />
               </div>
-              <div style={{ fontSize: 26, fontWeight: 800 }}>{formatCurrency(summary.totalAmount)}원</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-1)' }}>{formatCurrency(summary.totalAmount)}원</div>
             </div>
 
             <div
+              className="taxi-report-kpi-card"
               style={{
-                backgroundColor: 'var(--bg-card, #ffffff)',
+                backgroundColor: 'var(--bg-card)',
                 borderRadius: 12,
                 padding: 18,
-                border: '1px solid var(--border, #e2e8f0)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2, #64748b)', fontSize: 13, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2)', fontSize: 13, marginBottom: 6 }}>
                 <span>건당 평균 금액</span>
-                <TrendingUp size={18} style={{ color: 'var(--purple, #a855f7)' }} />
+                <TrendingUp size={18} style={{ color: 'var(--purple)' }} />
               </div>
-              <div style={{ fontSize: 26, fontWeight: 800 }}>{formatCurrency(summary.avgAmount)}원</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-1)' }}>{formatCurrency(summary.avgAmount)}원</div>
             </div>
 
             <div
+              className="taxi-report-kpi-card"
               style={{
-                backgroundColor: 'var(--bg-card, #ffffff)',
+                backgroundColor: 'var(--bg-card)',
                 borderRadius: 12,
                 padding: 18,
-                border: '1px solid var(--border, #e2e8f0)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2, #64748b)', fontSize: 13, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2)', fontSize: 13, marginBottom: 6 }}>
                 <span>이용 부서 / 사원 수</span>
-                <Building2 size={18} style={{ color: 'var(--green, #22c55e)' }} />
+                <Building2 size={18} style={{ color: 'var(--green)' }} />
               </div>
-              <div style={{ fontSize: 26, fontWeight: 800 }}>
-                {summary.activeDeptsCount}개 부서 <span style={{ fontSize: 16, color: 'var(--text-2, #64748b)', fontWeight: 500 }}>({summary.activeEmployeesCount}명)</span>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-1)' }}>
+                {summary.activeDeptsCount}개 부서 <span style={{ fontSize: 16, color: 'var(--text-2)', fontWeight: 500 }}>({summary.activeEmployeesCount}명)</span>
               </div>
             </div>
           </div>
@@ -522,79 +566,99 @@ export default function TaxiReportPage() {
 
         {/* 2. 부서별 이용 현황 (Department Breakdown: Both KPI & Table view options) */}
         <div
+          className="taxi-report-section-card"
           style={{
-            backgroundColor: 'var(--bg-card, #ffffff)',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: 14,
             padding: '20px 24px',
-            border: '1px solid var(--border, #e2e8f0)',
+            border: '1px solid var(--border)',
             marginBottom: 24,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            boxShadow: 'var(--shadow-card)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Building2 size={20} style={{ color: 'var(--indigo, #6366f1)' }} />
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-1)' }}>
+                <Building2 size={20} style={{ color: 'var(--purple)' }} />
                 기간 내 부서별 이용 현황
               </h2>
-              <p style={{ fontSize: 13, color: 'var(--text-2, #64748b)', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '4px 0 0 0' }}>
                 부서명, 이용건수, 총 이용금액, 이용건수 비중(%), 이용금액 비중(%)을 보여줍니다.
               </p>
             </div>
 
-            {/* View Mode Toggle: 둘 다 보기 / 카드만 / 테이블만 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, backgroundColor: 'var(--bg-main, #f1f5f9)', padding: 3, borderRadius: 8 }}>
+            {/* View Mode Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                backgroundColor: 'var(--bg-input)',
+                padding: 4,
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+              }}
+            >
               <button
+                type="button"
                 onClick={() => setDeptViewMode('both')}
+                className={`taxi-report-toggle-btn ${deptViewMode === 'both' ? 'active' : ''}`}
                 style={{
                   padding: '6px 12px',
+                  minHeight: 28,
                   borderRadius: 6,
                   border: 'none',
-                  backgroundColor: deptViewMode === 'both' ? 'var(--bg-card, #fff)' : 'transparent',
-                  fontWeight: deptViewMode === 'both' ? 700 : 500,
                   fontSize: 12,
-                  color: 'inherit',
+                  fontWeight: deptViewMode === 'both' ? 700 : 500,
+                  backgroundColor: deptViewMode === 'both' ? 'var(--bg-card)' : 'transparent',
+                  color: deptViewMode === 'both' ? 'var(--text-1)' : 'var(--text-2)',
                   cursor: 'pointer',
-                  boxShadow: deptViewMode === 'both' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  boxShadow: deptViewMode === 'both' ? '0 1px 4px rgba(0,0,0,0.18)' : 'none',
                 }}
               >
                 둘 다 함께 보기 (비교용)
               </button>
               <button
+                type="button"
                 onClick={() => setDeptViewMode('kpi')}
+                className={`taxi-report-toggle-btn ${deptViewMode === 'kpi' ? 'active' : ''}`}
                 style={{
                   padding: '6px 12px',
+                  minHeight: 28,
                   borderRadius: 6,
                   border: 'none',
-                  backgroundColor: deptViewMode === 'kpi' ? 'var(--bg-card, #fff)' : 'transparent',
-                  fontWeight: deptViewMode === 'kpi' ? 700 : 500,
                   fontSize: 12,
-                  color: 'inherit',
+                  fontWeight: deptViewMode === 'kpi' ? 700 : 500,
+                  backgroundColor: deptViewMode === 'kpi' ? 'var(--bg-card)' : 'transparent',
+                  color: deptViewMode === 'kpi' ? 'var(--text-1)' : 'var(--text-2)',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
-                  boxShadow: deptViewMode === 'kpi' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  boxShadow: deptViewMode === 'kpi' ? '0 1px 4px rgba(0,0,0,0.18)' : 'none',
                 }}
               >
                 <LayoutGrid size={14} />
                 KPI 카드 뷰
               </button>
               <button
+                type="button"
                 onClick={() => setDeptViewMode('table')}
+                className={`taxi-report-toggle-btn ${deptViewMode === 'table' ? 'active' : ''}`}
                 style={{
                   padding: '6px 12px',
+                  minHeight: 28,
                   borderRadius: 6,
                   border: 'none',
-                  backgroundColor: deptViewMode === 'table' ? 'var(--bg-card, #fff)' : 'transparent',
-                  fontWeight: deptViewMode === 'table' ? 700 : 500,
                   fontSize: 12,
-                  color: 'inherit',
+                  fontWeight: deptViewMode === 'table' ? 700 : 500,
+                  backgroundColor: deptViewMode === 'table' ? 'var(--bg-card)' : 'transparent',
+                  color: deptViewMode === 'table' ? 'var(--text-1)' : 'var(--text-2)',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
-                  boxShadow: deptViewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  boxShadow: deptViewMode === 'table' ? '0 1px 4px rgba(0,0,0,0.18)' : 'none',
                 }}
               >
                 <TableIcon size={14} />
@@ -604,7 +668,7 @@ export default function TaxiReportPage() {
           </div>
 
           {deptStats.length === 0 ? (
-            <div style={{ padding: '30px 0', textAlign: 'center', color: 'var(--text-2, #64748b)', fontSize: 14 }}>
+            <div style={{ padding: '30px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
               해당 기간의 부서별 이용 데이터가 없습니다.
             </div>
           ) : (
@@ -613,7 +677,7 @@ export default function TaxiReportPage() {
               {(deptViewMode === 'both' || deptViewMode === 'kpi') && (
                 <div style={{ marginBottom: deptViewMode === 'both' ? 24 : 0 }}>
                   {deptViewMode === 'both' && (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue, #3b82f6)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <LayoutGrid size={15} /> [형식 A] KPI 카드형 뷰
                     </div>
                   )}
@@ -622,15 +686,16 @@ export default function TaxiReportPage() {
                     {deptStats.map((item, idx) => (
                       <div
                         key={item.dept || idx}
+                        className="taxi-report-sub-card"
                         style={{
-                          backgroundColor: 'var(--bg-main, #f8fafc)',
+                          backgroundColor: 'var(--bg-card-2)',
                           borderRadius: 12,
                           padding: 16,
-                          border: '1px solid var(--border, #e2e8f0)',
+                          border: '1px solid var(--border)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                          <span style={{ fontSize: 16, fontWeight: 700 }}>{item.dept}</span>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>{item.dept}</span>
                           <StatBadge tone={idx === 0 ? 'purple' : idx === 1 ? 'blue' : 'gray'}>
                             {idx + 1}위
                           </StatBadge>
@@ -638,25 +703,25 @@ export default function TaxiReportPage() {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
                           <div>
-                            <div style={{ fontSize: 11, color: 'var(--text-2, #64748b)' }}>이용건수 (비중)</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
-                              {item.count}건 <span style={{ fontSize: 12, color: 'var(--blue, #3b82f6)' }}>({item.countRatio}%)</span>
+                            <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>이용건수 (비중)</div>
+                            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2, color: 'var(--text-1)' }}>
+                              {item.count}건 <span style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 700 }}>({item.countRatio}%)</span>
                             </div>
                           </div>
                           <div>
-                            <div style={{ fontSize: 11, color: 'var(--text-2, #64748b)' }}>총 이용금액 (비중)</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
-                              {formatCurrency(item.amount)}원 <span style={{ fontSize: 12, color: 'var(--amber, #f59e0b)' }}>({item.amountRatio}%)</span>
+                            <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>총 이용금액 (비중)</div>
+                            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2, color: 'var(--text-1)' }}>
+                              {formatCurrency(item.amount)}원 <span style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700 }}>({item.amountRatio}%)</span>
                             </div>
                           </div>
                         </div>
 
-                        <div style={{ height: 6, borderRadius: 3, backgroundColor: 'var(--border, #e2e8f0)', overflow: 'hidden' }}>
+                        <div style={{ height: 6, borderRadius: 3, backgroundColor: 'var(--bg-input)', overflow: 'hidden' }}>
                           <div
                             style={{
                               height: '100%',
                               width: `${Math.min(100, item.amountRatio)}%`,
-                              backgroundColor: idx === 0 ? '#a855f7' : idx === 1 ? '#3b82f6' : '#22c55e',
+                              backgroundColor: idx === 0 ? 'var(--purple)' : idx === 1 ? 'var(--blue)' : 'var(--green)',
                               borderRadius: 3,
                             }}
                           />
@@ -671,30 +736,30 @@ export default function TaxiReportPage() {
               {(deptViewMode === 'both' || deptViewMode === 'table') && (
                 <div>
                   {deptViewMode === 'both' && (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green, #22c55e)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <TableIcon size={15} /> [형식 B] 테이블 집계 뷰
                     </div>
                   )}
 
-                  <div style={{ overflowX: 'auto', border: '1px solid var(--border, #e2e8f0)', borderRadius: 10 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                  <div className="taxi-report-table-container" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10, backgroundColor: 'var(--bg-card)' }}>
+                    <table className="taxi-report-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ backgroundColor: 'var(--bg-main, #f8fafc)', borderBottom: '1px solid var(--border, #e2e8f0)' }}>
-                          <th style={{ padding: '12px 16px', fontWeight: 600 }}>부서명</th>
-                          <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>이용건수</th>
-                          <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>이용건수 비중 (%)</th>
-                          <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>총 이용금액</th>
-                          <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>이용금액 비중 (%)</th>
+                        <tr style={{ backgroundColor: 'var(--bg-card-2)', borderBottom: '1px solid var(--border)' }}>
+                          <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-2)' }}>부서명</th>
+                          <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>이용건수</th>
+                          <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>이용건수 비중 (%)</th>
+                          <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>총 이용금액</th>
+                          <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>이용금액 비중 (%)</th>
                         </tr>
                       </thead>
                       <tbody>
                         {deptStats.map((item, idx) => (
-                          <tr key={item.dept || idx} style={{ borderBottom: '1px solid var(--border, #f1f5f9)' }}>
-                            <td style={{ padding: '12px 16px', fontWeight: 700 }}>{item.dept}</td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>{item.count.toLocaleString()}건</td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--blue, #3b82f6)', fontWeight: 600 }}>{item.countRatio}%</td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.amount)}원</td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--amber, #f59e0b)', fontWeight: 600 }}>{item.amountRatio}%</td>
+                          <tr key={item.dept || idx} style={{ borderBottom: '1px solid var(--border-row)' }}>
+                            <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-1)' }}>{item.dept}</td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-1)' }}>{item.count.toLocaleString()}건</td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--blue)', fontWeight: 700 }}>{item.countRatio}%</td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(item.amount)}원</td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--amber)', fontWeight: 700 }}>{item.amountRatio}%</td>
                           </tr>
                         ))}
                       </tbody>
@@ -710,61 +775,71 @@ export default function TaxiReportPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 24, marginBottom: 24 }}>
           {/* 3. 시간대별 이용 현황 (19:00~24:00 & 00:00~06:00) */}
           <div
+            className="taxi-report-section-card"
             style={{
-              backgroundColor: 'var(--bg-card, #ffffff)',
+              backgroundColor: 'var(--bg-card)',
               borderRadius: 14,
               padding: '20px 24px',
-              border: '1px solid var(--border, #e2e8f0)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              border: '1px solid var(--border)',
+              boxShadow: 'var(--shadow-card)',
+              marginBottom: 0,
             }}
           >
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Clock size={20} style={{ color: 'var(--amber, #f59e0b)' }} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-1)' }}>
+              <Clock size={20} style={{ color: 'var(--amber)' }} />
               시간대별 이용 현황
             </h2>
-            <p style={{ fontSize: 12, color: 'var(--text-2, #64748b)', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 16px 0' }}>
               저녁/야근(19~24시)과 심야/새벽(00~06시) 핵심 시간대 이용 패턴입니다.
             </p>
 
             {timeWindowStats && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {/* 저녁/야근 (19:00 - 24:00) */}
-                <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.06)', borderRadius: 10, padding: 16, border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                <div style={{ backgroundColor: 'rgba(201, 150, 75, 0.1)', borderRadius: 10, padding: 16, border: '1px solid rgba(201, 150, 75, 0.28)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: '#d97706', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       🌆 {timeWindowStats.evening.label}
                     </span>
                     <StatBadge tone="amber">{timeWindowStats.evening.countRatio}%</StatBadge>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 15 }}>
-                    <span>이용건수: <strong>{timeWindowStats.evening.count}건</strong></span>
-                    <span>이용금액: <strong>{formatCurrency(timeWindowStats.evening.amount)}원</strong></span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-1)' }}>
+                    <span>이용건수: <strong style={{ color: 'var(--text-1)' }}>{timeWindowStats.evening.count}건</strong></span>
+                    <span>이용금액: <strong style={{ color: 'var(--text-1)' }}>{formatCurrency(timeWindowStats.evening.amount)}원</strong></span>
                   </div>
                 </div>
 
                 {/* 심야/새벽 (00:00 - 06:00) */}
-                <div style={{ backgroundColor: 'rgba(168, 85, 247, 0.06)', borderRadius: 10, padding: 16, border: '1px solid rgba(168, 85, 247, 0.2)' }}>
+                <div style={{ backgroundColor: 'rgba(157, 123, 216, 0.1)', borderRadius: 10, padding: 16, border: '1px solid rgba(157, 123, 216, 0.28)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: '#a855f7', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--purple)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       🌙 {timeWindowStats.lateNight.label}
                     </span>
                     <StatBadge tone="purple">{timeWindowStats.lateNight.countRatio}%</StatBadge>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 15 }}>
-                    <span>이용건수: <strong>{timeWindowStats.lateNight.count}건</strong></span>
-                    <span>이용금액: <strong>{formatCurrency(timeWindowStats.lateNight.amount)}원</strong></span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-1)' }}>
+                    <span>이용건수: <strong style={{ color: 'var(--text-1)' }}>{timeWindowStats.lateNight.count}건</strong></span>
+                    <span>이용금액: <strong style={{ color: 'var(--text-1)' }}>{formatCurrency(timeWindowStats.lateNight.amount)}원</strong></span>
                   </div>
                 </div>
 
                 {/* 주간/기타 (06:00 - 19:00) */}
-                <div style={{ backgroundColor: 'var(--bg-main, #f8fafc)', borderRadius: 10, padding: 14, border: '1px solid var(--border, #e2e8f0)' }}>
+                <div
+                  className="taxi-report-sub-card"
+                  style={{
+                    backgroundColor: 'var(--bg-card-2)',
+                    borderRadius: 10,
+                    padding: 14,
+                    border: '1px solid var(--border)',
+                  }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-2, #64748b)' }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
                       ☀️ {timeWindowStats.daytime.label}
                     </span>
                     <StatBadge tone="gray">{timeWindowStats.daytime.countRatio}%</StatBadge>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-2, #64748b)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-2)' }}>
                     <span>이용건수: {timeWindowStats.daytime.count}건</span>
                     <span>이용금액: {formatCurrency(timeWindowStats.daytime.amount)}원</span>
                   </div>
@@ -775,19 +850,21 @@ export default function TaxiReportPage() {
 
           {/* 4. 추가 호출비 발생 현황 분석 */}
           <div
+            className="taxi-report-section-card"
             style={{
-              backgroundColor: 'var(--bg-card, #ffffff)',
+              backgroundColor: 'var(--bg-card)',
               borderRadius: 14,
               padding: '20px 24px',
-              border: '1px solid var(--border, #e2e8f0)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              border: '1px solid var(--border)',
+              boxShadow: 'var(--shadow-card)',
+              marginBottom: 0,
             }}
           >
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Zap size={20} style={{ color: 'var(--rose, #f43f5e)' }} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-1)' }}>
+              <Zap size={20} style={{ color: 'var(--red)' }} />
               추가 호출비 발생 현황 분석
             </h2>
-            <p style={{ fontSize: 12, color: 'var(--text-2, #64748b)', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 16px 0' }}>
               플랫폼 이용료, 기본/스마트 호출료 등 추가비용이 발생한 건의 통계입니다.
             </p>
 
@@ -795,38 +872,54 @@ export default function TaxiReportPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div
                   style={{
-                    backgroundColor: 'rgba(244, 63, 94, 0.05)',
-                    border: '1px solid rgba(244, 63, 94, 0.2)',
+                    backgroundColor: 'rgba(208, 107, 107, 0.1)',
+                    border: '1px solid rgba(208, 107, 107, 0.28)',
                     borderRadius: 12,
                     padding: 18,
                     textAlign: 'center',
                   }}
                 >
-                  <div style={{ fontSize: 13, color: '#e11d48', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--red)', fontWeight: 600, marginBottom: 4 }}>
                     추가 호출비 발생건 비중
                   </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#e11d48' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)' }}>
                     {extraFeeStats.tripCount}건 <span style={{ fontSize: 18 }}>({extraFeeStats.tripRatio}%)</span>
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div style={{ backgroundColor: 'var(--bg-main, #f8fafc)', borderRadius: 10, padding: 14, border: '1px solid var(--border, #e2e8f0)' }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-2, #64748b)' }}>추가 호출비 총 금액</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: 'var(--rose, #f43f5e)' }}>
+                  <div
+                    className="taxi-report-sub-card"
+                    style={{
+                      backgroundColor: 'var(--bg-card-2)',
+                      borderRadius: 10,
+                      padding: 14,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>추가 호출비 총 금액</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: 'var(--red)' }}>
                       {formatCurrency(extraFeeStats.totalFeeAmount)}원
                     </div>
                   </div>
 
-                  <div style={{ backgroundColor: 'var(--bg-main, #f8fafc)', borderRadius: 10, padding: 14, border: '1px solid var(--border, #e2e8f0)' }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-2, #64748b)' }}>전체 결제액 대비 비중</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: 'var(--rose, #f43f5e)' }}>
+                  <div
+                    className="taxi-report-sub-card"
+                    style={{
+                      backgroundColor: 'var(--bg-card-2)',
+                      borderRadius: 10,
+                      padding: 14,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>전체 결제액 대비 비중</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: 'var(--red)' }}>
                       {extraFeeStats.amountRatio}%
                     </div>
                   </div>
                 </div>
 
-                <div style={{ fontSize: 12, color: 'var(--text-2, #64748b)', backgroundColor: 'var(--bg-main, #f1f5f9)', padding: 10, borderRadius: 8, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', backgroundColor: 'var(--bg-card-2)', border: '1px solid var(--border)', padding: 12, borderRadius: 8, lineHeight: 1.5 }}>
                   💡 <strong>참고:</strong> 빠른 배차를 위해 스마트호출/플랫폼 사용료가 부과된 이용건에 대한 추가 비용 집계입니다.
                 </div>
               </div>
@@ -836,20 +929,21 @@ export default function TaxiReportPage() {
 
         {/* 5. 주요 이용사유 현황 (TOP 4만 1행 카드 형태) */}
         <div
+          className="taxi-report-section-card"
           style={{
-            backgroundColor: 'var(--bg-card, #ffffff)',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: 14,
             padding: '20px 24px',
-            border: '1px solid var(--border, #e2e8f0)',
+            border: '1px solid var(--border)',
             marginBottom: 24,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            boxShadow: 'var(--shadow-card)',
           }}
         >
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FileText size={20} style={{ color: 'var(--blue, #3b82f6)' }} />
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-1)' }}>
+            <FileText size={20} style={{ color: 'var(--blue)' }} />
             주요 이용사유 현황 (TOP 4)
           </h2>
-          <p style={{ fontSize: 12, color: 'var(--text-2, #64748b)', margin: '0 0 16px 0' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 16px 0' }}>
             카카오T 승차 시 선택한 용도/사유 상위 4개 항목의 이용 건수 및 금액 집계입니다.
           </p>
 
@@ -857,20 +951,21 @@ export default function TaxiReportPage() {
             {reasonStats.slice(0, 4).map((item, idx) => (
               <div
                 key={item.reason || idx}
+                className="taxi-report-sub-card"
                 style={{
-                  backgroundColor: 'var(--bg-main, #f8fafc)',
+                  backgroundColor: 'var(--bg-card-2)',
                   borderRadius: 10,
                   padding: 14,
-                  border: '1px solid var(--border, #e2e8f0)',
+                  border: '1px solid var(--border)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>{item.reason}</span>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)' }}>{item.reason}</span>
                   <StatBadge tone={idx === 0 ? 'purple' : idx === 1 ? 'blue' : 'gray'}>{item.countRatio}%</StatBadge>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-2)' }}>
                   <span>{item.count}건</span>
-                  <span style={{ fontWeight: 600 }}>{formatCurrency(item.amount)}원</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(item.amount)}원</span>
                 </div>
               </div>
             ))}
@@ -879,48 +974,49 @@ export default function TaxiReportPage() {
 
         {/* 6. 일자별 이용 현황 (Daily Breakdown Table) */}
         <div
+          className="taxi-report-section-card"
           style={{
-            backgroundColor: 'var(--bg-card, #ffffff)',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: 14,
             padding: '20px 24px',
-            border: '1px solid var(--border, #e2e8f0)',
+            border: '1px solid var(--border)',
             marginBottom: 24,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            boxShadow: 'var(--shadow-card)',
           }}
         >
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Calendar size={20} style={{ color: 'var(--green, #22c55e)' }} />
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-1)' }}>
+            <Calendar size={20} style={{ color: 'var(--green)' }} />
             일자별 이용 현황
           </h2>
-          <p style={{ fontSize: 12, color: 'var(--text-2, #64748b)', margin: '0 0 16px 0' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 16px 0' }}>
             선택된 기간 내 각 일자별 이용 건수, 총 금액, 평균 금액 및 시간대 집계입니다.
           </p>
 
-          <div style={{ overflowX: 'auto', border: '1px solid var(--border, #e2e8f0)', borderRadius: 10, maxHeight: 350 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
-              <thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: 'var(--bg-main, #f8fafc)' }}>
-                <tr style={{ borderBottom: '1px solid var(--border, #e2e8f0)' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>일자 (Date)</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>이용건수</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>총 이용금액</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>건당 평균금액</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>야근/심야 건수</th>
+          <div className="taxi-report-table-container" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10, maxHeight: 350, backgroundColor: 'var(--bg-card)' }}>
+            <table className="taxi-report-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: 'var(--bg-card-2)' }}>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-2)' }}>일자 (Date)</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>이용건수</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>총 이용금액</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>건당 평균금액</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right' }}>야근/심야 건수</th>
                 </tr>
               </thead>
               <tbody>
                 {dailyStats.map((row) => (
-                  <tr key={row.date} style={{ borderBottom: '1px solid var(--border, #f1f5f9)' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 600 }}>{row.date}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right' }}>{row.count}건</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(row.amount)}원</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-2, #64748b)' }}>{formatCurrency(row.avgAmount)}원</td>
+                  <tr key={row.date} style={{ borderBottom: '1px solid var(--border-row)' }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-1)' }}>{row.date}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-1)' }}>{row.count}건</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(row.amount)}원</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-2)' }}>{formatCurrency(row.avgAmount)}원</td>
                     <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                       {(row.eveningCount > 0 || row.lateNightCount > 0) ? (
                         <StatBadge tone="amber">
                           야근 {row.eveningCount}건 / 심야 {row.lateNightCount}건
                         </StatBadge>
                       ) : (
-                        <span style={{ color: 'var(--text-2, #94a3b8)' }}>-</span>
+                        <span style={{ color: 'var(--text-3)' }}>-</span>
                       )}
                     </td>
                   </tr>
@@ -932,63 +1028,67 @@ export default function TaxiReportPage() {
 
         {/* 7. 최하단 전체 이용내역 상세 표 (Full Transactions Table) */}
         <div
+          className="taxi-report-section-card"
           style={{
-            backgroundColor: 'var(--bg-card, #ffffff)',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: 14,
             padding: '20px 24px',
-            border: '1px solid var(--border, #e2e8f0)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-card)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <CarTaxiFront size={20} style={{ color: 'var(--purple, #a855f7)' }} />
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-1)' }}>
+                <CarTaxiFront size={20} style={{ color: 'var(--purple)' }} />
                 전체 이용내역 상세 목록 ({filteredRows.length}건)
               </h2>
-              <p style={{ fontSize: 12, color: 'var(--text-2, #64748b)', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '4px 0 0 0' }}>
                 선택 기간 동안의 카카오T 이용내역 전체 상세 목록입니다.
               </p>
             </div>
 
             {/* Table Search input */}
             <div style={{ position: 'relative', minWidth: 260 }}>
-              <Search size={15} style={{ position: 'absolute', left: 12, top: 10, color: 'var(--text-2, #64748b)' }} />
+              <Search size={15} style={{ position: 'absolute', left: 12, top: 11, color: 'var(--text-3)' }} />
               <input
                 type="text"
                 placeholder="사원명, 부서, 사유, 출발/도착지 검색..."
                 value={tableSearch}
                 onChange={(e) => setTableSearch(e.target.value)}
+                className="taxi-report-input"
                 style={{
                   width: '100%',
                   padding: '8px 12px 8px 34px',
                   borderRadius: 8,
-                  border: '1px solid var(--border, #cbd5e1)',
-                  backgroundColor: 'var(--bg-main, #f8fafc)',
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'var(--bg-input)',
+                  color: 'var(--text-1)',
                   fontSize: 13,
+                  outline: 'none',
                   boxSizing: 'border-box',
                 }}
               />
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto', border: '1px solid var(--border, #e2e8f0)', borderRadius: 10 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+          <div className="taxi-report-table-container" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10, backgroundColor: 'var(--bg-card)' }}>
+            <table className="taxi-report-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
               <thead>
-                <tr style={{ backgroundColor: 'var(--bg-main, #f8fafc)', borderBottom: '1px solid var(--border, #e2e8f0)' }}>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, whiteSpace: 'nowrap', minWidth: 100 }}>승차 일시</th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, whiteSpace: 'nowrap', minWidth: 100 }}>부서</th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, whiteSpace: 'nowrap', minWidth: 90 }}>사원명</th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, minWidth: 200 }}>출발지 ➔ 도착지</th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, minWidth: 160 }}>이용목적</th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', minWidth: 105 }}>결제금액</th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', minWidth: 105 }}>추가호출비</th>
+                <tr style={{ backgroundColor: 'var(--bg-card-2)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap', minWidth: 100 }}>승차 일시</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap', minWidth: 100 }}>부서</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap', minWidth: 90 }}>사원명</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-2)', minWidth: 200 }}>출발지 ➔ 도착지</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-2)', minWidth: 160 }}>이용목적</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right', whiteSpace: 'nowrap', minWidth: 105 }}>결제금액</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'right', whiteSpace: 'nowrap', minWidth: 105 }}>추가호출비</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-2, #64748b)' }}>
+                    <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-3)' }}>
                       조회된 이용내역이 없습니다.
                     </td>
                   </tr>
@@ -996,11 +1096,11 @@ export default function TaxiReportPage() {
                   filteredRows.map((row) => {
                     const { date, time } = formatRideTimeTwoLines(row.rideTime);
                     return (
-                      <tr key={row.id} style={{ borderBottom: '1px solid var(--border, #f1f5f9)' }}>
+                      <tr key={row.id} style={{ borderBottom: '1px solid var(--border-row)' }}>
                         {/* 1. 승차 일시 (2줄 표시) */}
                         <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1, #1e293b)' }}>{date}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-2, #64748b)', marginTop: 2 }}>{time}</div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>{date}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{time}</div>
                         </td>
 
                         {/* 2. 부서 */}
@@ -1008,51 +1108,51 @@ export default function TaxiReportPage() {
                           <StatBadge tone="gray">{row.dept}</StatBadge>
                         </td>
 
-                        {/* 3. 사원명 (1줄 표시, 너비 확보) */}
-                        <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>
+                        {/* 3. 사원명 */}
+                        <td style={{ padding: '10px 14px', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', color: 'var(--text-1)' }}>
                           {row.employeeName}
                         </td>
 
                         {/* 4. 출발지 -> 도착지 (2줄 표시) */}
                         <td style={{ padding: '10px 14px', fontSize: 12 }}>
                           <div
-                            style={{ color: 'var(--text-1, #1e293b)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 240 }}
+                            style={{ color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 240 }}
                             title={row.pickup}
                           >
                             {row.pickup || '-'}
                           </div>
                           <div
-                            style={{ color: 'var(--text-2, #64748b)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 240, fontSize: 11 }}
+                            style={{ color: 'var(--text-2)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 240, fontSize: 11 }}
                             title={row.dropoff}
                           >
-                            <span style={{ color: 'var(--blue, #3b82f6)', fontWeight: 700, marginRight: 4 }}>➔</span>
+                            <span style={{ color: 'var(--blue)', fontWeight: 700, marginRight: 4 }}>➔</span>
                             {row.dropoff || '-'}
                           </div>
                         </td>
 
-                        {/* 5. 이용목적 (늘린 공간) */}
+                        {/* 5. 이용목적 */}
                         <td style={{ padding: '10px 14px', minWidth: 160 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1, #1e293b)' }}>{row.reason}</div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>{row.reason}</div>
                           {(row.verticalProductName || row.taxiKind) && (
-                            <div style={{ fontSize: 11, color: 'var(--text-2, #94a3b8)', marginTop: 2 }}>
+                            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
                               {row.verticalProductName || row.taxiKind}
                             </div>
                           )}
                         </td>
 
-                        {/* 6. 결제금액 (1줄 표시) */}
-                        <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        {/* 6. 결제금액 */}
+                        <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap', color: 'var(--text-1)' }}>
                           {formatCurrency(row.amount)}원
                         </td>
 
-                        {/* 7. 추가호출비 (1줄 표시) */}
+                        {/* 7. 추가호출비 */}
                         <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                           {row.hasExtraFee ? (
-                            <span style={{ color: 'var(--rose, #f43f5e)', fontWeight: 600 }}>
+                            <span style={{ color: 'var(--red)', fontWeight: 600 }}>
                               +{formatCurrency(row.platformFee)}원
                             </span>
                           ) : (
-                            <span style={{ color: 'var(--text-2, #94a3b8)' }}>-</span>
+                            <span style={{ color: 'var(--text-3)' }}>-</span>
                           )}
                         </td>
                       </tr>

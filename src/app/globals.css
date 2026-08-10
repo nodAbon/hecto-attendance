@@ -4458,3 +4458,135 @@ tr:last-child td { border-bottom: none; }
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Kakao T Taxi Report Styles
+   ───────────────────────────────────────────────────────────── */
+.taxi-report-section-card {
+  background-color: var(--bg-card) !important;
+  border-radius: 14px !important;
+  padding: 20px 24px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-card) !important;
+  margin-bottom: 24px !important;
+}
+
+.taxi-report-kpi-card {
+  background-color: var(--bg-card) !important;
+  border-radius: 12px !important;
+  padding: 18px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.taxi-report-sub-card {
+  background-color: var(--bg-card-2) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  border: 1px solid var(--border) !important;
+}
+
+.taxi-report-input {
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--bg-input) !important;
+  color: var(--text-1) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  outline: none !important;
+  color-scheme: dark light;
+}
+
+.taxi-report-input:focus {
+  border-color: var(--blue) !important;
+}
+
+.taxi-report-select {
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--bg-input) !important;
+  color: var(--text-1) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  outline: none !important;
+  cursor: pointer !important;
+}
+
+.taxi-report-select option {
+  background-color: var(--bg-card) !important;
+  color: var(--text-1) !important;
+}
+
+.taxi-report-quick-btn {
+  padding: 6px 11px !important;
+  min-height: 28px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--bg-input) !important;
+  color: var(--text-2) !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+}
+
+.taxi-report-quick-btn:hover {
+  color: var(--text-1) !important;
+  border-color: var(--border-hover) !important;
+  background-color: var(--bg-card-2) !important;
+}
+
+.taxi-report-toggle-btn {
+  padding: 6px 12px !important;
+  min-height: 28px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  background-color: transparent !important;
+  color: var(--text-2) !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+}
+
+.taxi-report-toggle-btn.active {
+  background-color: var(--bg-card) !important;
+  color: var(--text-1) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18) !important;
+}
+
+.taxi-report-table-container {
+  overflow-x: auto !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  background-color: var(--bg-card) !important;
+}
+
+.taxi-report-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 13px !important;
+  text-align: left !important;
+}
+
+.taxi-report-table th {
+  background-color: var(--bg-card-2) !important;
+  color: var(--text-2) !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 12px 14px !important;
+  font-weight: 600 !important;
+}
+
+.taxi-report-table td {
+  border-bottom: 1px solid var(--border-row) !important;
+  color: var(--text-1) !important;
+  padding: 12px 14px !important;
+}
+
+.taxi-report-table tbody tr:hover td {
+  background-color: var(--row-hover) !important;
+}
+
