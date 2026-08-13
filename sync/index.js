@@ -15,9 +15,10 @@ loadSyncEnv();
 
 // ── 설정 ──────────────────────────────────────────────────────────
 // 실행 주기: 30분 (1,800,000 ms)
-const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS) || 1_800_000;
-const MY_COMPANY_CODE  = process.env.MY_COMPANY_CODE || '1600';
-const CAPS_E_GROUP     = process.env.CAPS_E_GROUP || '08';
+const SYNC_INTERVAL_MS = 30 * 60 * 1000;
+// 헥토큐앤엠 전용: 환경변수가 잘못 남아 있어도 다른 법인 자료가 섞이지 않게 고정한다.
+const MY_COMPANY_CODE  = '1600';
+const CAPS_E_GROUP     = '08';
 
 const MYSQL_CONFIG = {
   host:           process.env.MYSQL_HOST,
@@ -58,9 +59,6 @@ const CAPS_GATE_MAPPING = {
   '4000': 'CAPS',
   '4004': 'CAPS',
 };
-
-// 직원 목록 최종 동기화 날짜 관리 (1일 1회 실행 제어용)
-let lastEmployeeSyncDate = '';
 
 // ── 유틸 ──────────────────────────────────────────────────────────
 function parseATime(aTime) {
@@ -140,10 +138,46 @@ function isMissingAttendanceSourceColumn(error) {
     || String(error?.message || '').toLowerCase().includes('source');
 }
 
+function timestamp() {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const hour24 = kst.getUTCHours();
+  const period = hour24 < 12 ? '오전' : '오후';
+  return `${kst.getUTCFullYear()}. ${kst.getUTCMonth() + 1}. ${kst.getUTCDate()}. ${period} ${hour24 % 12 || 12}:${String(kst.getUTCMinutes()).padStart(2, '0')}:${String(kst.getUTCSeconds()).padStart(2, '0')}`;
+}
+
 function log(level, msg, detail = '') {
-  const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
   const prefix = { INFO: '✅', WARN: '⚠️', ERROR: '❌' }[level] || 'ℹ️';
-  console.log(`[${now}] ${prefix} ${msg}${detail ? ' | ' + detail : ''}`);
+  console.log(`[${timestamp()}] ${prefix} ${msg}${detail ? ' | ' + detail : ''}`);
+}
+
+function getKstDateKey() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+}
+
+function getKstHour() {
+  return Number(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul', hour: '2-digit', hourCycle: 'h23',
+  }).format(new Date()));
+}
+
+async function shouldSyncEmployeesToday() {
+  if (getKstHour() < 8) return { due: false, reason: '오전 8시 이전' };
+  const day = getKstDateKey();
+  const from = new Date(`${day}T00:00:00+09:00`);
+  const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
+  const { data, error } = await supabase
+    .from('sa_employees')
+    .select('emp_no')
+    .eq('company_code', MY_COMPANY_CODE)
+    .gte('synced_at', from.toISOString())
+    .lt('synced_at', to.toISOString())
+    .limit(1);
+  if (error) throw new Error(`임직원 동기화 상태 조회 실패: ${error.message}`);
+  return data?.length
+    ? { due: false, reason: '오늘 이미 동기화됨' }
+    : { due: true, reason: '미동기화' };
 }
 
 async function queryMysql(conn, sql, params = []) {
@@ -159,7 +193,6 @@ async function queryMysql(conn, sql, params = []) {
 
 // 1. 임직원 마스터 동기화 (1일 1회만 수행됨)
 async function syncEmployees(conn) {
-  log('INFO', '임직원 정보 동기화 시작');
   const rows = await queryMysql(conn, `
     SELECT
       e.*,
@@ -177,7 +210,8 @@ async function syncEmployees(conn) {
 
   const { data: existingEmps, error: fetchErr } = await supabase
     .from('sa_employees')
-    .select('emp_no, is_active, status');
+    .select('emp_no, is_active, status')
+    .eq('company_code', MY_COMPANY_CODE);
   if (fetchErr) throw new Error(`기존 직원 조회 실패: ${fetchErr.message}`);
   const existingMap = new Map((existingEmps || []).map(e => [e.emp_no, e]));
 
@@ -350,9 +384,9 @@ async function syncCapsAttendance(conn) {
 // 4. 연차/휴가 내역 동기화 (최근 1일치)
 async function syncLeaves(conn) {
   const now = new Date();
-  // 최근 1일치 (어제부터 오늘까지)
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-  const toDate = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  // 오늘부터 한 달 뒤까지의 승인된 연차를 매 회차 갱신한다.
+  const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const toDate = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
   const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
   const toStr    = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2, '0')}${String(toDate.getDate()).padStart(2, '0')}`;
 
@@ -415,6 +449,7 @@ async function syncLeaves(conn) {
     const { data: emps } = await supabase
       .from('sa_employees')
       .select('emp_no, email, dept')
+      .eq('company_code', MY_COMPANY_CODE)
       .in('emp_no', empNos);
 
     const empMap = new Map((emps || []).map(e => [e.emp_no, e]));
@@ -450,17 +485,12 @@ async function runSync() {
   try {
     conn = await mysql.createConnection(MYSQL_CONFIG);
 
-    // KST 기준 오늘 날짜 문자열 획득 (예: 2026-07-03)
-    const todayKst = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
-
-    let empCount = 0;
-    // 날짜가 바뀌었을 때만 임직원 마스터 동기화 실행 (1일 1회)
-    if (todayKst !== lastEmployeeSyncDate) {
-      empCount = await syncEmployees(conn);
-      lastEmployeeSyncDate = todayKst;
-      log('INFO', `임직원 정보 동기화 완료: ${empCount}명`);
+    const employeeStatus = await shouldSyncEmployeesToday();
+    if (employeeStatus.due) {
+      const empCount = await syncEmployees(conn);
+      log('INFO', `임직원 정보 동기화 완료 (${empCount}건)`);
     } else {
-      log('INFO', '임직원 정보 동기화 건너뜀 (오늘 이미 동기화됨)');
+      log('INFO', `임직원 정보 동기화 건너뜀 (${employeeStatus.reason})`);
     }
 
     // 출입기록 동기화 (30분 주기 실행, 최근 2시간 범위)
@@ -480,7 +510,28 @@ async function runSync() {
   }
 }
 
+function millisecondsUntilNextEightKst() {
+  const now = Date.now();
+  const kstNow = new Date(now + 9 * 60 * 60 * 1000);
+  let target = Date.UTC(
+    kstNow.getUTCFullYear(),
+    kstNow.getUTCMonth(),
+    kstNow.getUTCDate(),
+    -1, 0, 0,
+  );
+  if (target <= now + 1000) target += 24 * 60 * 60 * 1000;
+  return target - now;
+}
+
+function scheduleDailyEightSync() {
+  setTimeout(async () => {
+    await runSync();
+    scheduleDailyEightSync();
+  }, millisecondsUntilNextEightKst());
+}
+
 // ── 시작 ──────────────────────────────────────────────────────────
 log('INFO', `통합 근태 동기화 데몬 시작 (${SYNC_INTERVAL_MS / 1000 / 60}분 주기)`);
 runSync();
 setInterval(runSync, SYNC_INTERVAL_MS);
+scheduleDailyEightSync();
