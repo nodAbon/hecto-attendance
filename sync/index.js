@@ -270,9 +270,10 @@ async function syncSecomAttendance(conn) {
 async function syncCapsAttendance(conn) {
   const now = new Date();
   // 최근 2시간 전부터 동기화 (네트워크 데이터 소모량 최소화)
-  const fromDate = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const fromDateStr = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}`;
-  const fromTimeStr = `${String(fromDate.getHours()).padStart(2, '0')}${String(fromDate.getMinutes()).padStart(2, '0')}00`;
+  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const fromCompact = formatKstCompact(fromDate);
+  const fromDateStr = fromCompact.slice(0, 8);
+  const fromTimeStr = fromCompact.slice(8, 14);
 
   const rows = await queryMysql(conn, `
     SELECT
