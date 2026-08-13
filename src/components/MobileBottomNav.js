@@ -33,7 +33,7 @@ const MOBILE_MORE_ITEMS = [
   { key: 'MANUAL_APPROVAL', label: '수동 요청 내역', icon: CheckCircle, href: '/?tab=MANUAL_APPROVAL', category: '부서', leaderOnly: true },
   { key: 'USER_REGISTER', label: '신규 계정 등록', icon: Plus, href: '/?tab=USER_REGISTER', category: '관리자', adminOnly: true },
   { key: 'CAPS_UPLOAD', label: '캡스 업로드', icon: Upload, href: '/?tab=CAPS_UPLOAD', category: '관리자', adminOnly: true },
-  { key: 'TAXI_AUDIT', label: '택시 이용내역', icon: CarTaxiFront, href: '/admin/taxi-audit', category: '관리자', adminOnly: true },
+  { key: 'TAXI_AUDIT', label: '택시 소명관리', icon: CarTaxiFront, href: '/admin/taxi-audit', category: '관리자', adminOnly: true },
   { key: 'EMPLOYEE_ADMIN', label: '직원 관리', icon: Users, href: '/admin/employees', category: '관리자', adminOnly: true },
 ];
 

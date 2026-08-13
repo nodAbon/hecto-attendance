@@ -37,7 +37,7 @@ const OVERTIME_ITEM = { href: '/?tab=OVERTIME', label: '초과근무 관리', ic
 const ADMIN_ITEMS = [
   { href: '/?tab=USER_REGISTER', label: '신규 계정 등록', icon: Plus, iconStyle: { color: 'var(--green)' }, category: '관리자' },
   { href: '/?tab=CAPS_UPLOAD', label: '캡스 업로드', icon: Upload, iconStyle: { color: 'var(--blue)' }, category: '관리자' },
-  { href: '/admin/taxi-audit', label: '택시 이용내역', icon: CarTaxiFront, iconStyle: { color: 'var(--pink)' }, activeHref: '/admin/taxi-audit', category: '관리자' },
+  { href: '/admin/taxi-audit', label: '택시 소명관리', icon: CarTaxiFront, iconStyle: { color: 'var(--pink)' }, activeHref: '/admin/taxi-audit', category: '관리자' },
   { href: '/admin/employees', label: '직원 관리', icon: Users, iconStyle: { color: 'var(--indigo)' }, activeHref: '/admin/employees', category: '관리자' },
 ];
 

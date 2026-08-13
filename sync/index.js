@@ -69,6 +69,24 @@ function parseATime(aTime) {
   return `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}T${s.substring(8, 10)}:${s.substring(10, 12)}:${s.substring(12, 14)}+09:00`;
 }
 
+function formatKstCompact(date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date).reduce((result, part) => {
+    if (part.type !== 'literal') result[part.type] = part.value;
+    return result;
+  }, {});
+
+  return `${parts.year}${parts.month}${parts.day}${parts.hour}${parts.minute}${parts.second}`;
+}
+
 function flag1ToEventType(flag1) {
   if (flag1 === '1') return '출근';
   if (flag1 === '4') return '퇴근';
@@ -189,9 +207,9 @@ async function syncEmployees(conn) {
 // 2. 세콤 출입기록 동기화 (최근 1일치)
 async function syncSecomAttendance(conn) {
   const now = new Date();
-  // 최근 2시간 전부터 동기화 (네트워크 데이터 소모량 최소화)
-  const fromDate = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const fromStr  = `${fromDate.getFullYear()}${String(fromDate.getMonth() + 1).padStart(2, '0')}${String(fromDate.getDate()).padStart(2, '0')}${String(fromDate.getHours()).padStart(2, '0')}${String(fromDate.getMinutes()).padStart(2, '0')}00`;
+  // 최근 24시간을 재조회해 늦게 반영되거나 일시 누락된 기록도 복구
+  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const fromStr = formatKstCompact(fromDate).slice(0, 12) + '00';
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -418,6 +436,12 @@ async function syncLeaves(conn) {
 
 // ── 메인 루프 ─────────────────────────────────────────────────────
 async function runSync() {
+  if (runSync.inProgress) {
+    log('WARN', '이전 동기화가 아직 진행 중이어서 이번 회차를 건너뜁니다.');
+    return;
+  }
+
+  runSync.inProgress = true;
   const startedAt = Date.now();
   log('INFO', '동기화 시작');
 
@@ -451,6 +475,7 @@ async function runSync() {
     log('ERROR', '동기화 실패', err.message);
   } finally {
     if (conn) await conn.end();
+    runSync.inProgress = false;
   }
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import mysql from 'mysql2/promise';
+import { verifySession } from '@/lib/auth';
 import { getAdminClient } from '@/lib/supabaseClient';
 import { syncLeavesToNaverWorks } from '@/lib/naverWorks';
 
@@ -93,6 +94,11 @@ function extractEmployeeLoginId(row) {
 export async function GET(request) {
   let conn = null;
   try {
+    const session = await verifySession(request);
+    if (!session?.isAdmin) {
+      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+
     const supabase = getAdminClient();
 
     // 1. MySQL Connection
@@ -158,7 +164,7 @@ export async function GET(request) {
       INNER JOIN hr_department d ON
         d.I_COMPANY = ? AND d.I_DEPT = e.I_DEPT
       WHERE COALESCE(e.I_RETIRE_YN, '0') <> '1'
-        AND t.ATime >= '${fromStr}01000000'
+        AND t.ATime >= '${fromStr}00000000'
       ORDER BY t.ATime DESC
     `, [MY_COMPANY_CODE, MY_COMPANY_CODE]);
 
