@@ -3023,6 +3023,7 @@ tr:last-child td { border-bottom: none; }
 .badge.green  { background: rgba(202,156,64,0.14);  color: #9a6b13; border-color: rgba(202,156,64,0.28); }
 .badge.amber  { background: rgba(201,150,75,0.10); color: #a66c22; border-color: rgba(201,150,75,0.18); }
 .badge.red    { background: rgba(208,107,107,0.10);  color: #c15555; border-color: rgba(208,107,107,0.18); }
+.badge.resigned { background: var(--red); color: #fff; border-color: var(--red); }
 .badge.gray   { background: rgba(100,116,139,0.08); color: #64748b; border-color: rgba(100,116,139,0.14); }
 .badge.blue   { background: rgba(91,136,214,0.10); color: var(--blue); border-color: rgba(91,136,214,0.18); }
 .badge.purple { background: rgba(157,123,216,0.10); color: var(--purple); border-color: rgba(157,123,216,0.18); }
@@ -4589,4 +4590,3 @@ tr:last-child td { border-bottom: none; }
 .taxi-report-table tbody tr:hover td {
   background-color: var(--row-hover) !important;
 }
-

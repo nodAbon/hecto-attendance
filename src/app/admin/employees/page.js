@@ -108,7 +108,7 @@ export default function EmployeeAdminPage() {
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${emp.status === 'resigned' ? 'gray' : 'green'}`}>
+                      <span className={`badge ${emp.status === 'resigned' ? 'resigned' : 'green'}`}>
                         {emp.status === 'resigned' ? '퇴사' : emp.isActive ? '재직' : '비활성'}
                       </span>
                     </td>
