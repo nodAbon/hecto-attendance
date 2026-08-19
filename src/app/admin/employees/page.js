@@ -85,6 +85,7 @@ export default function EmployeeAdminPage() {
                   <th>직급</th>
                   <th>직책</th>
                   <th>권한</th>
+                  <th>재직상태</th>
                   <th>상태</th>
                 </tr>
               </thead>
@@ -104,6 +105,11 @@ export default function EmployeeAdminPage() {
                     <td>
                       <span className={`badge ${emp.isAdmin ? 'blue' : 'gray'}`}>
                         {emp.isAdmin ? 'Admin' : 'User'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${emp.status === 'resigned' ? 'gray' : 'green'}`}>
+                        {emp.status === 'resigned' ? '퇴사' : emp.isActive ? '재직' : '비활성'}
                       </span>
                     </td>
                     <td>
