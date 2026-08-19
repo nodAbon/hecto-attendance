@@ -163,6 +163,9 @@ function getKstHour() {
 }
 
 async function shouldSyncEmployeesToday() {
+  if (shouldSyncEmployeesToday.forceOnce) {
+    return { due: true, reason: '데몬 시작 후 최초 동기화' };
+  }
   if (getKstHour() < 8) return { due: false, reason: '오전 8시 이전' };
   const day = getKstDateKey();
   const from = new Date(`${day}T00:00:00+09:00`);
@@ -490,6 +493,7 @@ async function runSync() {
     const employeeStatus = await shouldSyncEmployeesToday();
     if (employeeStatus.due) {
       const empCount = await syncEmployees(conn);
+      shouldSyncEmployeesToday.forceOnce = false;
       log('INFO', `임직원 정보 동기화 완료 (${empCount}건)`);
     } else {
       log('INFO', `임직원 정보 동기화 건너뜀 (${employeeStatus.reason})`);
@@ -511,6 +515,9 @@ async function runSync() {
     runSync.inProgress = false;
   }
 }
+
+// 프로세스 재시작 직후에는 당일 동기화 기록이 있어도 직원 상태를 한 번 재확인한다.
+shouldSyncEmployeesToday.forceOnce = true;
 
 function millisecondsUntilNextEightKst() {
   const now = Date.now();
