@@ -202,7 +202,6 @@ async function syncEmployees(conn) {
     FROM hr_employee e
     INNER JOIN hr_department d ON d.I_COMPANY = ? AND d.I_DEPT = e.I_DEPT
     WHERE e.I_COMPANY = ?
-      AND COALESCE(e.I_RETIRE_YN, '0') <> '1'
     ORDER BY d.N_DEPT, e.N_EMPLOY_NAME
   `, [MY_COMPANY_CODE, MY_COMPANY_CODE]);
 
@@ -217,6 +216,7 @@ async function syncEmployees(conn) {
 
   const records = rows.map(r => {
     const existing = existingMap.get(r.emp_no);
+    const isRetired = String(r.I_RETIRE_YN ?? '').trim() === '1';
     return {
       emp_no:       r.emp_no,
       name:         r.name,
@@ -224,8 +224,10 @@ async function syncEmployees(conn) {
       email:        extractEmployeeEmail(r) || null,
       login_id:     extractEmployeeLoginId(r) || null,
       company_code: MY_COMPANY_CODE,
-      is_active:    existing ? existing.is_active : true,
-      status:       existing ? (existing.status || 'active') : 'active',
+      // 퇴사 여부는 MySQL 인사마스터를 기준으로 동기화한다.
+      // 휴직처럼 I_RETIRE_YN이 비어 있는 직원은 기존 활성 상태를 유지한다.
+      is_active:    isRetired ? false : (existing ? existing.is_active : true),
+      status:       isRetired ? 'resigned' : (existing ? (existing.status || 'active') : 'active'),
       synced_at:    new Date().toISOString(),
     };
   });
