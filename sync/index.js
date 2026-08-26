@@ -10,7 +10,7 @@ const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
 const { syncLeavesToNaverWorks } = require('./naverWorks');
-const { getAttendanceWindow, saveAttendanceCheckpoint, formatBytes } = require('./attendanceIncremental');
+const { getAttendanceWindow, saveAttendanceCheckpoint, formatAttendanceMetrics } = require('./attendanceIncremental');
 
 loadSyncEnv();
 
@@ -271,8 +271,7 @@ async function syncSecomAttendance(conn) {
   `, [MY_COMPANY_CODE, MY_COMPANY_CODE, window.fromStr, window.toStr]);
 
   const queryBytes = Buffer.byteLength(JSON.stringify(rows || []), 'utf8');
-  log('INFO', `세콤 증분 조회 ${window.from.toISOString()} ~ ${window.to.toISOString()}`, `${rows.length}건 | 응답 ${formatBytes(queryBytes)} | ${Date.now() - queryStartedAt}ms | 체크포인트 ${window.origin}`);
-
+  const queryMs = Date.now() - queryStartedAt;
   const BATCH = 500;
   let total = 0;
   let upsertBytes = 0;
@@ -306,7 +305,7 @@ async function syncSecomAttendance(conn) {
     upsertBytes += Buffer.byteLength(JSON.stringify(batch), 'utf8');
   }
   await saveAttendanceCheckpoint({ supabase, companyCode: MY_COMPANY_CODE, source: 'secom', window, rowCount: rows.length, queryBytes, upsertBytes });
-  log('INFO', `세콤 저장 완료 ${total}건`, `Supabase 전송 ${formatBytes(upsertBytes)} | 체크포인트 ${window.to.toISOString()}`);
+  log('INFO', formatAttendanceMetrics({ source: '세콤', rowCount: rows.length, queryBytes, queryMs, upsertBytes, checkpointAt: window.to.toISOString(), origin: window.origin }));
   return total;
 }
 
@@ -352,8 +351,7 @@ async function syncCapsAttendance(conn) {
   `, [MY_COMPANY_CODE, MY_COMPANY_CODE, CAPS_E_GROUP, fromDateStr, fromDateStr, fromTimeStr, toDateStr, toDateStr, toTimeStr]);
 
   const queryBytes = Buffer.byteLength(JSON.stringify(rows || []), 'utf8');
-  log('INFO', `캡스 증분 조회 ${window.from.toISOString()} ~ ${window.to.toISOString()}`, `${rows.length}건 | 응답 ${formatBytes(queryBytes)} | ${Date.now() - queryStartedAt}ms | 체크포인트 ${window.origin}`);
-
+  const queryMs = Date.now() - queryStartedAt;
   const BATCH = 500;
   let total = 0;
   let upsertBytes = 0;
@@ -393,7 +391,7 @@ async function syncCapsAttendance(conn) {
     upsertBytes += Buffer.byteLength(JSON.stringify(batch), 'utf8');
   }
   await saveAttendanceCheckpoint({ supabase, companyCode: MY_COMPANY_CODE, source: 'caps', window, rowCount: rows.length, queryBytes, upsertBytes });
-  log('INFO', `캡스 저장 완료 ${total}건`, `Supabase 전송 ${formatBytes(upsertBytes)} | 체크포인트 ${window.to.toISOString()}`);
+  log('INFO', formatAttendanceMetrics({ source: '캡스', rowCount: rows.length, queryBytes, queryMs, upsertBytes, checkpointAt: window.to.toISOString(), origin: window.origin }));
   return total;
 }
 
