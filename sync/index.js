@@ -16,7 +16,7 @@ loadSyncEnv();
 
 // ── 설정 ──────────────────────────────────────────────────────────
 // 실행 주기: 30분 (1,800,000 ms)
-const SYNC_INTERVAL_MS = 30 * 60 * 1000;
+const SYNC_INTERVAL_MS = 10 * 60 * 1000;
 // 헥토큐앤엠 전용: 환경변수가 잘못 남아 있어도 다른 법인 자료가 섞이지 않게 고정한다.
 const MY_COMPANY_CODE  = '1600';
 const CAPS_E_GROUP     = '08';
@@ -510,7 +510,7 @@ async function runSync() {
       log('INFO', `임직원 정보 동기화 건너뜀 (${employeeStatus.reason})`);
     }
 
-    // 출입기록 동기화 (30분 주기 실행, 최근 2시간 범위)
+    // 출입기록 동기화 (10분 주기 실행, 체크포인트 기준 5분 겹침)
     const secomCount  = await syncSecomAttendance(conn);
     const capsCount   = await syncCapsAttendance(conn);
     const leaveCount  = await syncLeaves(conn);

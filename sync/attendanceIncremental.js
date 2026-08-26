@@ -1,4 +1,4 @@
-const DEFAULT_OVERLAP_MINUTES = 10;
+const DEFAULT_OVERLAP_MINUTES = 5;
 const DEFAULT_INITIAL_LOOKBACK_MINUTES = 60;
 
 function validDate(value) {
@@ -66,4 +66,10 @@ async function saveAttendanceCheckpoint({ supabase, companyCode, source, window,
   return true;
 }
 
-module.exports = { formatBytes, getAttendanceWindow, saveAttendanceCheckpoint };
+module.exports = {
+  DEFAULT_OVERLAP_MINUTES,
+  DEFAULT_INITIAL_LOOKBACK_MINUTES,
+  formatBytes,
+  getAttendanceWindow,
+  saveAttendanceCheckpoint,
+};
