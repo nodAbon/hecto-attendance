@@ -10,6 +10,7 @@ const { loadSyncEnv } = require('./loadEnv');
 const mysql = require('mysql2/promise');
 const { createClient } = require('@supabase/supabase-js');
 const { syncLeavesToNaverWorks } = require('./naverWorks');
+const { getAttendanceWindow, saveAttendanceCheckpoint, formatBytes } = require('./attendanceIncremental');
 
 loadSyncEnv();
 
@@ -243,12 +244,11 @@ async function syncEmployees(conn) {
   return rows.length;
 }
 
-// 2. 세콤 출입기록 동기화 (최근 1일치)
+// 2. 세콤 출입기록 동기화 (체크포인트 이후 증분)
 async function syncSecomAttendance(conn) {
   const now = new Date();
-  // 최근 24시간을 재조회해 늦게 반영되거나 일시 누락된 기록도 복구
-  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const fromStr = formatKstCompact(fromDate).slice(0, 12) + '00';
+  const window = await getAttendanceWindow({ supabase, companyCode: MY_COMPANY_CODE, source: 'secom', now });
+  const queryStartedAt = Date.now();
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -266,14 +266,16 @@ async function syncSecomAttendance(conn) {
       AND e.I_EMPLOY_NO = RIGHT(t.Sabun, 8)
     INNER JOIN hr_department d ON d.I_COMPANY = ? AND d.I_DEPT = e.I_DEPT
     WHERE COALESCE(e.I_RETIRE_YN, '0') <> '1'
-      AND t.ATime >= '${fromStr}'
-    ORDER BY t.ATime DESC
-  `, [MY_COMPANY_CODE, MY_COMPANY_CODE]);
+      AND t.ATime >= ? AND t.ATime <= ?
+      ORDER BY t.ATime DESC
+  `, [MY_COMPANY_CODE, MY_COMPANY_CODE, window.fromStr, window.toStr]);
 
-  if (rows.length === 0) return 0;
+  const queryBytes = Buffer.byteLength(JSON.stringify(rows || []), 'utf8');
+  log('INFO', `세콤 증분 조회 ${window.from.toISOString()} ~ ${window.to.toISOString()}`, `${rows.length}건 | 응답 ${formatBytes(queryBytes)} | ${Date.now() - queryStartedAt}ms | 체크포인트 ${window.origin}`);
 
   const BATCH = 500;
   let total = 0;
+  let upsertBytes = 0;
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH).map(r => ({
       sabun:      r.sabun,
@@ -301,18 +303,24 @@ async function syncSecomAttendance(conn) {
 
     if (error) throw new Error(`세콤 출입로그 upsert 실패: ${error.message}`);
     total += batch.length;
+    upsertBytes += Buffer.byteLength(JSON.stringify(batch), 'utf8');
   }
+  await saveAttendanceCheckpoint({ supabase, companyCode: MY_COMPANY_CODE, source: 'secom', window, rowCount: rows.length, queryBytes, upsertBytes });
+  log('INFO', `세콤 저장 완료 ${total}건`, `Supabase 전송 ${formatBytes(upsertBytes)} | 체크포인트 ${window.to.toISOString()}`);
   return total;
 }
 
-// 3. 캡스 출입기록 동기화 (최근 1일치)
+// 3. 캡스 출입기록 동기화 (체크포인트 이후 증분)
 async function syncCapsAttendance(conn) {
   const now = new Date();
-  // 최근 2시간 전부터 동기화 (네트워크 데이터 소모량 최소화)
-  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const fromCompact = formatKstCompact(fromDate);
+  const window = await getAttendanceWindow({ supabase, companyCode: MY_COMPANY_CODE, source: 'caps', now });
+  const fromCompact = window.fromStr;
+  const toCompact = window.toStr;
   const fromDateStr = fromCompact.slice(0, 8);
   const fromTimeStr = fromCompact.slice(8, 14);
+  const toDateStr = toCompact.slice(0, 8);
+  const toTimeStr = toCompact.slice(8, 14);
+  const queryStartedAt = Date.now();
 
   const rows = await queryMysql(conn, `
     SELECT
@@ -338,17 +346,17 @@ async function syncCapsAttendance(conn) {
       AND d.I_DEPT = e.I_DEPT
     WHERE COALESCE(e.I_RETIRE_YN, '0') <> '1'
       AND t.E_GROUP = ?
-      AND (
-        t.E_DATE > ?
-        OR (t.E_DATE = ? AND t.E_TIME >= ?)
-      )
+      AND (t.E_DATE > ? OR (t.E_DATE = ? AND LPAD(REPLACE(CAST(t.E_TIME AS CHAR), ':', ''), 6, '0') >= ?))
+      AND (t.E_DATE < ? OR (t.E_DATE = ? AND LPAD(REPLACE(CAST(t.E_TIME AS CHAR), ':', ''), 6, '0') <= ?))
     ORDER BY t.E_DATE DESC, t.E_TIME DESC
-  `, [MY_COMPANY_CODE, MY_COMPANY_CODE, CAPS_E_GROUP, fromDateStr, fromDateStr, fromTimeStr]);
+  `, [MY_COMPANY_CODE, MY_COMPANY_CODE, CAPS_E_GROUP, fromDateStr, fromDateStr, fromTimeStr, toDateStr, toDateStr, toTimeStr]);
 
-  if (rows.length === 0) return 0;
+  const queryBytes = Buffer.byteLength(JSON.stringify(rows || []), 'utf8');
+  log('INFO', `캡스 증분 조회 ${window.from.toISOString()} ~ ${window.to.toISOString()}`, `${rows.length}건 | 응답 ${formatBytes(queryBytes)} | ${Date.now() - queryStartedAt}ms | 체크포인트 ${window.origin}`);
 
   const BATCH = 500;
   let total = 0;
+  let upsertBytes = 0;
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH).map(row => {
       const empNo = normalizeEmpNo(row.emp_no || row.idno);
@@ -382,7 +390,10 @@ async function syncCapsAttendance(conn) {
 
     if (error) throw new Error(`캡스 출입로그 upsert 실패: ${error.message}`);
     total += batch.length;
+    upsertBytes += Buffer.byteLength(JSON.stringify(batch), 'utf8');
   }
+  await saveAttendanceCheckpoint({ supabase, companyCode: MY_COMPANY_CODE, source: 'caps', window, rowCount: rows.length, queryBytes, upsertBytes });
+  log('INFO', `캡스 저장 완료 ${total}건`, `Supabase 전송 ${formatBytes(upsertBytes)} | 체크포인트 ${window.to.toISOString()}`);
   return total;
 }
 
