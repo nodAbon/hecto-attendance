@@ -18,7 +18,8 @@
     "inspect:employment-status": "node inspect-employee-employment-status.js",
     "backfill-caps-by-name": "node backfill-caps-by-name.js",
     "index3days": "node index3days.js",
-    "index15days": "node index15days.js"
+    "index15days": "node index15days.js",
+    "index30days": "node index30days.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
